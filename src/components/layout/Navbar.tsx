@@ -11,6 +11,7 @@ export default function Navbar() {
   const tabs = [
     { label: ui('dailyBrief'), href: '/brief' },
     { label: ui('shockFeed'), href: '/shocks' },
+    { label: ui('explore'), href: '/explore' },
   ];
 
   return (

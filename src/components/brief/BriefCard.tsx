@@ -21,7 +21,7 @@ export default function BriefCard({ story }: BriefCardProps) {
     <article
       dir={dir}
       onClick={() => router.push(`/story/${story.slug}`)}
-      className="rounded-xl border border-gray-800 bg-gray-900/80 hover:bg-gray-800/80 transition-all cursor-pointer p-5 space-y-3"
+      className="rounded-xl border border-gray-800 bg-gray-900/80 hover:bg-gray-800/80 transition-all cursor-pointer p-5 space-y-3 card-glow"
     >
       {/* Top row: category + signal */}
       <div className="flex items-center justify-between">

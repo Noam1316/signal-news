@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       articles = articles.filter((a) => a.lensCategory === lensParam);
     }
 
-    const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 50, 200) : 50;
+    const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 100, 500) : 100;
     articles = articles.slice(0, limit);
 
     return NextResponse.json({

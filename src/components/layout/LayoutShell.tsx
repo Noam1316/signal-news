@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav';
+import ScrollToTop from '@/components/shared/ScrollToTop';
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -17,6 +18,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
       <Navbar />
       <main className="pt-16 pb-20 md:pb-4">{children}</main>
       <BottomNav />
+      <ScrollToTop />
     </>
   );
 }

@@ -29,7 +29,7 @@ export default function ShockCard({ shock }: ShockCardProps) {
     <article
       dir={dir}
       onClick={shock.relatedStorySlug ? () => router.push(`/story/${shock.relatedStorySlug}`) : undefined}
-      className={`rounded-xl bg-gray-900/80 border border-gray-800 border-l-4 ${borderColors[shock.type]} p-5 space-y-3 ${glowClass} ${shock.relatedStorySlug ? 'cursor-pointer hover:bg-gray-800/80 transition-all' : ''}`}
+      className={`rounded-xl bg-gray-900/80 border border-gray-800 border-l-4 ${borderColors[shock.type]} p-5 space-y-3 ${glowClass} card-glow ${shock.relatedStorySlug ? 'cursor-pointer hover:bg-gray-800/80 transition-all' : ''}`}
     >
       {/* Top: badge + timestamp */}
       <div className="flex items-center justify-between">

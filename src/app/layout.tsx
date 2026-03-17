@@ -18,7 +18,21 @@ const heebo = Heebo({
 
 export const metadata: Metadata = {
   title: "Signal News — Know what's likely next",
-  description: "A real-time news layer that turns chaos into clarity: likelihood, narratives, and lens differences — with sources and confidence.",
+  description: "A real-time news intelligence layer that turns chaos into clarity: likelihood scores, narrative analysis, and lens differences — with sources and confidence.",
+  icons: {
+    icon: '/favicon.svg',
+  },
+  openGraph: {
+    title: "Signal News",
+    description: "Know what's likely next — without the noise. Real-time news intelligence with likelihood scores and multi-lens analysis.",
+    siteName: "Signal News",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Signal News",
+    description: "Know what's likely next — without the noise.",
+  },
 };
 
 export default function RootLayout({

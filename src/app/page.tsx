@@ -69,6 +69,12 @@ export default function LandingPage() {
           >
             {ui('shockFeed')}
           </Link>
+          <Link
+            href="/explore"
+            className="hidden sm:inline-flex px-3 py-1.5 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 transition-colors"
+          >
+            {ui('explore')}
+          </Link>
           <button
             onClick={toggleLang}
             className="px-2.5 py-1 rounded-md text-xs font-semibold border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 transition-colors"
@@ -308,8 +314,11 @@ export default function LandingPage() {
             <Link href="/shocks" className="text-sm text-gray-400 hover:text-white transition-colors">
               {ui('shockFeed')}
             </Link>
+            <Link href="/explore" className="text-sm text-gray-400 hover:text-white transition-colors">
+              {ui('explore')}
+            </Link>
             <a
-              href="https://github.com"
+              href="https://github.com/Noam1316/signal-news"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-gray-400 hover:text-white transition-colors"

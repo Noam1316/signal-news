@@ -16,10 +16,10 @@ export interface FetchedArticle {
 }
 
 const parser = new Parser({
-  timeout: 10_000,
+  timeout: 15_000,
   headers: {
-    'User-Agent': 'SignalNews/1.0',
-    Accept: 'application/rss+xml, application/xml, text/xml',
+    'User-Agent': 'Mozilla/5.0 (compatible; SignalNews/1.0; +https://signal-news.vercel.app)',
+    Accept: 'application/rss+xml, application/xml, text/xml, application/atom+xml',
   },
 });
 
