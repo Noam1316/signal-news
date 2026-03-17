@@ -45,14 +45,22 @@ export default function Navbar() {
         })}
       </div>
 
-      {/* Language toggle */}
-      <button
-        onClick={toggleLang}
-        className="px-2.5 py-1 rounded-md text-xs font-semibold border border-gray-700
-                   text-gray-300 hover:text-white hover:border-gray-500 transition-colors"
-      >
-        {lang === 'en' ? 'HE' : 'EN'}
-      </button>
+      {/* Right side: debug link + language toggle */}
+      <div className="flex items-center gap-2">
+        <Link
+          href="/rss-debug"
+          className="px-2 py-1 rounded-md text-[10px] font-mono text-gray-500 hover:text-gray-300 hover:bg-gray-800/50 transition-colors"
+        >
+          Debug
+        </Link>
+        <button
+          onClick={toggleLang}
+          className="px-2.5 py-1 rounded-md text-xs font-semibold border border-gray-700
+                     text-gray-300 hover:text-white hover:border-gray-500 transition-colors"
+        >
+          {lang === 'en' ? 'HE' : 'EN'}
+        </button>
+      </div>
     </nav>
   );
 }
