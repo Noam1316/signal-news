@@ -24,6 +24,7 @@ export interface BriefStory {
   why: LocalizedText;
   isSignal: boolean;
   category: LocalizedText;
+  lens: 'israel' | 'world';
   sources: Source[];
   updatedAt: string;
 }

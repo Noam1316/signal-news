@@ -7,6 +7,7 @@ import SignalLabel from '@/components/shared/SignalLabel';
 import LikelihoodMeter from '@/components/shared/LikelihoodMeter';
 import DeltaIndicator from '@/components/shared/DeltaIndicator';
 import SourceList from '@/components/shared/SourceList';
+import ShareButton from '@/components/shared/ShareButton';
 
 interface BriefCardProps {
   story: BriefStory;
@@ -47,8 +48,11 @@ export default function BriefCard({ story }: BriefCardProps) {
       {/* Why */}
       <p className="text-sm italic text-gray-400">{t(story.why)}</p>
 
-      {/* Sources */}
-      <SourceList sources={story.sources} />
+      {/* Sources + Share */}
+      <div className="flex items-center justify-between">
+        <SourceList sources={story.sources} />
+        <ShareButton title={t(story.headline)} text={t(story.summary)} />
+      </div>
     </article>
   );
 }

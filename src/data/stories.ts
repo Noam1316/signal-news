@@ -4,6 +4,7 @@ export const stories: StoryDetail[] = [
   // ── 1. Iran Nuclear Talks ──────────────────────────────────────────
   {
     slug: 'iran-nuclear-talks',
+    lens: 'world',
     headline: {
       he: 'שיחות הגרעין עם איראן: חלון הזדמנויות חדש נפתח',
       en: 'Iran Nuclear Talks: A New Window of Opportunity Opens',
@@ -111,6 +112,7 @@ export const stories: StoryDetail[] = [
   // ── 2. Israel-Saudi Normalization ──────────────────────────────────
   {
     slug: 'israel-saudi-normalization',
+    lens: 'israel',
     headline: {
       he: 'נורמליזציה ישראלית-סעודית: תנאים חדשים על השולחן',
       en: 'Israel-Saudi Normalization: New Conditions on the Table',
@@ -205,6 +207,7 @@ export const stories: StoryDetail[] = [
   // ── 3. Global Tech Layoffs ─────────────────────────────────────────
   {
     slug: 'global-tech-layoffs',
+    lens: 'world',
     headline: {
       he: 'פיטורי הייטק גלובליים: הגל השלישי מגיע לישראל',
       en: 'Global Tech Layoffs: Third Wave Reaches Israel',
@@ -307,6 +310,7 @@ export const stories: StoryDetail[] = [
   // ── 4. US Midterms Impact on Middle East ───────────────────────────
   {
     slug: 'us-midterms-middle-east',
+    lens: 'world',
     headline: {
       he: 'בחירות האמצע בארה"ב: השלכות על המזרח התיכון',
       en: 'US Midterms: Implications for the Middle East',
@@ -404,6 +408,7 @@ export const stories: StoryDetail[] = [
   // ── 5. Northern Border Security ────────────────────────────────────
   {
     slug: 'northern-border-security',
+    lens: 'israel',
     headline: {
       he: 'ביטחון הגבול הצפוני: חיזבאללה מגביר פעילות',
       en: 'Northern Border Security: Hezbollah Escalates Activity',

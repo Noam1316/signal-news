@@ -3,14 +3,14 @@
 import { useLanguage } from '@/i18n/context';
 
 interface LensSwitcherProps {
-  value: 'israel' | 'world';
-  onChange: (v: 'israel' | 'world') => void;
+  value: 'all' | 'israel' | 'world';
+  onChange: (v: 'all' | 'israel' | 'world') => void;
 }
 
 export default function LensSwitcher({ value, onChange }: LensSwitcherProps) {
   const { ui } = useLanguage();
 
-  const options: Array<'israel' | 'world'> = ['israel', 'world'];
+  const options: Array<'all' | 'israel' | 'world'> = ['all', 'israel', 'world'];
 
   return (
     <div className="inline-flex rounded-lg bg-gray-800 p-0.5">

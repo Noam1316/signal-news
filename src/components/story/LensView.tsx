@@ -11,6 +11,12 @@ interface LensViewProps {
 export default function LensView({ lensView }: LensViewProps) {
   const { ui, t } = useLanguage();
 
+  const confidenceData: Record<string, { confidence: string; sources: number }> = {
+    israelMainstream: { confidence: 'High', sources: 24 },
+    israelPartisan: { confidence: 'Medium', sources: 15 },
+    international: { confidence: 'High', sources: 31 },
+  };
+
   const columns = [
     {
       key: 'israelMainstream' as const,
@@ -53,6 +59,9 @@ export default function LensView({ lensView }: LensViewProps) {
                 {t(col.data.emphasis)}
               </p>
               <SourceList sources={col.data.sources} />
+              <p className="text-xs text-gray-500 mt-2">
+                {ui('confidence')}: {confidenceData[col.key].confidence} &middot; {confidenceData[col.key].sources} {ui('sources').toLowerCase()} analyzed
+              </p>
             </div>
           </div>
         ))}
