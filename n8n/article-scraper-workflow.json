@@ -1,0 +1,182 @@
+{
+  "name": "Signal News - Article Scraper & Enricher",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SIGNAL_NEWS_URL || 'http://localhost:3000'}}/api/rss/latest?limit=50",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "fetch-articles",
+      "name": "Fetch Latest Articles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract articles array from API response\nconst response = $input.first().json;\nconst articles = response.articles || [];\n\n// Return each article as a separate item for the loop\nreturn articles.map(article => ({\n  json: {\n    articleId: article.id,\n    sourceId: article.sourceId,\n    sourceName: article.sourceName,\n    title: article.title,\n    link: article.link,\n    language: article.language\n  }\n}));"
+      },
+      "id": "split-articles",
+      "name": "Split Into Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.link}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 10000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "fetch-full-page",
+      "name": "Fetch Full Article Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract article body text from HTML\nconst html = $input.first().json.data || $input.first().json.body || '';\nconst articleId = $('Split Into Items').first().json.articleId;\nconst sourceId = $('Split Into Items').first().json.sourceId;\n\n// Remove scripts, styles, and HTML tags\nlet text = html\n  .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n  .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n  .replace(/<nav[^>]*>[\\s\\S]*?<\\/nav>/gi, '')\n  .replace(/<header[^>]*>[\\s\\S]*?<\\/header>/gi, '')\n  .replace(/<footer[^>]*>[\\s\\S]*?<\\/footer>/gi, '')\n  .replace(/<aside[^>]*>[\\s\\S]*?<\\/aside>/gi, '')\n  .replace(/<[^>]+>/g, ' ')\n  .replace(/&nbsp;/g, ' ')\n  .replace(/&amp;/g, '&')\n  .replace(/&lt;/g, '<')\n  .replace(/&gt;/g, '>')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\n// Limit to 50KB\ntext = text.substring(0, 50000);\n\nreturn [{\n  json: {\n    articleId,\n    sourceId,\n    fullText: text\n  }\n}];"
+      },
+      "id": "extract-text",
+      "name": "Extract Article Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.fullText}}",
+              "operation": "isNotEmpty"
+            }
+          ],
+          "number": [
+            {
+              "value1": "={{$json.fullText.length}}",
+              "operation": "largerEqual",
+              "value2": 100
+            }
+          ]
+        }
+      },
+      "id": "filter-valid",
+      "name": "Filter Valid Text",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SIGNAL_NEWS_URL || 'http://localhost:3000'}}/api/webhooks/enrich",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{$env.WEBHOOK_SECRET || ''}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "articleId",
+              "value": "={{$json.articleId}}"
+            },
+            {
+              "name": "sourceId",
+              "value": "={{$json.sourceId}}"
+            },
+            {
+              "name": "fullText",
+              "value": "={{$json.fullText}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "send-to-webhook",
+      "name": "Send to Signal News",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 0],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [{ "node": "Fetch Latest Articles", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Latest Articles": {
+      "main": [
+        [{ "node": "Split Into Items", "type": "main", "index": 0 }]
+      ]
+    },
+    "Split Into Items": {
+      "main": [
+        [{ "node": "Fetch Full Article Page", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Full Article Page": {
+      "main": [
+        [{ "node": "Extract Article Text", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Article Text": {
+      "main": [
+        [{ "node": "Filter Valid Text", "type": "main", "index": 0 }]
+      ]
+    },
+    "Filter Valid Text": {
+      "main": [
+        [{ "node": "Send to Signal News", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "signal-news" },
+    { "name": "scraping" }
+  ]
+}

@@ -6,6 +6,7 @@ import BriefList from '@/components/brief/BriefList';
 import DateHeader from '@/components/brief/DateHeader';
 import ShockFeed from '@/components/shocks/ShockFeed';
 import LiveWire from '@/components/explore/LiveWire';
+import GeoMap from '@/components/map/GeoMap';
 import IntelDashboard from '@/components/intel/IntelDashboard';
 import ScrollToTop from '@/components/shared/ScrollToTop';
 
@@ -39,6 +40,13 @@ export default function DashboardPage() {
         {/* ── Explore Section ── */}
         <section id="explore" className="scroll-mt-28">
           <LiveWire />
+        </section>
+
+        <div className="border-t border-gray-800/50" />
+
+        {/* ── Map Section ── */}
+        <section id="map" className="scroll-mt-28">
+          <GeoMap />
         </section>
 
         <div className="border-t border-gray-800/50" />

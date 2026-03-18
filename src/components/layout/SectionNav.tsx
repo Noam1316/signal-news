@@ -7,6 +7,7 @@ const SECTIONS = [
   { id: 'brief',   icon: '📋', en: 'Brief',   he: 'תקציר' },
   { id: 'shocks',  icon: '⚡', en: 'Shocks',  he: 'זעזועים' },
   { id: 'explore', icon: '🌐', en: 'Explore', he: 'גלה' },
+  { id: 'map',     icon: '🗺️', en: 'Map',     he: 'מפה' },
   { id: 'intel',   icon: '🧠', en: 'Intel',   he: 'מודיעין' },
 ];
 

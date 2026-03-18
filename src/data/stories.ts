@@ -17,8 +17,8 @@ export const stories: StoryDetail[] = [
     likelihoodLabel: 'high',
     delta: 8,
     why: {
-      he: 'לחץ כלכלי פנימי באיראן והתמריצים של ממשל ביידן להשיג הישג דיפלומטי לפני סוף הקדנציה מעלים את הסיכוי להסכם ביניים.',
-      en: 'Internal economic pressure in Iran and the Biden administration\'s incentives to achieve a diplomatic win before the end of the term raise the probability of an interim deal.',
+      he: 'לחץ כלכלי פנימי באיראן וגישת הלחץ המרבי של ממשל טראמפ כלפי טהרן מעלים את הסיכוי להסכם ביניים.',
+      en: 'Internal economic pressure in Iran and the Trump administration\'s maximum pressure approach toward Tehran raise the probability of an interim deal.',
     },
     isSignal: true,
     category: { he: 'ביטחון לאומי', en: 'National Security' },
@@ -56,7 +56,7 @@ export const stories: StoryDetail[] = [
         id: 'iran-n2',
         thesis: { he: 'ארה"ב תיאלץ לקבל הסכם חלקי בשל לוח הזמנים הפוליטי', en: 'US will be forced to accept a partial deal due to political timeline' },
         trend: 'growing',
-        keyFrame: { he: 'ביידן מבקש הישג דיפלומטי לפני בחירות 2026', en: 'Biden seeks diplomatic achievement before 2026 midterms' },
+        keyFrame: { he: 'טראמפ מבקש להציג הישג דיפלומטי לפני בחירות 2026', en: 'Trump seeks to showcase diplomatic achievement before 2026 midterms' },
         sources: [{ name: 'Washington Post', url: '#' }],
       },
       {
@@ -139,7 +139,7 @@ export const stories: StoryDetail[] = [
     timeline: [
       { date: '2025-12-22', value: 38 },
       { date: '2025-12-30', value: 36 },
-      { date: '2026-01-08', value: 35, event: { he: 'ביידן מציע חבילה ביטחונית לסעודיה', en: 'Biden proposes security package for Saudi Arabia' } },
+      { date: '2026-01-08', value: 35, event: { he: 'טראמפ מציע חבילה ביטחונית לסעודיה', en: 'Trump proposes security package for Saudi Arabia' } },
       { date: '2026-01-17', value: 38 },
       { date: '2026-01-25', value: 40 },
       { date: '2026-02-02', value: 39 },
@@ -351,7 +351,7 @@ export const stories: StoryDetail[] = [
     narratives: [
       {
         id: 'midterms-n1',
-        thesis: { he: 'הבחירות ימנעו מביידן להתקדם בהסכם הגרעיני', en: 'Elections will prevent Biden from advancing the nuclear deal' },
+        thesis: { he: 'הבחירות ישפיעו על יכולת טראמפ להתקדם בהסכם הגרעיני', en: 'Elections will impact Trump\'s ability to advance the nuclear deal' },
         trend: 'growing',
         keyFrame: { he: 'דמוקרטים מתונים מתרחקים מנושא איראן', en: 'Moderate Democrats distancing from Iran issue' },
         sources: [{ name: 'Politico', url: '#' }, { name: 'The Hill', url: '#' }],
@@ -395,7 +395,7 @@ export const stories: StoryDetail[] = [
         implication: { he: 'אינדיקציה לכיוון מדיניות החוץ בקונגרס הבא', en: 'Indication of foreign policy direction in the next Congress' },
       },
       {
-        trigger: { he: 'ביידן נושא נאום מדיניות חוץ מרכזי', en: 'Biden delivers a major foreign policy speech' },
+        trigger: { he: 'טראמפ נושא נאום מדיניות חוץ מרכזי', en: 'Trump delivers a major foreign policy speech' },
         implication: { he: 'הבהרת עמדת ארה"ב לפני הבחירות; השפעה על שיחות הגרעין', en: 'Clarification of US stance before elections; impact on nuclear talks' },
       },
       {
@@ -468,7 +468,7 @@ export const stories: StoryDetail[] = [
         id: 'north-n3',
         thesis: { he: 'איראן מנחה את חיזבאללה להסלים כמנוף לחץ בשיחות הגרעין', en: 'Iran is directing Hezbollah to escalate as leverage in nuclear talks' },
         trend: 'stable',
-        keyFrame: { he: 'ביקור קאסם סולימאני השני בביירות', en: 'Second Qasem Soleimani visit to Beirut' },
+        keyFrame: { he: 'ביקור מפקד כוח קודס בביירות', en: 'Quds Force commander visits Beirut' },
         sources: [{ name: 'Reuters', url: '#' }, { name: 'Al-Monitor', url: '#' }],
       },
       {

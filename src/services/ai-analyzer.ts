@@ -5,6 +5,7 @@
  */
 
 import { FetchedArticle } from './rss-fetcher';
+import { getEnrichment } from './article-enrichment';
 
 export type PoliticalLeaning = 'left' | 'center-left' | 'center' | 'center-right' | 'right' | 'unknown';
 
@@ -16,6 +17,7 @@ export interface ArticleAnalysis {
   signalScore: number; // 0-100
   region: 'israel' | 'middle-east' | 'global';
   politicalLeaning: PoliticalLeaning;
+  isEnriched?: boolean;
   summary?: string;
 }
 
@@ -119,6 +121,83 @@ const SIGNAL_INDICATORS = [
   'בלעדי', 'חדשות', 'דרמטי', 'מפנה', 'תפנית', 'פריצת דרך',
 ];
 
+// ── Political Leaning Keyword Dictionaries (for content-based classification) ──
+
+const RIGHT_KEYWORDS = [
+  // Hebrew
+  'ריבונות', 'בטחון לאומי', 'התנחלויות', 'ארץ ישראל', 'הרתעה', 'תגובה נחרצת',
+  'ציונות', 'יהודית', 'גוש אמונים', 'נאמנות', 'כוח צבאי', 'מבצע צבאי',
+  'טרור', 'חיסול', 'הגנה עצמית', 'זכות קיום', 'מדינה יהודית',
+  // English
+  'sovereignty', 'national security', 'settlements', 'land of israel', 'deterrence',
+  'decisive response', 'zionism', 'military operation', 'self-defense', 'jewish state',
+  'strong response', 'zero tolerance', 'iron fist', 'preemptive', 'right to exist',
+];
+
+const LEFT_KEYWORDS = [
+  // Hebrew
+  'כיבוש', 'זכויות אדם', 'שתי מדינות', 'מחאה חברתית', 'צדק חברתי',
+  'דמוקרטיה', 'חופש ביטוי', 'שוויון', 'מיעוטים', 'הומניטרי',
+  'פליטים', 'עוני', 'אי-שוויון', 'חברה אזרחית', 'זכויות', 'דו-קיום',
+  // English
+  'occupation', 'human rights', 'two-state', 'social justice', 'democracy',
+  'freedom of speech', 'equality', 'minorities', 'humanitarian', 'refugees',
+  'poverty', 'inequality', 'civil society', 'coexistence', 'proportional',
+  'disproportionate', 'civilian casualties', 'international law', 'war crimes',
+];
+
+const CENTER_KEYWORDS = [
+  // Hebrew
+  'פשרה', 'דיאלוג', 'משא ומתן', 'איזון', 'מתינות', 'שיתוף פעולה',
+  'הסכמה', 'גישור', 'מו"מ', 'ביטחון ושלום',
+  // English
+  'compromise', 'dialogue', 'negotiation', 'balance', 'moderation', 'bipartisan',
+  'cooperation', 'consensus', 'mediation', 'pragmatic',
+];
+
+/**
+ * Classify political leaning based on article content.
+ * Blends source-based leaning (40%) with content-based keywords (60%).
+ * Falls back to source-based only if no full text available.
+ */
+export function classifyPoliticalLeaning(
+  fullText: string,
+  sourceLeaning: PoliticalLeaning
+): PoliticalLeaning {
+  const lower = fullText.toLowerCase();
+
+  const rightScore = RIGHT_KEYWORDS.filter((kw) => lower.includes(kw.toLowerCase())).length;
+  const leftScore = LEFT_KEYWORDS.filter((kw) => lower.includes(kw.toLowerCase())).length;
+  const centerScore = CENTER_KEYWORDS.filter((kw) => lower.includes(kw.toLowerCase())).length;
+
+  const totalHits = rightScore + leftScore + centerScore;
+
+  // If very few keyword hits, content analysis is unreliable → use source-based
+  if (totalHits < 3) return sourceLeaning;
+
+  // Determine content-based leaning
+  let contentLeaning: PoliticalLeaning;
+  if (rightScore > leftScore && rightScore > centerScore) {
+    contentLeaning = rightScore > leftScore * 2 ? 'right' : 'center-right';
+  } else if (leftScore > rightScore && leftScore > centerScore) {
+    contentLeaning = leftScore > rightScore * 2 ? 'left' : 'center-left';
+  } else {
+    contentLeaning = 'center';
+  }
+
+  // Blend: 40% source + 60% content
+  const leaningScale: Record<PoliticalLeaning, number> = {
+    'left': -2, 'center-left': -1, 'center': 0, 'center-right': 1, 'right': 2, 'unknown': 0,
+  };
+  const blended = leaningScale[sourceLeaning] * 0.4 + leaningScale[contentLeaning] * 0.6;
+
+  if (blended <= -1.5) return 'left';
+  if (blended <= -0.5) return 'center-left';
+  if (blended <= 0.5) return 'center';
+  if (blended <= 1.5) return 'center-right';
+  return 'right';
+}
+
 function detectTopics(text: string): string[] {
   const lower = text.toLowerCase();
   const found: string[] = [];
@@ -161,12 +240,21 @@ function detectPoliticalLeaning(article: FetchedArticle): PoliticalLeaning {
 }
 
 export function analyzeArticle(article: FetchedArticle): ArticleAnalysis {
-  const text = `${article.title} ${article.description}`;
-  const topics = detectTopics(text);
-  const sentiment = detectSentiment(text);
-  const { isSignal, score } = detectSignal(text);
+  const enrichment = getEnrichment(article.id);
+  const baseText = `${article.title} ${article.description}`;
+  // Use full text if enriched, otherwise fall back to title + description
+  const analysisText = enrichment ? `${baseText} ${enrichment.fullText}` : baseText;
+
+  const topics = detectTopics(analysisText);
+  const sentiment = detectSentiment(analysisText);
+  const { isSignal, score } = detectSignal(analysisText);
   const region = detectRegion(article);
-  const politicalLeaning = detectPoliticalLeaning(article);
+
+  // Enhanced political leaning: content-based when enriched, source-based otherwise
+  const sourceLeaning = detectPoliticalLeaning(article);
+  const politicalLeaning = enrichment
+    ? classifyPoliticalLeaning(enrichment.fullText, sourceLeaning)
+    : sourceLeaning;
 
   return {
     articleId: article.id,
@@ -176,6 +264,7 @@ export function analyzeArticle(article: FetchedArticle): ArticleAnalysis {
     signalScore: score,
     region,
     politicalLeaning,
+    isEnriched: !!enrichment,
   };
 }
 

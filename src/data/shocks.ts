@@ -111,8 +111,8 @@ export const shocks: ShockEvent[] = [
     timeWindow: { he: 'שבועות-חודשים', en: 'Weeks to months' },
     confidence: 'medium',
     whyNow: {
-      he: 'MBS מבין שחלון ההזדמנויות עם ממשל ביידן מצטמצם ומוכן להתפשר.',
-      en: 'MBS understands the window of opportunity with the Biden administration is narrowing and is willing to compromise.',
+      he: 'MBS מבין שממשל טראמפ מעדיף עסקאות דו-צדדיות ומוכן להתפשר כדי להבטיח הסכם ביטחוני.',
+      en: 'MBS understands the Trump administration favors bilateral deals and is willing to compromise to secure a security pact.',
     },
     whoDriving: {
       he: 'הנסיך מוחמד בן סלמאן ויועציו, בתיווך אמריקאי אינטנסיבי.',

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { analyzeArticles, extractTrendingTopics, extractTopicsByLeaning } from '@/services/ai-analyzer';
-import type { FetchedArticle } from '@/services/rss-fetcher';
+import { getEnrichmentStats } from '@/services/article-enrichment';
+import { getCachedArticles } from '@/services/article-cache';
 
 // Cache analysis results for 10 minutes
 let cache: { data: unknown; timestamp: number } | null = null;
@@ -13,11 +14,8 @@ export async function GET() {
   }
 
   try {
-    // Fetch latest articles
-    const res = await fetch('http://localhost:3000/api/rss/latest?limit=100', {
-      cache: 'no-store',
-    });
-    const { articles }: { articles: FetchedArticle[] } = await res.json();
+    // Get latest articles from shared cache
+    const articles = (await getCachedArticles()).slice(0, 100);
 
     if (!articles || articles.length === 0) {
       return NextResponse.json({
@@ -60,6 +58,10 @@ export async function GET() {
         (sentimentByLeaning[a.politicalLeaning][a.sentiment] || 0) + 1;
     }
 
+    // Enrichment stats
+    const enrichmentStats = getEnrichmentStats();
+    const enrichedCount = analyses.filter((a) => a.isEnriched).length;
+
     const result = {
       analyses,
       trending: trending.slice(0, 10),
@@ -73,6 +75,11 @@ export async function GET() {
         regionBreakdown,
         politicalBreakdown,
         sentimentByLeaning,
+        enrichment: {
+          enrichedArticles: enrichedCount,
+          totalInCache: enrichmentStats.totalEnriched,
+          maxCapacity: enrichmentStats.maxCapacity,
+        },
       },
       analyzedAt: new Date().toISOString(),
     };

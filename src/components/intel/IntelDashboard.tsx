@@ -30,6 +30,11 @@ interface AnalysisData {
     regionBreakdown: Record<string, number>;
     politicalBreakdown: Record<string, number>;
     sentimentByLeaning: Record<string, Record<string, number>>;
+    enrichment?: {
+      enrichedArticles: number;
+      totalInCache: number;
+      maxCapacity: number;
+    };
   };
   analyzedAt: string;
 }
@@ -123,6 +128,33 @@ export default function IntelDashboard() {
 
       {data && (
         <>
+          {/* n8n Enrichment Status */}
+          {data.stats.enrichment && (
+            <div className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border ${
+              data.stats.enrichment.enrichedArticles > 0
+                ? 'bg-emerald-500/10 border-emerald-500/20'
+                : 'bg-gray-800/50 border-gray-700/50'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${data.stats.enrichment.enrichedArticles > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-gray-600'}`} />
+              <span className="text-xs text-gray-300">
+                {lang === 'he' ? 'n8n העשרה: ' : 'n8n Enrichment: '}
+                <span className={data.stats.enrichment.enrichedArticles > 0 ? 'text-emerald-400 font-bold' : 'text-gray-500'}>
+                  {data.stats.enrichment.enrichedArticles}/{data.stats.total}
+                </span>
+                {' '}
+                {lang === 'he' ? 'כתבות מועשרות' : 'articles enriched'}
+                {data.stats.enrichment.enrichedArticles > 0 && (
+                  <span className="text-gray-500"> · {lang === 'he' ? 'סיווג פוליטי לפי תוכן' : 'content-based political classification'}</span>
+                )}
+              </span>
+              {data.stats.enrichment.enrichedArticles === 0 && (
+                <span className="text-[10px] text-gray-600 ms-auto">
+                  {lang === 'he' ? 'חבר n8n workflow להפעלה' : 'Connect n8n workflow to activate'}
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="p-4 rounded-xl bg-gray-900 border border-gray-800">
