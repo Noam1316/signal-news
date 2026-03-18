@@ -8,9 +8,20 @@ import ScrollToTop from '@/components/shared/ScrollToTop';
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === '/';
+  const isDashboard = pathname === '/dashboard';
 
   if (isLanding) {
     return <main>{children}</main>;
+  }
+
+  // Dashboard has its own SectionNav and ScrollToTop
+  if (isDashboard) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-16">{children}</main>
+      </>
+    );
   }
 
   return (

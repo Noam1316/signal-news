@@ -9,10 +9,11 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const tabs = [
+    { label: lang === 'he' ? '📋 דשבורד' : '📋 Dashboard', href: '/dashboard' },
     { label: ui('dailyBrief'), href: '/brief' },
     { label: ui('shockFeed'), href: '/shocks' },
     { label: ui('explore'), href: '/explore' },
-    { label: lang === 'he' ? 'מודיעין' : 'Intel', href: '/intel' },
+    { label: ui('intel'), href: '/intel' },
   ];
 
   return (

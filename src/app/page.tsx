@@ -58,22 +58,10 @@ export default function LandingPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link
-            href="/brief"
-            className="hidden sm:inline-flex px-3 py-1.5 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 transition-colors"
+            href="/dashboard"
+            className="hidden sm:inline-flex px-3 py-1.5 rounded-md text-sm font-medium text-yellow-400 hover:text-white hover:bg-gray-800/50 transition-colors"
           >
-            {ui('dailyBrief')}
-          </Link>
-          <Link
-            href="/shocks"
-            className="hidden sm:inline-flex px-3 py-1.5 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 transition-colors"
-          >
-            {ui('shockFeed')}
-          </Link>
-          <Link
-            href="/explore"
-            className="hidden sm:inline-flex px-3 py-1.5 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 transition-colors"
-          >
-            {ui('explore')}
+            {lang === 'he' ? 'דשבורד' : 'Dashboard'}
           </Link>
           <button
             onClick={toggleLang}
@@ -112,7 +100,7 @@ export default function LandingPage() {
 
           {/* CTA */}
           <Link
-            href="/brief"
+            href="/dashboard"
             className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-yellow-400 text-gray-950 font-bold text-lg
                        hover:bg-yellow-300 hover:scale-105 transition-all duration-200 shadow-lg shadow-yellow-400/20"
           >
