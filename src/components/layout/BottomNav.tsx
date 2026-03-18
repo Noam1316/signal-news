@@ -37,6 +37,17 @@ const tabs = [
       </svg>
     ),
   },
+  {
+    key: 'intel' as const,
+    href: '/intel',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <path d="M12 2a8 8 0 0 0-8 8c0 3.37 2.1 6.27 5 7.42V20h6v-2.58c2.9-1.15 5-4.05 5-7.42a8 8 0 0 0-8-8z" />
+        <path d="M10 22h4M12 18v-4" />
+      </svg>
+    ),
+  },
 ];
 
 export default function BottomNav() {

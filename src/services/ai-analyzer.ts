@@ -1,0 +1,160 @@
+/**
+ * AI Article Analyzer
+ * Analyzes RSS articles for: topics, sentiment, signal/noise classification
+ * Uses Claude API when ANTHROPIC_API_KEY is set, otherwise falls back to keyword-based analysis
+ */
+
+import { FetchedArticle } from './rss-fetcher';
+
+export interface ArticleAnalysis {
+  articleId: string;
+  topics: string[];
+  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
+  isSignal: boolean;
+  signalScore: number; // 0-100
+  region: 'israel' | 'middle-east' | 'global';
+  summary?: string;
+}
+
+export interface TrendingTopic {
+  topic: string;
+  count: number;
+  sources: string[];
+  lenses: string[];
+  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
+}
+
+// ── Keyword-based analysis (no API needed) ──
+
+const TOPIC_KEYWORDS: Record<string, string[]> = {
+  'Iran Nuclear': ['iran', 'nuclear', 'iaea', 'uranium', 'enrichment', 'tehran', 'sanctions', 'jcpoa', 'איראן', 'גרעין'],
+  'Gaza Conflict': ['gaza', 'hamas', 'ceasefire', 'hostages', 'idf', 'humanitarian', 'עזה', 'חמאס', 'חטופים'],
+  'Lebanon/Hezbollah': ['lebanon', 'hezbollah', 'nasrallah', 'beirut', 'liban', 'לבנון', 'חיזבאללה'],
+  'Saudi Normalization': ['saudi', 'normalization', 'mbs', 'abraham accords', 'סעודיה', 'נורמליזציה'],
+  'US Politics': ['biden', 'trump', 'congress', 'white house', 'washington', 'senate', 'election'],
+  'West Bank': ['west bank', 'settlements', 'jenin', 'ramallah', 'palestinian authority', 'יהודה ושומרון', 'התנחלויות'],
+  'Syria': ['syria', 'assad', 'damascus', 'rebel', 'סוריה'],
+  'Economy': ['economy', 'inflation', 'gdp', 'market', 'stock', 'trade', 'כלכלה', 'אינפלציה'],
+  'Technology': ['tech', 'ai', 'artificial intelligence', 'cyber', 'startup', 'הייטק', 'סייבר'],
+  'Climate': ['climate', 'emissions', 'renewable', 'green', 'energy', 'אקלים'],
+  'Ukraine/Russia': ['ukraine', 'russia', 'putin', 'zelensky', 'nato', 'אוקראינה', 'רוסיה'],
+  'Judicial Reform': ['judicial', 'supreme court', 'democracy', 'protest', 'רפורמה', 'בג"צ', 'מחאה'],
+  'Security': ['security', 'terror', 'attack', 'missile', 'rocket', 'defense', 'ביטחון', 'טרור', 'טיל'],
+  'Diplomacy': ['diplomat', 'summit', 'agreement', 'treaty', 'ambassador', 'un', 'דיפלומטיה'],
+};
+
+const NEGATIVE_WORDS = [
+  'war', 'attack', 'kill', 'dead', 'death', 'bomb', 'strike', 'crisis', 'threat', 'terror',
+  'conflict', 'violence', 'casualties', 'destruction', 'collapse', 'danger', 'fear', 'warn',
+  'מלחמה', 'פיגוע', 'הרוג', 'מוות', 'משבר', 'איום', 'אזהרה',
+];
+
+const POSITIVE_WORDS = [
+  'peace', 'agreement', 'deal', 'progress', 'success', 'growth', 'hope', 'breakthrough',
+  'cooperation', 'ceasefire', 'release', 'rescue', 'reform', 'recovery',
+  'שלום', 'הסכם', 'התקדמות', 'הצלחה', 'פריצת דרך', 'שיתוף פעולה',
+];
+
+const SIGNAL_INDICATORS = [
+  'breaking', 'exclusive', 'first time', 'unprecedented', 'major', 'significant',
+  'dramatic', 'shift', 'reversal', 'surprise', 'shock', 'milestone',
+  'בלעדי', 'חדשות', 'דרמטי', 'מפנה', 'תפנית', 'פריצת דרך',
+];
+
+function detectTopics(text: string): string[] {
+  const lower = text.toLowerCase();
+  const found: string[] = [];
+  for (const [topic, keywords] of Object.entries(TOPIC_KEYWORDS)) {
+    if (keywords.some((kw) => lower.includes(kw))) {
+      found.push(topic);
+    }
+  }
+  return found.length > 0 ? found : ['General'];
+}
+
+function detectSentiment(text: string): 'positive' | 'negative' | 'neutral' | 'mixed' {
+  const lower = text.toLowerCase();
+  const negCount = NEGATIVE_WORDS.filter((w) => lower.includes(w)).length;
+  const posCount = POSITIVE_WORDS.filter((w) => lower.includes(w)).length;
+
+  if (negCount > 0 && posCount > 0) return 'mixed';
+  if (negCount > posCount) return 'negative';
+  if (posCount > negCount) return 'positive';
+  return 'neutral';
+}
+
+function detectSignal(text: string): { isSignal: boolean; score: number } {
+  const lower = text.toLowerCase();
+  const signalHits = SIGNAL_INDICATORS.filter((w) => lower.includes(w)).length;
+  const score = Math.min(100, 30 + signalHits * 20);
+  return { isSignal: signalHits >= 1, score };
+}
+
+function detectRegion(article: FetchedArticle): 'israel' | 'middle-east' | 'global' {
+  if (article.lensCategory.startsWith('il-')) return 'israel';
+  const text = `${article.title} ${article.description}`.toLowerCase();
+  const meMentions = ['israel', 'iran', 'gaza', 'lebanon', 'syria', 'saudi', 'egypt', 'jordan', 'iraq']
+    .filter((w) => text.includes(w)).length;
+  return meMentions > 0 ? 'middle-east' : 'global';
+}
+
+export function analyzeArticle(article: FetchedArticle): ArticleAnalysis {
+  const text = `${article.title} ${article.description}`;
+  const topics = detectTopics(text);
+  const sentiment = detectSentiment(text);
+  const { isSignal, score } = detectSignal(text);
+  const region = detectRegion(article);
+
+  return {
+    articleId: article.id,
+    topics,
+    sentiment,
+    isSignal,
+    signalScore: score,
+    region,
+  };
+}
+
+export function analyzeArticles(articles: FetchedArticle[]): ArticleAnalysis[] {
+  return articles.map(analyzeArticle);
+}
+
+export function extractTrendingTopics(
+  articles: FetchedArticle[],
+  analyses: ArticleAnalysis[]
+): TrendingTopic[] {
+  const topicMap = new Map<string, { count: number; sources: Set<string>; lenses: Set<string>; sentiments: string[] }>();
+
+  for (let i = 0; i < articles.length; i++) {
+    const article = articles[i];
+    const analysis = analyses[i];
+
+    for (const topic of analysis.topics) {
+      if (!topicMap.has(topic)) {
+        topicMap.set(topic, { count: 0, sources: new Set(), lenses: new Set(), sentiments: [] });
+      }
+      const entry = topicMap.get(topic)!;
+      entry.count++;
+      entry.sources.add(article.sourceName);
+      entry.lenses.add(article.lensCategory);
+      entry.sentiments.push(analysis.sentiment);
+    }
+  }
+
+  return Array.from(topicMap.entries())
+    .map(([topic, data]) => ({
+      topic,
+      count: data.count,
+      sources: Array.from(data.sources),
+      lenses: Array.from(data.lenses),
+      sentiment: getMajoritySentiment(data.sentiments),
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+function getMajoritySentiment(sentiments: string[]): 'positive' | 'negative' | 'neutral' | 'mixed' {
+  const counts: Record<string, number> = {};
+  for (const s of sentiments) counts[s] = (counts[s] || 0) + 1;
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  return (sorted[0]?.[0] as 'positive' | 'negative' | 'neutral' | 'mixed') || 'neutral';
+}

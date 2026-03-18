@@ -58,6 +58,7 @@ type TranslationKey =
   | 'emailThanks'
   | 'footerBuiltWith'
   | 'explore'
+  | 'intel'
   | 'github';
 
 export const translations: Record<TranslationKey, LocalizedText> = {
@@ -177,6 +178,10 @@ export const translations: Record<TranslationKey, LocalizedText> = {
   explore: {
     en: 'Explore',
     he: 'גלה',
+  },
+  intel: {
+    en: 'Intel',
+    he: 'מודיעין',
   },
   github: {
     en: 'GitHub',

@@ -3,6 +3,7 @@ import { Inter, Heebo } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/i18n/context";
 import LayoutShell from "@/components/layout/LayoutShell";
+import ServiceWorkerRegistrar from "@/components/shared/ServiceWorkerRegistrar";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -19,8 +20,15 @@ const heebo = Heebo({
 export const metadata: Metadata = {
   title: "Signal News — Know what's likely next",
   description: "A real-time news intelligence layer that turns chaos into clarity: likelihood scores, narrative analysis, and lens differences — with sources and confidence.",
+  manifest: '/manifest.json',
   icons: {
     icon: '/favicon.svg',
+    apple: '/icon-192.svg',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Signal News',
   },
   openGraph: {
     title: "Signal News",
@@ -45,6 +53,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${heebo.variable} antialiased`}>
         <LanguageProvider>
           <LayoutShell>{children}</LayoutShell>
+          <ServiceWorkerRegistrar />
         </LanguageProvider>
       </body>
     </html>

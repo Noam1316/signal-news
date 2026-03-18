@@ -12,6 +12,7 @@ export default function Navbar() {
     { label: ui('dailyBrief'), href: '/brief' },
     { label: ui('shockFeed'), href: '/shocks' },
     { label: ui('explore'), href: '/explore' },
+    { label: lang === 'he' ? 'מודיעין' : 'Intel', href: '/intel' },
   ];
 
   return (
