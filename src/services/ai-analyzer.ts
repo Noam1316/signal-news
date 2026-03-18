@@ -6,6 +6,8 @@
 
 import { FetchedArticle } from './rss-fetcher';
 
+export type PoliticalLeaning = 'left' | 'center-left' | 'center' | 'center-right' | 'right' | 'unknown';
+
 export interface ArticleAnalysis {
   articleId: string;
   topics: string[];
@@ -13,8 +15,57 @@ export interface ArticleAnalysis {
   isSignal: boolean;
   signalScore: number; // 0-100
   region: 'israel' | 'middle-east' | 'global';
+  politicalLeaning: PoliticalLeaning;
   summary?: string;
 }
+
+// ── Source → Political Leaning Mapping ──
+// Based on well-known editorial positions of each outlet
+const SOURCE_POLITICAL_MAP: Record<string, PoliticalLeaning> = {
+  // Israeli – Left / Center-Left
+  'haaretz': 'left',
+  'haaretz-en': 'left',
+
+  // Israeli – Center / Mainstream
+  'ynet': 'center',
+  'ynet-en': 'center',
+  'mako': 'center',
+  'kan': 'center',
+  'walla': 'center',
+  'calcalist': 'center',
+  'globes': 'center',
+  'timesofisrael': 'center',
+  'i24news': 'center',
+  'jpost': 'center-right',
+
+  // Israeli – Right
+  'israelhayom': 'right',
+  'inn': 'right',
+  'channel14': 'right',
+
+  // International – Left / Center-Left
+  'guardian-world': 'center-left',
+  'nyt-world': 'center-left',
+  'nyt-mideast': 'center-left',
+  'bbc-world': 'center',
+  'bbc-mideast': 'center',
+  'france24': 'center',
+  'dw': 'center',
+  'sky-world': 'center-right',
+  'reuters-world': 'center',
+  'reuters-mideast': 'center',
+  'cnn-world': 'center-left',
+  'cnn-mideast': 'center-left',
+  'economist': 'center-right',
+  'foreignpolicy': 'center',
+
+  // International – ME Regional
+  'aljazeera': 'left',
+  'almonitor': 'center',
+  'middleeasteye': 'center-left',
+  'thenational': 'center-right',
+  'arabnews': 'center-right',
+};
 
 export interface TrendingTopic {
   topic: string;
@@ -22,6 +73,13 @@ export interface TrendingTopic {
   sources: string[];
   lenses: string[];
   sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
+  leaningBreakdown: Record<PoliticalLeaning, number>;
+}
+
+export interface TopicByLeaning {
+  topic: string;
+  leanings: Record<PoliticalLeaning, { count: number; sentiment: 'positive' | 'negative' | 'neutral' | 'mixed' }>;
+  totalCount: number;
 }
 
 // ── Keyword-based analysis (no API needed) ──
@@ -98,12 +156,17 @@ function detectRegion(article: FetchedArticle): 'israel' | 'middle-east' | 'glob
   return meMentions > 0 ? 'middle-east' : 'global';
 }
 
+function detectPoliticalLeaning(article: FetchedArticle): PoliticalLeaning {
+  return SOURCE_POLITICAL_MAP[article.sourceId] || 'unknown';
+}
+
 export function analyzeArticle(article: FetchedArticle): ArticleAnalysis {
   const text = `${article.title} ${article.description}`;
   const topics = detectTopics(text);
   const sentiment = detectSentiment(text);
   const { isSignal, score } = detectSignal(text);
   const region = detectRegion(article);
+  const politicalLeaning = detectPoliticalLeaning(article);
 
   return {
     articleId: article.id,
@@ -112,6 +175,7 @@ export function analyzeArticle(article: FetchedArticle): ArticleAnalysis {
     isSignal,
     signalScore: score,
     region,
+    politicalLeaning,
   };
 }
 
@@ -123,7 +187,13 @@ export function extractTrendingTopics(
   articles: FetchedArticle[],
   analyses: ArticleAnalysis[]
 ): TrendingTopic[] {
-  const topicMap = new Map<string, { count: number; sources: Set<string>; lenses: Set<string>; sentiments: string[] }>();
+  const topicMap = new Map<string, {
+    count: number;
+    sources: Set<string>;
+    lenses: Set<string>;
+    sentiments: string[];
+    leaningBreakdown: Record<PoliticalLeaning, number>;
+  }>();
 
   for (let i = 0; i < articles.length; i++) {
     const article = articles[i];
@@ -131,13 +201,20 @@ export function extractTrendingTopics(
 
     for (const topic of analysis.topics) {
       if (!topicMap.has(topic)) {
-        topicMap.set(topic, { count: 0, sources: new Set(), lenses: new Set(), sentiments: [] });
+        topicMap.set(topic, {
+          count: 0,
+          sources: new Set(),
+          lenses: new Set(),
+          sentiments: [],
+          leaningBreakdown: { left: 0, 'center-left': 0, center: 0, 'center-right': 0, right: 0, unknown: 0 },
+        });
       }
       const entry = topicMap.get(topic)!;
       entry.count++;
       entry.sources.add(article.sourceName);
       entry.lenses.add(article.lensCategory);
       entry.sentiments.push(analysis.sentiment);
+      entry.leaningBreakdown[analysis.politicalLeaning]++;
     }
   }
 
@@ -148,8 +225,53 @@ export function extractTrendingTopics(
       sources: Array.from(data.sources),
       lenses: Array.from(data.lenses),
       sentiment: getMajoritySentiment(data.sentiments),
+      leaningBreakdown: data.leaningBreakdown,
     }))
     .sort((a, b) => b.count - a.count);
+}
+
+export function extractTopicsByLeaning(
+  articles: FetchedArticle[],
+  analyses: ArticleAnalysis[]
+): TopicByLeaning[] {
+  const map = new Map<string, Record<PoliticalLeaning, { count: number; sentiments: string[] }>>();
+
+  for (let i = 0; i < articles.length; i++) {
+    const analysis = analyses[i];
+
+    for (const topic of analysis.topics) {
+      if (!map.has(topic)) {
+        const init: Record<PoliticalLeaning, { count: number; sentiments: string[] }> = {
+          left: { count: 0, sentiments: [] },
+          'center-left': { count: 0, sentiments: [] },
+          center: { count: 0, sentiments: [] },
+          'center-right': { count: 0, sentiments: [] },
+          right: { count: 0, sentiments: [] },
+          unknown: { count: 0, sentiments: [] },
+        };
+        map.set(topic, init);
+      }
+      const entry = map.get(topic)!;
+      entry[analysis.politicalLeaning].count++;
+      entry[analysis.politicalLeaning].sentiments.push(analysis.sentiment);
+    }
+  }
+
+  return Array.from(map.entries())
+    .map(([topic, leanings]) => {
+      const processed: Record<PoliticalLeaning, { count: number; sentiment: 'positive' | 'negative' | 'neutral' | 'mixed' }> = {} as never;
+      let totalCount = 0;
+      for (const [leaning, data] of Object.entries(leanings)) {
+        processed[leaning as PoliticalLeaning] = {
+          count: data.count,
+          sentiment: getMajoritySentiment(data.sentiments),
+        };
+        totalCount += data.count;
+      }
+      return { topic, leanings: processed, totalCount };
+    })
+    .filter((t) => t.totalCount >= 2)
+    .sort((a, b) => b.totalCount - a.totalCount);
 }
 
 function getMajoritySentiment(sentiments: string[]): 'positive' | 'negative' | 'neutral' | 'mixed' {
