@@ -8,6 +8,7 @@ import ShockFeed from '@/components/shocks/ShockFeed';
 import LiveWire from '@/components/explore/LiveWire';
 import GeoMap from '@/components/map/GeoMap';
 import IntelDashboard from '@/components/intel/IntelDashboard';
+import EntityGraph from '@/components/entities/EntityGraph';
 import ScrollToTop from '@/components/shared/ScrollToTop';
 
 export default function DashboardPage() {
@@ -47,6 +48,13 @@ export default function DashboardPage() {
         {/* ── Map Section ── */}
         <section id="map" className="scroll-mt-28">
           <GeoMap />
+        </section>
+
+        <div className="border-t border-gray-800/50" />
+
+        {/* ── Entities Section ── */}
+        <section id="entities" className="scroll-mt-28">
+          <EntityGraph />
         </section>
 
         <div className="border-t border-gray-800/50" />

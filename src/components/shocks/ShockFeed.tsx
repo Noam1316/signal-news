@@ -1,17 +1,41 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useLanguage } from '@/i18n/context';
-import { shocks } from '@/data/shocks';
+import type { ShockEvent } from '@/lib/types';
 import ShockCard from '@/components/shocks/ShockCard';
 
 export default function ShockFeed() {
-  const { ui, dir } = useLanguage();
+  const { ui, dir, lang } = useLanguage();
+  const [shocks, setShocks] = useState<ShockEvent[]>([]);
+  const [source, setSource] = useState<'live' | 'cache' | 'static-fallback' | 'loading'>('loading');
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    async function fetchShocks() {
+      try {
+        const res = await fetch('/api/shocks');
+        if (!res.ok) throw new Error('Failed to fetch shocks');
+        const data = await res.json();
+        setShocks(data.shocks || []);
+        setSource(data.source || 'live');
+      } catch {
+        // Fallback: import static shocks
+        const { shocks: staticShocks } = await import('@/data/shocks');
+        setShocks(staticShocks);
+        setSource('static-fallback');
+        setError(true);
+      }
+    }
+    fetchShocks();
+  }, []);
 
   const sorted = [...shocks].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 
   const highConfidenceCount = shocks.filter((s) => s.confidence === 'high').length;
+  const isLive = source === 'live' || source === 'cache';
 
   return (
     <section dir={dir} className="space-y-6">
@@ -28,19 +52,59 @@ export default function ShockFeed() {
               </span>
             )}
           </div>
+          {/* Live indicator */}
+          {source !== 'loading' && (
+            <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${
+              isLive ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-400'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`} />
+              {isLive
+                ? (lang === 'he' ? 'זיהוי חי' : 'Live Detection')
+                : (lang === 'he' ? 'נתוני דמו' : 'Demo Data')}
+            </span>
+          )}
         </div>
         <p className="text-sm text-gray-400">
           {dir === 'rtl'
-            ? 'שינויים פתאומיים בסבירות, נרטיב או פיצול תקשורתי'
-            : 'Sudden shifts in likelihood, narrative, or media fragmentation'}
+            ? 'שינויים פתאומיים בסבירות, נרטיב או פיצול תקשורתי — מזוהים אוטומטית מ-RSS'
+            : 'Sudden shifts in likelihood, narrative, or media fragmentation — auto-detected from RSS'}
         </p>
       </header>
 
-      <div className="flex flex-col gap-4">
-        {sorted.map((shock) => (
-          <ShockCard key={shock.id} shock={shock} />
-        ))}
-      </div>
+      {/* Loading state */}
+      {source === 'loading' && (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl bg-gray-900/80 border border-gray-800 p-5 animate-pulse">
+              <div className="h-4 bg-gray-800 rounded w-1/4 mb-3" />
+              <div className="h-5 bg-gray-800 rounded w-3/4 mb-2" />
+              <div className="h-4 bg-gray-800 rounded w-full mb-2" />
+              <div className="h-3 bg-gray-800 rounded w-1/2" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Shock cards */}
+      {source !== 'loading' && (
+        <div className="flex flex-col gap-4">
+          {sorted.map((shock) => (
+            <ShockCard key={shock.id} shock={shock} />
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {source !== 'loading' && shocks.length === 0 && (
+        <div className="text-center py-12 text-gray-500">
+          <p className="text-lg">
+            {lang === 'he' ? 'לא זוהו זעזועים כרגע' : 'No shocks detected right now'}
+          </p>
+          <p className="text-sm mt-1">
+            {lang === 'he' ? 'המערכת מנטרת כל הזמן' : 'The system is continuously monitoring'}
+          </p>
+        </div>
+      )}
     </section>
   );
 }

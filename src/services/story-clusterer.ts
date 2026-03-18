@@ -124,30 +124,72 @@ function buildSummary(cluster: Cluster): { he: string; en: string } {
 }
 
 /**
- * Calculate likelihood score for a cluster
- * Based on: number of sources, signal ratio, recency
+ * Calculate likelihood score for a cluster.
+ * Enhanced with cross-source verification and confidence scoring.
+ *
+ * Factors:
+ * 1. Cross-source verification (30%): more independent sources = higher likelihood
+ * 2. Signal strength (25%): proportion and score of signal articles
+ * 3. Cross-lens coverage (20%): Israeli + international = broad significance
+ * 4. Recency (15%): fresher articles boost likelihood
+ * 5. Sentiment consensus (10%): agreement across sources = higher confidence
  */
-function calculateLikelihood(cluster: Cluster): { likelihood: number; delta: number } {
+function calculateLikelihood(cluster: Cluster): { likelihood: number; delta: number; confidence: number } {
+  const totalArticles = cluster.articles.length;
   const signalCount = cluster.articles.filter((a) => a.analysis.isSignal).length;
-  const avgSignalScore = cluster.articles.reduce((sum, a) => sum + a.analysis.signalScore, 0) / cluster.articles.length;
+  const avgSignalScore = cluster.articles.reduce((sum, a) => sum + a.analysis.signalScore, 0) / totalArticles;
   const uniqueSources = new Set(cluster.articles.map((a) => a.article.sourceId)).size;
   const uniqueLenses = new Set(cluster.articles.map((a) => a.article.lensCategory)).size;
 
-  // Multi-source coverage boosts likelihood
-  const sourceBonus = Math.min(uniqueSources * 5, 25);
-  // Cross-lens coverage indicates broad significance
-  const lensBonus = uniqueLenses >= 3 ? 15 : uniqueLenses >= 2 ? 8 : 0;
-  // Signal ratio
-  const signalBonus = (signalCount / cluster.articles.length) * 20;
+  // 1. Cross-source verification (0-30 points)
+  // 1 source = 5pts, 2 = 10, 3 = 15, 5+ = 25, 8+ = 30
+  const crossSourceScore = Math.min(30, uniqueSources <= 1 ? 5 : uniqueSources * 5);
 
-  const likelihood = Math.min(95, Math.max(20, Math.round(avgSignalScore + sourceBonus + lensBonus + signalBonus)));
+  // 2. Signal strength (0-25 points)
+  const signalRatio = signalCount / totalArticles;
+  const signalScore = Math.round(signalRatio * 15 + (avgSignalScore / 100) * 10);
 
-  // Delta: simulate change based on signal strength
-  const delta = signalCount >= 3 ? Math.round(Math.random() * 8 + 4) :
-                signalCount >= 1 ? Math.round(Math.random() * 6 + 1) :
-                Math.round(Math.random() * 4 - 2);
+  // 3. Cross-lens coverage (0-20 points)
+  const lensScore = uniqueLenses >= 3 ? 20 : uniqueLenses >= 2 ? 12 : 4;
 
-  return { likelihood, delta };
+  // 4. Recency score (0-15 points)
+  const now = Date.now();
+  const newestArticle = cluster.articles
+    .map((a) => a.article.pubDate ? new Date(a.article.pubDate).getTime() : 0)
+    .reduce((max, t) => Math.max(max, t), 0);
+  const ageHours = (now - newestArticle) / (1000 * 60 * 60);
+  const recencyScore = ageHours < 1 ? 15 : ageHours < 3 ? 12 : ageHours < 6 ? 9 : ageHours < 12 ? 6 : 3;
+
+  // 5. Sentiment consensus (0-10 points)
+  const sentimentCounts: Record<string, number> = {};
+  for (const a of cluster.articles) {
+    sentimentCounts[a.analysis.sentiment] = (sentimentCounts[a.analysis.sentiment] || 0) + 1;
+  }
+  const dominantSentimentRatio = Math.max(...Object.values(sentimentCounts)) / totalArticles;
+  const consensusScore = Math.round(dominantSentimentRatio * 10);
+
+  // Total likelihood (clamped 15-95)
+  const rawLikelihood = crossSourceScore + signalScore + lensScore + recencyScore + consensusScore;
+  const likelihood = Math.min(95, Math.max(15, rawLikelihood));
+
+  // Confidence (0-100): how reliable is this likelihood estimate?
+  // Based on: sample size, source diversity, signal clarity
+  const sampleSizeConf = Math.min(30, totalArticles * 6); // 5 articles = 30
+  const diversityConf = Math.min(30, uniqueSources * 6);  // 5 sources = 30
+  const clarityConf = Math.min(20, Math.round(signalRatio * 20)); // high signal ratio = clear
+  const lensConf = Math.min(20, uniqueLenses * 7);        // 3 lenses = 20
+  const confidence = Math.min(95, sampleSizeConf + diversityConf + clarityConf + lensConf);
+
+  // Delta: deterministic based on content, not random
+  // Use signal strength and recency as factors
+  const baseDelta = signalCount >= 3 ? 8 : signalCount >= 1 ? 4 : 1;
+  const recencyMult = ageHours < 3 ? 1.5 : ageHours < 6 ? 1.2 : 1.0;
+  // Hash-based pseudo-random offset so delta stays stable per topic
+  const topicHash = cluster.topic.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const offset = (topicHash % 5) - 2; // -2 to +2
+  const delta = Math.round(baseDelta * recencyMult + offset);
+
+  return { likelihood, delta, confidence };
 }
 
 /**
@@ -169,7 +211,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
   return clusters.slice(0, maxStories).map((cluster) => {
     const headline = pickHeadline(cluster);
     const summary = buildSummary(cluster);
-    const { likelihood, delta } = calculateLikelihood(cluster);
+    const { likelihood, delta, confidence } = calculateLikelihood(cluster);
     const lens = determineLens(cluster);
     const isSignal = cluster.articles.some((a) => a.analysis.isSignal);
     const category = TOPIC_CATEGORIES[cluster.topic] || { he: 'כללי', en: 'General' };
@@ -192,10 +234,12 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
 
     const likelihoodLabel: Confidence = likelihood >= 70 ? 'high' : likelihood >= 40 ? 'medium' : 'low';
 
-    // Build "why" explanation
+    // Build "why" explanation with confidence
+    const confLabel = confidence >= 70 ? 'high' : confidence >= 40 ? 'medium' : 'low';
+    const confLabelHe = confidence >= 70 ? 'גבוה' : confidence >= 40 ? 'בינוני' : 'נמוך';
     const why = {
-      he: `${cluster.articles.length} כתבות מ-${sourcesMap.size} מקורות שונים מכסות את הנושא. ${isSignal ? 'זוהה כסיגנל חדשותי משמעותי.' : ''}`,
-      en: `${cluster.articles.length} articles from ${sourcesMap.size} different sources cover this topic. ${isSignal ? 'Identified as a significant news signal.' : ''}`,
+      he: `${cluster.articles.length} כתבות מ-${sourcesMap.size} מקורות שונים. רמת ביטחון: ${confLabelHe} (${confidence}%). ${isSignal ? 'זוהה כסיגנל חדשותי משמעותי.' : ''}`,
+      en: `${cluster.articles.length} articles from ${sourcesMap.size} sources. Confidence: ${confLabel} (${confidence}%). ${isSignal ? 'Identified as a significant news signal.' : ''}`,
     };
 
     return {
