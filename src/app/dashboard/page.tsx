@@ -8,10 +8,14 @@ import ShockFeed from '@/components/shocks/ShockFeed';
 import MapEntities from '@/components/map/MapEntities';
 import IntelHub from '@/components/intel/IntelHub';
 import EngagementDashboard from '@/components/analytics/EngagementDashboard';
+import FeaturesHub from '@/components/features/FeaturesHub';
+import ThemeToggle from '@/components/features/ThemeToggle';
+import { KeyboardShortcutsModal, useKeyboardShortcuts } from '@/components/features/KeyboardShortcuts';
 import ScrollToTop from '@/components/shared/ScrollToTop';
 
 export default function DashboardPage() {
   const { dir } = useLanguage();
+  const { showHelp, setShowHelp } = useKeyboardShortcuts();
 
   return (
     <div dir={dir} className="min-h-screen">
@@ -55,9 +59,18 @@ export default function DashboardPage() {
         <section id="analytics" className="scroll-mt-28">
           <EngagementDashboard />
         </section>
+
+        <div className="border-t border-gray-800/50" />
+
+        {/* ── Features Section ── */}
+        <section id="features" className="scroll-mt-28">
+          <FeaturesHub />
+        </section>
       </div>
 
+      <ThemeToggle />
       <ScrollToTop />
+      <KeyboardShortcutsModal open={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );
 }

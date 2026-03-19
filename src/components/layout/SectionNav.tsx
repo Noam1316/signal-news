@@ -9,6 +9,7 @@ const SECTIONS = [
   { id: 'map',    icon: '🌍', en: 'Map & Entities', he: 'מפה וישויות' },
   { id: 'intel',  icon: '🧠', en: 'Intel Hub', he: 'מרכז מודיעין' },
   { id: 'analytics', icon: '📊', en: 'Engagement', he: 'מעורבות' },
+  { id: 'features', icon: '✨', en: 'Features', he: 'פיצ\'רים' },
 ];
 
 export default function SectionNav() {

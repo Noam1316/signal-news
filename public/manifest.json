@@ -1,11 +1,11 @@
 {
-  "name": "Signal News",
+  "name": "Signal News Intelligence",
   "short_name": "Signal",
-  "description": "Know what's likely next — without the noise.",
-  "start_url": "/brief",
+  "description": "Know what's likely next — AI-powered news intelligence with prediction markets",
+  "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#0a0f1a",
-  "theme_color": "#0a0f1a",
+  "background_color": "#030712",
+  "theme_color": "#facc15",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -27,7 +27,9 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["news", "education"],
+  "categories": ["news", "intelligence", "analysis"],
   "lang": "en",
-  "dir": "auto"
+  "dir": "auto",
+  "scope": "/",
+  "prefer_related_applications": false
 }

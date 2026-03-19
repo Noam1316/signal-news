@@ -1,8 +1,6 @@
-const CACHE_NAME = 'signal-news-v1';
+const CACHE_NAME = 'signal-news-v2';
 const STATIC_ASSETS = [
-  '/brief',
-  '/shocks',
-  '/explore',
+  '/dashboard',
   '/favicon.svg',
   '/manifest.json',
 ];
@@ -39,7 +37,6 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Clone and cache successful responses
         if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
@@ -47,5 +44,35 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => caches.match(event.request))
+  );
+});
+
+// Push notifications
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : { title: 'Signal News', body: 'New intelligence update' };
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/favicon.svg',
+      badge: '/favicon.svg',
+      tag: 'signal-news-alert',
+      data: { url: data.url || '/dashboard' },
+    })
+  );
+});
+
+// Notification click → open dashboard
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/dashboard';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes('/dashboard') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    })
   );
 });
