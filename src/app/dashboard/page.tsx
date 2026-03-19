@@ -5,10 +5,8 @@ import SectionNav from '@/components/layout/SectionNav';
 import BriefList from '@/components/brief/BriefList';
 import DateHeader from '@/components/brief/DateHeader';
 import ShockFeed from '@/components/shocks/ShockFeed';
-import LiveWire from '@/components/explore/LiveWire';
-import GeoMap from '@/components/map/GeoMap';
-import IntelDashboard from '@/components/intel/IntelDashboard';
-import EntityGraph from '@/components/entities/EntityGraph';
+import MapEntities from '@/components/map/MapEntities';
+import IntelHub from '@/components/intel/IntelHub';
 import ScrollToTop from '@/components/shared/ScrollToTop';
 
 export default function DashboardPage() {
@@ -38,30 +36,16 @@ export default function DashboardPage() {
 
         <div className="border-t border-gray-800/50" />
 
-        {/* ── Explore Section ── */}
-        <section id="explore" className="scroll-mt-28">
-          <LiveWire />
-        </section>
-
-        <div className="border-t border-gray-800/50" />
-
-        {/* ── Map Section ── */}
+        {/* ── Map & Entities Section ── */}
         <section id="map" className="scroll-mt-28">
-          <GeoMap />
+          <MapEntities />
         </section>
 
         <div className="border-t border-gray-800/50" />
 
-        {/* ── Entities Section ── */}
-        <section id="entities" className="scroll-mt-28">
-          <EntityGraph />
-        </section>
-
-        <div className="border-t border-gray-800/50" />
-
-        {/* ── Intel Section ── */}
+        {/* ── Intel Hub Section ── */}
         <section id="intel" className="scroll-mt-28">
-          <IntelDashboard />
+          <IntelHub />
         </section>
       </div>
 

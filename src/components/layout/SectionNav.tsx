@@ -4,12 +4,10 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '@/i18n/context';
 
 const SECTIONS = [
-  { id: 'brief',   icon: '📋', en: 'Brief',   he: 'תקציר' },
-  { id: 'shocks',  icon: '⚡', en: 'Shocks',  he: 'זעזועים' },
-  { id: 'explore', icon: '🌐', en: 'Explore', he: 'גלה' },
-  { id: 'map',      icon: '🗺️', en: 'Map',      he: 'מפה' },
-  { id: 'entities', icon: '🕸️', en: 'Entities', he: 'ישויות' },
-  { id: 'intel',    icon: '🧠', en: 'Intel',    he: 'מודיעין' },
+  { id: 'brief',  icon: '📋', en: 'Brief',    he: 'תקציר' },
+  { id: 'shocks', icon: '⚡', en: 'Shocks',   he: 'זעזועים' },
+  { id: 'map',    icon: '🌍', en: 'Map & Entities', he: 'מפה וישויות' },
+  { id: 'intel',  icon: '🧠', en: 'Intel Hub', he: 'מרכז מודיעין' },
 ];
 
 export default function SectionNav() {
