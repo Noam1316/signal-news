@@ -7,6 +7,7 @@ import DateHeader from '@/components/brief/DateHeader';
 import ShockFeed from '@/components/shocks/ShockFeed';
 import MapEntities from '@/components/map/MapEntities';
 import IntelHub from '@/components/intel/IntelHub';
+import CredibilityDashboard from '@/components/credibility/CredibilityDashboard';
 import EngagementDashboard from '@/components/analytics/EngagementDashboard';
 import FeaturesHub from '@/components/features/FeaturesHub';
 import ThemeToggle from '@/components/features/ThemeToggle';
@@ -51,6 +52,13 @@ export default function DashboardPage() {
         {/* ── Intel Hub Section ── */}
         <section id="intel" className="scroll-mt-28">
           <IntelHub />
+        </section>
+
+        <div className="border-t border-gray-800/50" />
+
+        {/* ── Credibility Engine Section ── */}
+        <section id="credibility" className="scroll-mt-28">
+          <CredibilityDashboard />
         </section>
 
         <div className="border-t border-gray-800/50" />

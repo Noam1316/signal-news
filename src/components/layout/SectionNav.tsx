@@ -8,6 +8,7 @@ const SECTIONS = [
   { id: 'shocks', icon: '⚡', en: 'Shocks',   he: 'זעזועים' },
   { id: 'map',    icon: '🌍', en: 'Map & Entities', he: 'מפה וישויות' },
   { id: 'intel',  icon: '🧠', en: 'Intel Hub', he: 'מרכז מודיעין' },
+  { id: 'credibility', icon: '🛡️', en: 'Credibility', he: 'אמינות' },
   { id: 'analytics', icon: '📊', en: 'Engagement', he: 'מעורבות' },
   { id: 'features', icon: '✨', en: 'Features', he: 'פיצ\'רים' },
 ];
