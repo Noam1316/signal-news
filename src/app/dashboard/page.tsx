@@ -7,6 +7,7 @@ import DateHeader from '@/components/brief/DateHeader';
 import ShockFeed from '@/components/shocks/ShockFeed';
 import MapEntities from '@/components/map/MapEntities';
 import IntelHub from '@/components/intel/IntelHub';
+import EngagementDashboard from '@/components/analytics/EngagementDashboard';
 import ScrollToTop from '@/components/shared/ScrollToTop';
 
 export default function DashboardPage() {
@@ -46,6 +47,13 @@ export default function DashboardPage() {
         {/* ── Intel Hub Section ── */}
         <section id="intel" className="scroll-mt-28">
           <IntelHub />
+        </section>
+
+        <div className="border-t border-gray-800/50" />
+
+        {/* ── Engagement Analytics Section ── */}
+        <section id="analytics" className="scroll-mt-28">
+          <EngagementDashboard />
         </section>
       </div>
 
