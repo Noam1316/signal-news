@@ -123,7 +123,7 @@ export default function IntelDashboard() {
       {data && (
         <>
           {/* Compact stats row */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { label: { he: 'כתבות', en: 'Articles' }, value: data.stats.total, color: 'text-white' },
               { label: { he: 'סיגנל', en: 'Signal' }, value: data.stats.signals, color: 'text-yellow-400', sub: `${data.stats.signalRatio}%` },

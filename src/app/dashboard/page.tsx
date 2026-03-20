@@ -5,6 +5,8 @@ import { useLanguage } from '@/i18n/context';
 import SectionNav from '@/components/layout/SectionNav';
 import BriefList from '@/components/brief/BriefList';
 import DateHeader from '@/components/brief/DateHeader';
+import HeroBar from '@/components/brief/HeroBar';
+import TrackRecord from '@/components/brief/TrackRecord';
 import ScrollToTop from '@/components/shared/ScrollToTop';
 
 /* Lazy-load heavy sections — only ship JS when scrolled into view */
@@ -23,6 +25,7 @@ export default function DashboardPage() {
 
   return (
     <div dir={dir} className="min-h-screen">
+      <HeroBar />
       <SectionNav />
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-10">
@@ -30,6 +33,7 @@ export default function DashboardPage() {
         <section id="brief" className="scroll-mt-24">
           <DateHeader />
           <div className="mt-3"><BriefList /></div>
+          <div className="mt-4"><TrackRecord /></div>
         </section>
 
         {/* ── Shocks ── */}

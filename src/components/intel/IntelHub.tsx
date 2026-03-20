@@ -24,15 +24,10 @@ export default function IntelHub() {
     <div dir={dir} className="space-y-4">
       {/* Header */}
       <header>
-        <h2 className="text-2xl font-bold flex items-center gap-2">
+        <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
           <span className="text-yellow-400">🧠</span>
           {lang === 'he' ? 'מרכז מודיעין' : 'Intelligence Hub'}
         </h2>
-        <p className="text-sm text-gray-500 mt-1">
-          {lang === 'he'
-            ? 'ניתוח AI, שווקי תחזיות, הטיה תקשורתית ופיד חי'
-            : 'AI analysis, prediction markets, media bias & live feed'}
-        </p>
       </header>
 
       {/* Tab bar */}
@@ -57,7 +52,7 @@ export default function IntelHub() {
       </div>
 
       {/* Tab content */}
-      <div className="min-h-[400px]">
+      <div className="min-h-[300px]">
         {activeTab === 'overview' && <IntelDashboard />}
         {activeTab === 'polymarket' && <PolymarketComparison />}
         {activeTab === 'bias' && <MediaBiasPanel />}

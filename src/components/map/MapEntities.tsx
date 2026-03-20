@@ -19,19 +19,10 @@ export default function MapEntities() {
   return (
     <div dir={dir} className="space-y-4">
       {/* Header */}
-      <header className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <span className="text-yellow-400">🌍</span>
-            {lang === 'he' ? 'מפה וישויות' : 'Map & Entities'}
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {lang === 'he'
-              ? 'תפוצה גאוגרפית וגרף קשרים בין ישויות'
-              : 'Geographic distribution and entity relationship graph'}
-          </p>
-        </div>
-      </header>
+      <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+        <span className="text-yellow-400">🌍</span>
+        {lang === 'he' ? 'מפה וישויות' : 'Map & Entities'}
+      </h2>
 
       {/* Tab bar */}
       <div className="flex gap-1 bg-gray-900/80 rounded-xl p-1 border border-gray-800 max-w-xs">
