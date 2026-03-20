@@ -23,11 +23,17 @@ export interface SignalVsMarket {
   marketProbability: number;      // polymarket 0-100
   delta: number;                  // signal - market (positive = we think more likely)
   alphaDirection: 'signal-higher' | 'market-higher' | 'aligned';
+  alphaScore: number;             // 0-100 — how significant is the divergence
+  whyDifferent: string;           // auto-generated explanation for the delta
   polymarketTitle: string;
   polymarketSlug: string;
+  polymarketUrl: string;          // direct link to the market
   volume: number;
+  liquidity: number;
+  endDate: string;
   confidence: number;             // how confident the match is (0-100)
   matchedKeywords: string[];
+  sourceCount: number;            // how many RSS sources back our Signal
 }
 
 // Keywords to match our topics with Polymarket events
@@ -104,7 +110,7 @@ export async function fetchPolymarketEvents(): Promise<PolymarketEvent[]> {
  * Match our brief stories with Polymarket events
  */
 export function matchStoriesWithMarkets(
-  stories: Array<{ slug: string; headline: string; likelihood: number; category?: string }>,
+  stories: Array<{ slug: string; headline: string; likelihood: number; category?: string; sourceCount?: number }>,
   markets: PolymarketEvent[]
 ): SignalVsMarket[] {
   const matches: SignalVsMarket[] = [];
@@ -155,23 +161,86 @@ export function matchStoriesWithMarkets(
       const marketProb = Math.round(bestMatch.outcomePrices[0] * 100);
       const delta = story.likelihood - marketProb;
       const absDelta = Math.abs(delta);
+      const direction: SignalVsMarket['alphaDirection'] = absDelta <= 10 ? 'aligned' : (delta > 0 ? 'signal-higher' : 'market-higher');
+
+      // Alpha score: how significant is the divergence (factors: delta size, volume, confidence)
+      const volumeWeight = Math.min(30, Math.log10(bestMatch.volume + 1) * 5);
+      const alphaScore = Math.min(100, Math.round(absDelta * 0.8 + volumeWeight + bestScore * 2));
+
+      // Generate explanation for why Signal differs from Market
+      const whyDifferent = generateWhyDifferent(direction, absDelta, story, bestMatch, story.sourceCount || 3);
 
       matches.push({
         topic: story.headline,
         signalLikelihood: story.likelihood,
         marketProbability: marketProb,
         delta,
-        alphaDirection: absDelta <= 10 ? 'aligned' : (delta > 0 ? 'signal-higher' : 'market-higher'),
+        alphaDirection: direction,
+        alphaScore,
+        whyDifferent,
         polymarketTitle: bestMatch.title,
         polymarketSlug: bestMatch.slug,
+        polymarketUrl: bestMatch.slug
+          ? `https://polymarket.com/event/${bestMatch.slug}`
+          : 'https://polymarket.com',
         volume: bestMatch.volume,
+        liquidity: bestMatch.liquidity,
+        endDate: bestMatch.endDate,
         confidence: Math.min(95, bestScore * 12),
         matchedKeywords: bestKeywords.slice(0, 5),
+        sourceCount: story.sourceCount || 3,
       });
     }
   }
 
   return matches.sort((a, b) => b.confidence - a.confidence);
+}
+
+/**
+ * Auto-generate explanation for why Signal differs from Market
+ */
+function generateWhyDifferent(
+  direction: SignalVsMarket['alphaDirection'],
+  absDelta: number,
+  story: { headline: string; sourceCount?: number },
+  market: PolymarketEvent,
+  sourceCount: number,
+): string {
+  if (direction === 'aligned') {
+    return `Signal analysis aligns with market consensus within 10%. ${sourceCount} sources confirm the market's assessment.`;
+  }
+
+  const parts: string[] = [];
+
+  if (direction === 'signal-higher') {
+    parts.push(`Signal rates this ${absDelta}% higher than the market.`);
+
+    if (sourceCount >= 5) {
+      parts.push(`Strong cross-source verification: ${sourceCount} independent sources are reporting escalation signals.`);
+    } else if (sourceCount >= 3) {
+      parts.push(`${sourceCount} sources show emerging indicators not yet priced in by traders.`);
+    } else {
+      parts.push('Early signals detected from limited sources — higher uncertainty.');
+    }
+
+    if (market.volume < 1_000_000) {
+      parts.push('Low market volume suggests thin liquidity — market may be slow to react.');
+    }
+  } else {
+    parts.push(`Market rates this ${absDelta}% higher than our Signal.`);
+
+    if (sourceCount <= 2) {
+      parts.push('Limited source coverage may explain the gap — Signal has less data to work with.');
+    } else {
+      parts.push(`Despite ${sourceCount} sources, sentiment analysis shows lower confidence than market pricing.`);
+    }
+
+    if (market.volume > 5_000_000) {
+      parts.push('High-volume market with strong trader conviction.');
+    }
+  }
+
+  return parts.join(' ');
 }
 
 /**

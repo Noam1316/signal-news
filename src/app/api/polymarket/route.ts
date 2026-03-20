@@ -27,6 +27,7 @@ export async function GET() {
       headline: typeof s.headline === 'string' ? s.headline : s.headline.en || s.headline.he || '',
       likelihood: s.likelihood,
       category: typeof s.category === 'string' ? s.category : '',
+      sourceCount: s.sources?.length || 3,
     }));
 
     const matches = matchStoriesWithMarkets(storyData, markets);
