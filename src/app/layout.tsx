@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Heebo } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/i18n/context";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import LayoutShell from "@/components/layout/LayoutShell";
 import ServiceWorkerRegistrar from "@/components/shared/ServiceWorkerRegistrar";
 
@@ -51,10 +52,12 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr">
       <body className={`${inter.variable} ${heebo.variable} antialiased`}>
-        <LanguageProvider>
-          <LayoutShell>{children}</LayoutShell>
-          <ServiceWorkerRegistrar />
-        </LanguageProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            <LayoutShell>{children}</LayoutShell>
+            <ServiceWorkerRegistrar />
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

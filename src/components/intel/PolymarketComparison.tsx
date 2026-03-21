@@ -48,6 +48,7 @@ export default function PolymarketComparison() {
   const [data, setData] = useState<PolyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [topAlphaOnly, setTopAlphaOnly] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -112,8 +113,8 @@ export default function PolymarketComparison() {
         </div>
       </div>
 
-      {/* Source badge */}
-      <div className="flex items-center justify-between">
+      {/* Source badge + Top Alpha toggle */}
+      <div className="flex items-center justify-between gap-2">
         <span className={`text-[10px] px-2 py-0.5 rounded-full ${
           data.source === 'live'
             ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
@@ -121,14 +122,29 @@ export default function PolymarketComparison() {
         }`}>
           {data.source === 'live' ? 'LIVE Polymarket API' : 'DEMO DATA'}
         </span>
-        <button onClick={fetchData} disabled={loading}
-          className="text-[10px] text-gray-500 hover:text-white transition-colors">
-          {loading ? '...' : '↻'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTopAlphaOnly(p => !p)}
+            className={`text-[10px] px-2.5 py-1 rounded-lg border font-medium transition-colors
+                        ${topAlphaOnly
+                          ? 'bg-yellow-400/15 border-yellow-400/40 text-yellow-400'
+                          : 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300'
+                        }`}
+          >
+            {lang === 'he' ? '⚡ Top Alpha' : '⚡ Top Alpha'}
+          </button>
+          <button onClick={fetchData} disabled={loading}
+            className="text-[10px] text-gray-500 hover:text-white transition-colors">
+            {loading ? '...' : '↻'}
+          </button>
+        </div>
       </div>
 
-      {/* Match cards */}
-      {data.matches.map((match, i) => {
+      {/* Match cards — sorted by alphaScore desc, optionally top-5 only */}
+      {[...data.matches]
+        .sort((a, b) => (b.alphaScore || 0) - (a.alphaScore || 0))
+        .slice(0, topAlphaOnly ? 5 : undefined)
+        .map((match, i) => {
         const absDelta = Math.abs(match.delta);
         const isAligned = match.alphaDirection === 'aligned';
         const signalHigher = match.alphaDirection === 'signal-higher';

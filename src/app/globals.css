@@ -118,7 +118,7 @@ body {
   border-radius: 3px;
 }
 
-/* Light theme override */
+/* Light theme */
 .light-theme {
   --color-bg-primary: #f8fafc;
   --color-bg-surface: #ffffff;
@@ -129,39 +129,24 @@ body {
   --color-text-muted: #94a3b8;
 }
 .light-theme body {
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  background: #f8fafc;
+  color: #0f172a;
 }
-.light-theme .bg-gray-900,
-.light-theme .bg-gray-900\/80 {
-  background-color: #ffffff !important;
-}
-.light-theme .bg-gray-950,
-.light-theme .bg-gray-950\/95 {
-  background-color: #f8fafc !important;
-}
-.light-theme .bg-gray-800,
-.light-theme .bg-gray-800\/50,
-.light-theme .bg-gray-800\/30 {
-  background-color: #f1f5f9 !important;
-}
-.light-theme .border-gray-800,
-.light-theme .border-gray-800\/50,
-.light-theme .border-gray-700 {
-  border-color: #e2e8f0 !important;
-}
-.light-theme .text-white {
-  color: #0f172a !important;
-}
-.light-theme .text-gray-300 {
-  color: #334155 !important;
-}
-.light-theme .text-gray-400 {
-  color: #64748b !important;
-}
-.light-theme .text-gray-500 {
-  color: #94a3b8 !important;
-}
-.light-theme .text-gray-600 {
-  color: #94a3b8 !important;
-}
+.light-theme .bg-gray-950 { background-color: #f8fafc !important; }
+.light-theme .bg-gray-900 { background-color: #ffffff !important; }
+.light-theme .bg-gray-800 { background-color: #f1f5f9 !important; }
+.light-theme .bg-gray-700 { background-color: #e2e8f0 !important; }
+.light-theme .border-gray-900 { border-color: #e2e8f0 !important; }
+.light-theme .border-gray-800 { border-color: #e2e8f0 !important; }
+.light-theme .border-gray-700 { border-color: #cbd5e1 !important; }
+.light-theme .border-gray-600 { border-color: #94a3b8 !important; }
+.light-theme .text-white { color: #0f172a !important; }
+.light-theme .text-gray-100 { color: #1e293b !important; }
+.light-theme .text-gray-200 { color: #334155 !important; }
+.light-theme .text-gray-300 { color: #475569 !important; }
+.light-theme .text-gray-400 { color: #64748b !important; }
+.light-theme .text-gray-500 { color: #94a3b8 !important; }
+.light-theme .text-gray-600 { color: #94a3b8 !important; }
+.light-theme .text-gray-700 { color: #cbd5e1 !important; }
+.light-theme ::-webkit-scrollbar-track { background: #f8fafc; }
+.light-theme ::-webkit-scrollbar-thumb { background: #cbd5e1; }

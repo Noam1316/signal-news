@@ -8,6 +8,7 @@ import DateHeader from '@/components/brief/DateHeader';
 import HeroBar from '@/components/brief/HeroBar';
 import TrackRecord from '@/components/brief/TrackRecord';
 import ScrollToTop from '@/components/shared/ScrollToTop';
+import OnboardingTour from '@/components/onboarding/OnboardingTour';
 
 /* Lazy-load heavy sections — only ship JS when scrolled into view */
 const ShockFeed = dynamic(() => import('@/components/shocks/ShockFeed'), {
@@ -28,12 +29,15 @@ export default function DashboardPage() {
       <HeroBar />
       <SectionNav />
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-10">
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-12">
         {/* ── Brief ── */}
         <section id="brief" className="scroll-mt-24">
           <DateHeader />
-          <div className="mt-3"><BriefList /></div>
-          <div className="mt-4"><TrackRecord /></div>
+          {/* 2-column on large screens: news feed left, track record right */}
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
+            <BriefList />
+            <TrackRecord />
+          </div>
         </section>
 
         {/* ── Shocks ── */}
@@ -53,6 +57,7 @@ export default function DashboardPage() {
       </div>
 
       <ScrollToTop />
+      <OnboardingTour />
     </div>
   );
 }
