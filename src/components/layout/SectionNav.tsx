@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useLanguage } from '@/i18n/context';
+import { usePreferences } from '@/contexts/PreferencesContext';
+
+const PreferencesPanel = dynamic(() => import('@/components/preferences/PreferencesPanel'), { ssr: false });
 
 const SECTIONS = [
   { id: 'brief',  icon: '📋', en: 'Brief',  he: 'תקציר' },
@@ -12,7 +16,11 @@ const SECTIONS = [
 
 export default function SectionNav() {
   const { lang, dir } = useLanguage();
+  const { prefs } = usePreferences();
   const [active, setActive] = useState('brief');
+  const [showPrefs, setShowPrefs] = useState(false);
+
+  const activeCount = prefs.topics.length + prefs.hiddenSections.length + (prefs.alertProfile !== 'all' ? 1 : 0) + (prefs.compactMode ? 1 : 0);
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -65,6 +73,24 @@ export default function SectionNav() {
             </button>
           );
         })}
+
+        {/* Customize button */}
+        <button
+          onClick={() => setShowPrefs(true)}
+          className={`ms-auto shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
+            activeCount > 0
+              ? 'border-yellow-400/40 bg-yellow-400/10 text-yellow-400'
+              : 'border-gray-800 text-gray-500 hover:text-gray-300 hover:border-gray-700'
+          }`}
+          aria-label={lang === 'he' ? 'התאמה אישית' : 'Customize dashboard'}
+        >
+          ⚙️
+          {activeCount > 0 && (
+            <span className="bg-yellow-400 text-gray-950 text-[10px] font-bold px-1.5 rounded-full">{activeCount}</span>
+          )}
+        </button>
+
+        {showPrefs && <PreferencesPanel onClose={() => setShowPrefs(false)} />}
       </div>
     </nav>
   );

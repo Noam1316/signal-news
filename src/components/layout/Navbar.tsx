@@ -55,6 +55,7 @@ export default function Navbar() {
         <button
           onClick={toggleTheme}
           title={isLight ? (lang === 'he' ? 'מצב כהה' : 'Dark mode') : (lang === 'he' ? 'מצב בהיר' : 'Light mode')}
+          aria-label={isLight ? (lang === 'he' ? 'מצב כהה' : 'Dark mode') : (lang === 'he' ? 'מצב בהיר' : 'Light mode')}
           className={`p-1.5 rounded-md transition-colors
                       ${isLight
                         ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
@@ -75,6 +76,7 @@ export default function Navbar() {
 
         <button
           onClick={toggleLang}
+          aria-label={lang === 'en' ? 'Switch to Hebrew' : 'עבור לאנגלית'}
           className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors
                       ${isLight
                         ? 'border-gray-300 text-gray-600 hover:text-gray-900 hover:border-gray-500'

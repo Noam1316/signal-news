@@ -55,6 +55,11 @@ body {
   to { opacity: 1; }
 }
 
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -172,3 +177,61 @@ body {
 /* Scrollbar */
 .light-theme ::-webkit-scrollbar-track { background: #f1f5f9; }
 .light-theme ::-webkit-scrollbar-thumb { background: #cbd5e1; }
+
+/* ─── Accessibility ──────────────────────────────────────────────────────── */
+
+/* Skip to content link */
+.skip-to-content {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 0.75rem 1.5rem;
+  background: #fbbf24;
+  color: #0a0f1a;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border-radius: 0 0 0.5rem 0.5rem;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+.skip-to-content:focus {
+  top: 0;
+}
+
+/* Focus ring — visible and consistent */
+:focus-visible {
+  outline: 2px solid #fbbf24;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Remove default focus for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Minimum contrast fixes for tiny text */
+.text-xs, .text-\[10px\], .text-\[11px\] {
+  /* Slightly boost readability — font rendering hint */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* High-contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --color-text-muted: #94a3b8;
+    --color-border-subtle: #475569;
+  }
+  .card-glow::after { display: none; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -70,7 +70,7 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
 
           {/* Source count badge */}
           {sourceCount > 0 && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-800 border border-gray-700 text-gray-500 font-medium shrink-0">
+            <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-gray-800 border border-gray-700 text-gray-400 font-medium shrink-0">
               {sourceCount} {lang === 'he' ? 'מקורות' : 'src'}
             </span>
           )}
@@ -78,14 +78,14 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
           {/* Credibility grade */}
           <span
             title={gradeStyle.title}
-            className={`text-[9px] px-1.5 py-0.5 rounded-full border font-bold shrink-0 ${gradeStyle.bg} ${gradeStyle.color}`}
+            className={`text-[11px] px-1.5 py-0.5 rounded-full border font-bold shrink-0 ${gradeStyle.bg} ${gradeStyle.color}`}
           >
             {grade}
           </span>
 
           {/* Political lean */}
           {leanData && (
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 ${leanData.bg} ${leanData.color}`}>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 ${leanData.bg} ${leanData.color}`}>
               {lang === 'he' ? leanData.he : leanData.en}
             </span>
           )}
@@ -93,7 +93,7 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
 
         <div className="flex items-center gap-2 shrink-0">
           {!hasDetailPage && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+            <span className="text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
               LIVE
             </span>
           )}
@@ -141,7 +141,7 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
         >
           <span className="text-orange-400 text-sm shrink-0">⚡</span>
           <div className="min-w-0 flex-1">
-            <p className="text-[9px] text-orange-400/70 uppercase tracking-wider mb-0.5">
+            <p className="text-[11px] text-orange-400/70 uppercase tracking-wider mb-0.5">
               {lang === 'he' ? 'זעזוע זוהה' : 'Shock Detected'}
             </p>
             <p className="text-xs text-orange-200 font-medium truncate">
@@ -157,7 +157,7 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
       {/* Expanded: source links */}
       {expanded && !hasDetailPage && (
         <div className="pt-2 border-t border-gray-800/50 space-y-2">
-          <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+          <p className="text-[11px] text-gray-400 uppercase tracking-wider">
             {lang === 'he' ? 'מקורות' : 'Sources'}
           </p>
           <div className="flex flex-wrap gap-2">

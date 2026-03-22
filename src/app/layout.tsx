@@ -3,6 +3,7 @@ import { Inter, Heebo } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/i18n/context";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { PreferencesProvider } from "@/contexts/PreferencesContext";
 import LayoutShell from "@/components/layout/LayoutShell";
 import ServiceWorkerRegistrar from "@/components/shared/ServiceWorkerRegistrar";
 
@@ -81,10 +82,15 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr">
       <body className={`${inter.variable} ${heebo.variable} antialiased`}>
+        <a href="#brief" className="skip-to-content">
+          Skip to content
+        </a>
         <ThemeProvider>
           <LanguageProvider>
-            <LayoutShell>{children}</LayoutShell>
-            <ServiceWorkerRegistrar />
+            <PreferencesProvider>
+              <LayoutShell>{children}</LayoutShell>
+              <ServiceWorkerRegistrar />
+            </PreferencesProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>

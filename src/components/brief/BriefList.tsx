@@ -13,7 +13,11 @@ import { useRecordStories } from '@/hooks/useLikelihoodHistory';
 
 type SortKey = 'default' | 'likelihood' | 'delta' | 'sources' | 'newest';
 
-export default function BriefList() {
+interface BriefListProps {
+  compactMode?: boolean;
+}
+
+export default function BriefList({ compactMode: _compactMode }: BriefListProps = {}) {
   const { lang } = useLanguage();
   const [lens, setLens] = useState<'all' | 'israel' | 'world'>('all');
   const [stories, setStories] = useState<BriefStory[]>([]);
