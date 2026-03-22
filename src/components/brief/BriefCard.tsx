@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/i18n/context';
-import type { BriefStory } from '@/lib/types';
+import type { BriefStory, ShockEvent } from '@/lib/types';
 import SignalLabel from '@/components/shared/SignalLabel';
 import { getStoryLean, LEAN_LABEL } from '@/utils/political-lean';
 import { computeGrade, GRADE_STYLE } from '@/utils/credibility-grade';
@@ -26,9 +26,10 @@ interface BriefCardProps {
   story: BriefStory;
   isWatched?: boolean;
   onWatchToggle?: () => void;
+  relatedShock?: ShockEvent;
 }
 
-export default function BriefCard({ story, isWatched = false, onWatchToggle }: BriefCardProps) {
+export default function BriefCard({ story, isWatched = false, onWatchToggle, relatedShock }: BriefCardProps) {
   const { t, dir, lang } = useLanguage();
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
@@ -126,6 +127,32 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle }: B
 
       {/* Why */}
       <p className="text-sm italic text-gray-400">{t(story.why)}</p>
+
+      {/* Shock indicator — links this story to a detected shock */}
+      {relatedShock && (
+        <div
+          onClick={e => {
+            e.stopPropagation();
+            const el = document.getElementById('shocks');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/30 cursor-pointer hover:border-orange-400/60 transition-colors"
+          title={lang === 'he' ? 'לחץ לראות הזעזוע' : 'Click to see shock'}
+        >
+          <span className="text-orange-400 text-sm shrink-0">⚡</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] text-orange-400/70 uppercase tracking-wider mb-0.5">
+              {lang === 'he' ? 'זעזוע זוהה' : 'Shock Detected'}
+            </p>
+            <p className="text-xs text-orange-200 font-medium truncate">
+              {lang === 'he' ? relatedShock.headline?.he : relatedShock.headline?.en}
+            </p>
+          </div>
+          <span className={`text-[10px] font-bold shrink-0 ${relatedShock.delta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {relatedShock.delta >= 0 ? '+' : ''}{relatedShock.delta}%
+          </span>
+        </div>
+      )}
 
       {/* Expanded: source links */}
       {expanded && !hasDetailPage && (

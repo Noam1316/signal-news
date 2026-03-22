@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/i18n/context';
-import type { BriefStory } from '@/lib/types';
+import type { BriefStory, ShockEvent } from '@/lib/types';
 import BriefCard from './BriefCard';
+import DailySummary from './DailySummary';
 import LensSwitcher from '@/components/shared/LensSwitcher';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import { getStoryLean, LEAN_LABEL, type Lean } from '@/utils/political-lean';
@@ -15,6 +16,7 @@ export default function BriefList() {
   const { lang } = useLanguage();
   const [lens, setLens] = useState<'all' | 'israel' | 'world'>('all');
   const [stories, setStories] = useState<BriefStory[]>([]);
+  const [shocks, setShocks] = useState<ShockEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [source, setSource] = useState<string>('');
   const [search, setSearch] = useState('');
@@ -25,14 +27,26 @@ export default function BriefList() {
 
   useRecordStories(stories); // persist likelihood history for sparklines + real delta
 
+  // Build slug → shock map for shock indicators on Brief cards
+  const shockBySlug = Object.fromEntries(
+    shocks.filter(sh => sh.relatedStorySlug).map(sh => [sh.relatedStorySlug!, sh])
+  );
+
   const fetchStories = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/stories');
-      if (!res.ok) throw new Error('Failed');
-      const data = await res.json();
-      setStories(data.stories || []);
-      setSource(data.source || '');
+      const [storiesRes, shocksRes] = await Promise.all([
+        fetch('/api/stories'),
+        fetch('/api/shocks'),
+      ]);
+      if (!storiesRes.ok) throw new Error('Failed');
+      const storiesData = await storiesRes.json();
+      setStories(storiesData.stories || []);
+      setSource(storiesData.source || '');
+      if (shocksRes.ok) {
+        const shocksData = await shocksRes.json();
+        setShocks(shocksData.shocks || []);
+      }
     } catch {
       const { stories: staticStories } = await import('@/data/stories');
       setStories(staticStories);
@@ -162,6 +176,11 @@ export default function BriefList() {
         </select>
       </div>
 
+      {/* Daily Intelligence Summary */}
+      {!loading && stories.length > 0 && (
+        <DailySummary stories={stories} shocks={shocks} />
+      )}
+
       {/* Skeleton */}
       {loading && stories.length === 0 && (
         <div className="space-y-4">
@@ -179,7 +198,12 @@ export default function BriefList() {
       {sorted.map((story, i) => (
         <div key={story.slug} className="animate-slide-up"
              style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'both' }}>
-          <BriefCard story={story} isWatched={isWatched(story.slug)} onWatchToggle={() => toggle(story.slug)} />
+          <BriefCard
+            story={story}
+            isWatched={isWatched(story.slug)}
+            onWatchToggle={() => toggle(story.slug)}
+            relatedShock={shockBySlug[story.slug]}
+          />
         </div>
       ))}
 
