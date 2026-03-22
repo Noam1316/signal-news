@@ -10,9 +10,11 @@ import { computeGrade, GRADE_STYLE } from '@/utils/credibility-grade';
 import { getSparklineData, getRealDelta } from '@/hooks/useLikelihoodHistory';
 import SparkLine from '@/components/shared/SparkLine';
 import LikelihoodMeter from '@/components/shared/LikelihoodMeter';
+import LikelihoodTooltip from '@/components/shared/LikelihoodTooltip';
 import DeltaIndicator from '@/components/shared/DeltaIndicator';
 import SourceList from '@/components/shared/SourceList';
 import ShareButton from '@/components/shared/ShareButton';
+import ShareStoryButton from '@/components/shared/ShareStoryButton';
 
 const STATIC_SLUGS = [
   'iran-nuclear-talks',
@@ -91,13 +93,14 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {!hasDetailPage && (
             <span className="text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
               LIVE
             </span>
           )}
           <SignalLabel isSignal={story.isSignal} />
+          <ShareStoryButton story={story} />
           {onWatchToggle && (
             <button
               onClick={e => { e.stopPropagation(); onWatchToggle(); }}
@@ -119,7 +122,10 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
       {/* Likelihood + Delta + Sparkline */}
       <div className="flex items-center gap-3">
         <div className="flex-1">
-          <LikelihoodMeter value={story.likelihood} label={story.likelihoodLabel} />
+          <div className="flex items-center gap-1">
+            <LikelihoodMeter value={story.likelihood} label={story.likelihoodLabel} />
+            <LikelihoodTooltip likelihood={story.likelihood} />
+          </div>
         </div>
         <DeltaIndicator delta={displayDelta} />
         {sparkData.length >= 2 && <SparkLine data={sparkData} />}

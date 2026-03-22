@@ -72,6 +72,7 @@ export function useShockAlerts() {
       const settings = loadSettings();
       const allowedTypes: string[] = settings.shockTypes || ['likelihood', 'narrative', 'fragmentation'];
       const keywords: string[] = settings.topicKeywords || [];
+      const minLikelihood: number = settings.minLikelihood ?? 0;
 
       const newShocks = shocks.filter(s => !knownIds.current.has(s.id));
       if (newShocks.length === 0) return;
@@ -80,7 +81,12 @@ export function useShockAlerts() {
       saveKnownIds(knownIds.current);
 
       // Filter by shock type preference
-      const filtered = newShocks.filter(s => allowedTypes.includes(s.type));
+      let filtered = newShocks.filter(s => allowedTypes.includes(s.type));
+
+      // Filter by minimum likelihood
+      if (minLikelihood > 0) {
+        filtered = filtered.filter(s => (s.delta ? Math.abs(s.delta) : 0) >= minLikelihood);
+      }
 
       // Identify topic matches
       const withMatch = filtered.map(s => ({

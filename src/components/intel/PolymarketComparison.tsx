@@ -133,6 +133,24 @@ export default function PolymarketComparison() {
         ))}
       </div>
 
+      {/* Alpha Score explanation */}
+      <details className="rounded-xl bg-gray-900/50 border border-gray-800 overflow-hidden">
+        <summary className="px-4 py-2.5 text-[11px] text-gray-500 cursor-pointer hover:text-gray-300 transition-colors flex items-center gap-2">
+          <span>ℹ️</span>
+          {lang === 'he' ? 'איך Alpha Score מחושב?' : 'How is Alpha Score calculated?'}
+          <span className="ms-auto text-gray-700">▾</span>
+        </summary>
+        <div className="px-4 pb-3 text-[11px] text-gray-400 space-y-1.5 border-t border-gray-800">
+          <p className="font-mono text-yellow-400/80 bg-gray-950 rounded px-2 py-1.5 mt-2">
+            Alpha = min(100, |Δ| × 0.8 + volumeWeight + matchScore × 2)
+          </p>
+          <p>{lang === 'he' ? '• |Δ| = הפרש בין תחזית Signal לשוק Polymarket' : '• |Δ| = difference between Signal likelihood and Polymarket odds'}</p>
+          <p>{lang === 'he' ? '• volumeWeight = נפח מסחר (מנרמל 0-10)' : '• volumeWeight = trading volume score (normalized 0-10)'}</p>
+          <p>{lang === 'he' ? '• matchScore = איכות ההתאמה בין הסיפור לשוק' : '• matchScore = keyword match quality between story and market'}</p>
+          <p className="text-gray-600 pt-1">{lang === 'he' ? 'Alpha > 50 = Signal חושב שהשוק מתמחר לא נכון' : 'Alpha > 50 = Signal thinks the market is mispriced'}</p>
+        </div>
+      </details>
+
       {/* Source badge + Top Alpha toggle */}
       <div className="flex items-center justify-between gap-2">
         <span className={`text-[10px] px-2 py-0.5 rounded-full ${

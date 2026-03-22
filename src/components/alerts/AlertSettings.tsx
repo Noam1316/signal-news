@@ -160,6 +160,38 @@ export default function AlertSettings({ onClose, onRequestPermission, notifPermi
           </div>
         </section>
 
+        {/* ── Likelihood Threshold ── */}
+        <section className="space-y-2">
+          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
+            <span>{lang === 'he' ? '📊 סף סבירות מינימלי' : '📊 Min Likelihood Threshold'}</span>
+            <span className={`text-sm font-black ${
+              settings.minLikelihood >= 70 ? 'text-emerald-400' : settings.minLikelihood >= 45 ? 'text-yellow-400' : 'text-gray-400'
+            }`}>
+              {settings.minLikelihood === 0 ? (lang === 'he' ? 'הכל' : 'All') : `${settings.minLikelihood}%+`}
+            </span>
+          </h4>
+          <p className="text-[10px] text-gray-600">
+            {lang === 'he'
+              ? 'התראה רק כשסבירות הזעזוע גבוהה מ...'
+              : 'Only alert when shock likelihood exceeds...'}
+          </p>
+          <input
+            type="range"
+            min={0}
+            max={90}
+            step={10}
+            value={settings.minLikelihood}
+            onChange={e => update({ minLikelihood: Number(e.target.value) })}
+            className="w-full h-1.5 rounded-full appearance-none bg-gray-700 accent-yellow-400 cursor-pointer"
+          />
+          <div className="flex justify-between text-[9px] text-gray-600">
+            <span>{lang === 'he' ? 'הכל' : 'All'}</span>
+            <span>45%</span>
+            <span>70%</span>
+            <span>90%+</span>
+          </div>
+        </section>
+
         {/* ── Daily Brief ── */}
         <section className="space-y-2">
           <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">

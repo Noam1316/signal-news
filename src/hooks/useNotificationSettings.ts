@@ -7,6 +7,7 @@ export interface NotificationSettings {
   shockTypes: ('likelihood' | 'narrative' | 'fragmentation')[]; // which shock types to alert on
   dailyBriefEnabled: boolean;
   dailyBriefTime: string;        // "HH:MM" format, e.g. "08:00"
+  minLikelihood: number;         // 0-100, default 0 (all)
 }
 
 const KEY = 'signal_notif_settings';
@@ -15,6 +16,7 @@ const DEFAULT: NotificationSettings = {
   shockTypes: ['likelihood', 'narrative', 'fragmentation'],
   dailyBriefEnabled: false,
   dailyBriefTime: '08:00',
+  minLikelihood: 0,
 };
 
 function load(): NotificationSettings {
