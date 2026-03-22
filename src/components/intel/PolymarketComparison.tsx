@@ -49,6 +49,7 @@ export default function PolymarketComparison() {
   const [loading, setLoading] = useState(true);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [topAlphaOnly, setTopAlphaOnly] = useState(false);
+  const [filterTab, setFilterTab] = useState<'all' | 'signal-higher' | 'market-higher' | 'closing-soon'>('all');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -113,6 +114,25 @@ export default function PolymarketComparison() {
         </div>
       </div>
 
+      {/* Filter tabs */}
+      <div className="flex gap-1.5 flex-wrap">
+        {[
+          { id: 'all',           en: 'All',            he: 'הכל' },
+          { id: 'signal-higher', en: '⚡ Signal Higher', he: '⚡ Signal גבוה' },
+          { id: 'market-higher', en: '📈 Market Higher', he: '📈 שוק גבוה' },
+          { id: 'closing-soon',  en: '⏳ Closing Soon',  he: '⏳ נסגר בקרוב' },
+        ].map(tab => (
+          <button key={tab.id} onClick={() => setFilterTab(tab.id as typeof filterTab)}
+            className={`text-[10px] px-2.5 py-1 rounded-full border transition-colors ${
+              filterTab === tab.id
+                ? 'border-yellow-400/50 bg-yellow-400/10 text-yellow-400'
+                : 'border-gray-700 text-gray-500 hover:text-gray-300'
+            }`}>
+            {lang === 'he' ? tab.he : tab.en}
+          </button>
+        ))}
+      </div>
+
       {/* Source badge + Top Alpha toggle */}
       <div className="flex items-center justify-between gap-2">
         <span className={`text-[10px] px-2 py-0.5 rounded-full ${
@@ -141,10 +161,22 @@ export default function PolymarketComparison() {
       </div>
 
       {/* Match cards — sorted by alphaScore desc, optionally top-5 only */}
-      {[...data.matches]
-        .sort((a, b) => (b.alphaScore || 0) - (a.alphaScore || 0))
-        .slice(0, topAlphaOnly ? 5 : undefined)
-        .map((match, i) => {
+      {(() => {
+        const isClosingSoon = (endDate: string) => {
+          if (!endDate) return false;
+          const days = (new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+          return days >= 0 && days <= 14;
+        };
+        const tabFiltered = [...data.matches].filter(m => {
+          if (filterTab === 'signal-higher') return m.alphaDirection === 'signal-higher';
+          if (filterTab === 'market-higher') return m.alphaDirection === 'market-higher';
+          if (filterTab === 'closing-soon')  return isClosingSoon(m.endDate);
+          return true;
+        });
+        return tabFiltered
+          .sort((a, b) => (b.alphaScore || 0) - (a.alphaScore || 0))
+          .slice(0, topAlphaOnly ? 5 : undefined)
+          .map((match, i) => {
         const absDelta = Math.abs(match.delta);
         const isAligned = match.alphaDirection === 'aligned';
         const signalHigher = match.alphaDirection === 'signal-higher';
@@ -292,7 +324,8 @@ export default function PolymarketComparison() {
             )}
           </div>
         );
-      })}
+      });
+      })()}
     </div>
   );
 }

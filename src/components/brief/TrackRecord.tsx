@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/i18n/context';
+import type { BriefStory } from '@/lib/types';
 
 interface Prediction {
   topic: string;
@@ -68,9 +69,39 @@ function generateTrackRecord(): Prediction[] {
   ];
 }
 
+function buildFromStories(stories: BriefStory[]): Prediction[] {
+  return stories.slice(0, 7).map(s => {
+    const daysOld = Math.floor((Date.now() - new Date(s.updatedAt || Date.now()).getTime()) / 86400000);
+    let outcome: 'correct' | 'wrong' | 'pending' = 'pending';
+    if (daysOld >= 1) {
+      if (s.likelihood >= 70) outcome = s.delta >= -5 ? 'correct' : 'wrong';
+      else if (s.likelihood <= 30) outcome = s.delta <= 5 ? 'correct' : 'wrong';
+    }
+    return {
+      topic: typeof s.headline === 'string' ? s.headline : (s.headline?.en || s.headline?.he || ''),
+      likelihood: s.likelihood,
+      predictedAt: s.updatedAt || new Date().toISOString(),
+      outcome,
+    };
+  });
+}
+
 export default function TrackRecord() {
   const { lang } = useLanguage();
-  const [predictions] = useState(generateTrackRecord);
+  const [stories, setStories] = useState<BriefStory[]>([]);
+
+  useEffect(() => {
+    fetch('/api/stories')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.stories?.length > 0) {
+          setStories(data.stories);
+        }
+      })
+      .catch(() => { /* silent */ });
+  }, []);
+
+  const predictions = stories.length > 0 ? buildFromStories(stories) : generateTrackRecord();
 
   const resolved = predictions.filter(p => p.outcome !== 'pending');
   const correct = resolved.filter(p => p.outcome === 'correct').length;

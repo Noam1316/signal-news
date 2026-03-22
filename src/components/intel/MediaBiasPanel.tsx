@@ -105,6 +105,9 @@ export default function MediaBiasPanel() {
         <span>{data.mappedArticles}/{data.totalArticles} {lang === 'he' ? 'כתבות ממופות' : 'articles mapped'}</span>
         <span>{data.sourcesInDb} {lang === 'he' ? 'מקורות במאגר' : 'sources in DB'}</span>
       </div>
+      <p className="text-[10px] text-gray-600">
+        {lang === 'he' ? 'סנטימנט נקבע לפי ניתוח מילות מפתח בכותרות' : 'Sentiment determined by keyword analysis of titles'}
+      </p>
 
       {/* Sub-tabs */}
       <div className="flex gap-2">
@@ -135,6 +138,17 @@ export default function MediaBiasPanel() {
             <h3 className="text-sm font-semibold text-gray-300">
               {lang === 'he' ? 'ספקטרום הטיה של מקורות' : 'Source Bias Spectrum'}
             </h3>
+            {/* Legend */}
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-800/50 border border-gray-700/50">
+              <span className="text-[10px] text-gray-500">
+                {lang === 'he' ? 'ספקטרום:' : 'Spectrum:'}
+              </span>
+              <span className="text-[10px] text-red-400">←</span>
+              <span className="text-[10px] text-gray-400">{lang === 'he' ? 'שמאל' : 'Left'}</span>
+              <div className="flex-1 h-1.5 rounded bg-gradient-to-r from-red-500 via-gray-400 to-violet-500" />
+              <span className="text-[10px] text-gray-400">{lang === 'he' ? 'ימין' : 'Right'}</span>
+              <span className="text-[10px] text-violet-400">→</span>
+            </div>
             <div className="flex h-10 rounded-lg overflow-hidden bg-gray-800">
               {BIAS_ORDER.map(bias => {
                 const count = data.biasDistribution[bias] || 0;

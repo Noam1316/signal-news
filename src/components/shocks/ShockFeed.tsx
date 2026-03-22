@@ -1,34 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/i18n/context';
 import type { ShockEvent } from '@/lib/types';
 import ShockCard from '@/components/shocks/ShockCard';
+import { usePolling } from '@/hooks/usePolling';
 
 export default function ShockFeed() {
   const { ui, dir, lang } = useLanguage();
   const [shocks, setShocks] = useState<ShockEvent[]>([]);
   const [source, setSource] = useState<'live' | 'cache' | 'static-fallback' | 'loading'>('loading');
   const [error, setError] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+
+  const fetchShocks = useCallback(async () => {
+    try {
+      const res = await fetch('/api/shocks');
+      if (!res.ok) throw new Error('Failed to fetch shocks');
+      const data = await res.json();
+      setShocks(data.shocks || []);
+      setSource(data.source || 'live');
+    } catch {
+      // Fallback: import static shocks
+      const { shocks: staticShocks } = await import('@/data/shocks');
+      setShocks(staticShocks);
+      setSource('static-fallback');
+      setError(true);
+    }
+  }, []);
 
   useEffect(() => {
-    async function fetchShocks() {
-      try {
-        const res = await fetch('/api/shocks');
-        if (!res.ok) throw new Error('Failed to fetch shocks');
-        const data = await res.json();
-        setShocks(data.shocks || []);
-        setSource(data.source || 'live');
-      } catch {
-        // Fallback: import static shocks
-        const { shocks: staticShocks } = await import('@/data/shocks');
-        setShocks(staticShocks);
-        setSource('static-fallback');
-        setError(true);
-      }
-    }
     fetchShocks();
-  }, []);
+  }, [fetchShocks]);
+
+  usePolling(fetchShocks, 2 * 60 * 1000, autoRefresh);
 
   const sorted = [...shocks].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
@@ -63,6 +68,19 @@ export default function ShockFeed() {
                 : (lang === 'he' ? 'נתוני דמו' : 'Demo Data')}
             </span>
           )}
+          {/* Auto Refresh toggle */}
+          <button
+            onClick={() => setAutoRefresh(p => !p)}
+            className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+              autoRefresh
+                ? 'border-green-500/50 text-green-400 bg-green-500/10'
+                : 'border-gray-700 text-gray-500'
+            }`}
+          >
+            {autoRefresh
+              ? (lang === 'he' ? 'רענון אוטומטי' : 'AUTO REFRESH')
+              : (lang === 'he' ? 'מושהה' : 'PAUSED')}
+          </button>
         </div>
         <p className="text-sm text-gray-400">
           {dir === 'rtl'

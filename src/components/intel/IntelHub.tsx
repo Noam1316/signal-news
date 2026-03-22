@@ -31,13 +31,27 @@ export default function IntelHub() {
       </header>
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-gray-900/80 rounded-xl p-1 border border-gray-800">
+      <div role="tablist" className="flex gap-1 bg-gray-900/80 rounded-xl p-1 border border-gray-800">
         {TABS.map(tab => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={isActive}
+              tabIndex={isActive ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
+              onKeyDown={(e) => {
+                const tabs = TABS.map(t => t.id);
+                const currentIdx = tabs.indexOf(activeTab);
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setActiveTab(tabs[(currentIdx + 1) % tabs.length] as TabId);
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setActiveTab(tabs[(currentIdx - 1 + tabs.length) % tabs.length] as TabId);
+                }
+              }}
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-gray-800 text-white shadow-sm'
@@ -52,7 +66,7 @@ export default function IntelHub() {
       </div>
 
       {/* Tab content */}
-      <div className="min-h-[300px]">
+      <div role="tabpanel" aria-label={lang === 'he' ? TABS.find(t => t.id === activeTab)?.he : TABS.find(t => t.id === activeTab)?.en} className="min-h-[300px]">
         {activeTab === 'overview' && <IntelDashboard />}
         {activeTab === 'polymarket' && <PolymarketComparison />}
         {activeTab === 'bias' && <MediaBiasPanel />}

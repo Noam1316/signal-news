@@ -73,12 +73,21 @@ const SENTIMENT_COLORS = {
   mixed: { fill: '#f59e0b', glow: '#f59e0b40' },
 };
 
+interface RawArticle {
+  title: string;
+  link: string;
+  sourceName: string;
+  pubDate: string;
+  description: string;
+}
+
 export default function GeoMap() {
   const { lang, dir } = useLanguage();
   const [mapData, setMapData] = useState<MapData | null>(null);
   const [loading, setLoading] = useState(true);
   const [hoveredCountry, setHoveredCountry] = useState<CountryData | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [allArticles, setAllArticles] = useState<RawArticle[]>([]);
 
   const fetchMapData = useCallback(async () => {
     setLoading(true);
@@ -86,6 +95,7 @@ export default function GeoMap() {
       const res = await fetch('/api/rss/latest?limit=200');
       if (!res.ok) throw new Error('Failed');
       const { articles } = await res.json();
+      setAllArticles((articles as RawArticle[]).slice(0, 200));
 
       // Count articles per country (by source country + content mentions)
       const countryMap = new Map<string, {
@@ -378,6 +388,44 @@ export default function GeoMap() {
               </tbody>
             </table>
           </div>
+
+          {/* Country article drill-down */}
+          {selectedCountry && (() => {
+            const selectedData = mapData.countries.find(c => c.code === selectedCountry);
+            const keywords = REGION_KEYWORDS[selectedCountry] || [];
+            const relatedArticles = allArticles.filter(a => {
+              const text = `${a.title} ${a.description}`.toLowerCase();
+              return keywords.some(kw => text.includes(kw));
+            }).slice(0, 5);
+
+            if (relatedArticles.length === 0) return null;
+
+            return (
+              <div className="rounded-xl bg-gray-900 border border-yellow-400/20 overflow-hidden mt-3">
+                <div className="px-4 py-2 border-b border-gray-800 flex items-center justify-between">
+                  <h3 className="text-xs font-semibold text-yellow-400">
+                    {lang === 'he'
+                      ? `כתבות על ${selectedData?.name.he}`
+                      : `Articles about ${selectedData?.name.en}`}
+                  </h3>
+                  <button onClick={() => setSelectedCountry(null)} className="text-xs text-gray-500 hover:text-gray-300">✕</button>
+                </div>
+                <div className="divide-y divide-gray-800/50">
+                  {relatedArticles.map((a, i) => (
+                    <a key={i} href={a.link} target="_blank" rel="noopener noreferrer"
+                       onClick={e => e.stopPropagation()}
+                       className="flex items-start gap-3 px-4 py-2.5 hover:bg-gray-800/30 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-200 line-clamp-1">{a.title}</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">{a.sourceName}</p>
+                      </div>
+                      <span className="text-gray-600 text-xs shrink-0">↗</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </>
       )}
     </div>

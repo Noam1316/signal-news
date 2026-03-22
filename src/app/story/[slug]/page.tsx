@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
 import PageShell from '@/components/layout/PageShell';
 import { useLanguage } from '@/i18n/context';
@@ -18,10 +18,24 @@ import WatchNext from '@/components/story/WatchNext';
 
 export default function StoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
-  const { t, ui, dir } = useLanguage();
+  const { t, ui, dir, lang } = useLanguage();
   const [reported, setReported] = useState(false);
+  const [liveLikelihood, setLiveLikelihood] = useState<number | null>(null);
 
   const story = stories.find((s) => s.slug === slug);
+
+  useEffect(() => {
+    if (!slug) return;
+    fetch('/api/stories')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.stories) {
+          const liveStory = data.stories.find((s: { slug: string; likelihood: number }) => s.slug === slug);
+          if (liveStory) setLiveLikelihood(liveStory.likelihood);
+        }
+      })
+      .catch(() => { /* silent */ });
+  }, [slug]);
 
   if (!story) {
     return (
@@ -36,9 +50,24 @@ export default function StoryPage({ params }: { params: Promise<{ slug: string }
   return (
     <PageShell>
       <div className="space-y-6" dir={dir}>
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-xs text-gray-500 mb-4">
+          <Link href="/dashboard" className="hover:text-gray-300 transition-colors">
+            {lang === 'he' ? 'דשבורד' : 'Dashboard'}
+          </Link>
+          <span>/</span>
+          <Link href="/dashboard#brief" className="hover:text-gray-300 transition-colors">
+            {lang === 'he' ? 'תקציר' : 'Brief'}
+          </Link>
+          <span>/</span>
+          <span className="text-gray-300 truncate max-w-[200px]">
+            {typeof story.headline === 'string' ? story.headline : story.headline?.en}
+          </span>
+        </nav>
+
         {/* Back button */}
         <Link
-          href="/brief"
+          href="/dashboard#brief"
           className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -77,8 +106,18 @@ export default function StoryPage({ params }: { params: Promise<{ slug: string }
           <div className="flex-1 max-w-xs">
             <LikelihoodMeter value={story.likelihood} label={story.likelihoodLabel} showLabel />
           </div>
+          {liveLikelihood !== null && liveLikelihood !== story.likelihood && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shrink-0">
+              {lang === 'he' ? `חי: ${liveLikelihood}%` : `Live: ${liveLikelihood}%`}
+            </span>
+          )}
           <DeltaIndicator delta={story.delta} />
         </div>
+
+        {/* Related shocks link */}
+        <Link href="/dashboard#shocks" className="inline-flex items-center gap-1.5 text-xs text-yellow-400/70 hover:text-yellow-400 transition-colors">
+          {lang === 'he' ? 'ראה זעזועים קשורים ↓' : 'See related shocks ↓'}
+        </Link>
 
         <div className="border-t border-gray-800" />
 

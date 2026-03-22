@@ -1,79 +1,72 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/i18n/context';
 
-const tabs = [
+const SECTIONS = [
   {
-    key: 'dailyBrief' as const,
-    href: '/brief',
+    id: 'brief', heLabel: 'תקציר', enLabel: 'Brief',
     icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M4 4h16v16H4z" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}
+        strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <rect x="4" y="4" width="16" height="16" rx="2" />
         <path d="M8 8h8M8 12h5M8 16h6" />
       </svg>
     ),
   },
   {
-    key: 'shockFeed' as const,
-    href: '/shocks',
+    id: 'shocks', heLabel: 'זעזועים', enLabel: 'Shocks',
     icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}
+        strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
       </svg>
     ),
   },
   {
-    key: 'explore' as const,
-    href: '/explore',
+    id: 'map', heLabel: 'מפה', enLabel: 'Map',
     icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}
+        strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
         <circle cx="12" cy="12" r="10" />
-        <path d="M16.24 7.76l-1.41 1.41M12 2v2M12 20v2M4.93 4.93l1.41 1.41M2 12h2M20 12h2M19.07 4.93l-1.41 1.41M4.93 19.07l1.41-1.41M16.24 16.24l1.41 1.41" />
+        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
       </svg>
     ),
   },
   {
-    key: 'intel' as const,
-    href: '/intel',
+    id: 'intel', heLabel: 'מודיעין', enLabel: 'Intel',
     icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}
+        strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
         <path d="M12 2a8 8 0 0 0-8 8c0 3.37 2.1 6.27 5 7.42V20h6v-2.58c2.9-1.15 5-4.05 5-7.42a8 8 0 0 0-8-8z" />
-        <path d="M10 22h4M12 18v-4" />
+        <path d="M10 22h4" />
       </svg>
     ),
   },
 ];
 
 export default function BottomNav() {
-  const pathname = usePathname();
-  const { ui } = useLanguage();
+  const { lang } = useLanguage();
+
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden
-                    bg-gray-950/90 backdrop-blur-md border-t border-gray-800">
+    <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-gray-950/95 backdrop-blur-md border-t border-gray-800">
       <div className="flex items-center justify-around h-14">
-        {tabs.map((tab) => {
-          const isActive = pathname.startsWith(tab.href);
-          const label = ui(tab.key);
-
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={`flex flex-col items-center gap-0.5 transition-colors
-                ${isActive ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-200'}`}
-            >
-              {tab.icon}
-              <span className="text-[10px] font-medium">{label}</span>
-            </Link>
-          );
-        })}
+        {SECTIONS.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => scrollTo(s.id)}
+            className="flex flex-col items-center gap-0.5 text-gray-400 hover:text-yellow-400 transition-colors active:scale-95"
+          >
+            {s.icon}
+            <span className="text-[10px] font-medium">
+              {lang === 'he' ? s.heLabel : s.enLabel}
+            </span>
+          </button>
+        ))}
       </div>
     </nav>
   );

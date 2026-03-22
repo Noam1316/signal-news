@@ -39,6 +39,8 @@ export default function LiveWire() {
   const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [showStats, setShowStats] = useState(true);
+  const [groupByTopic, setGroupByTopic] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(['il-mainstream']));
 
   const fetchArticles = useCallback(async () => {
     setLoading(true);
@@ -289,6 +291,20 @@ export default function LiveWire() {
             </option>
           ))}
         </select>
+
+        {/* Group by topic toggle */}
+        <button
+          onClick={() => setGroupByTopic(p => !p)}
+          className={`shrink-0 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+            groupByTopic
+              ? 'border-yellow-400/50 bg-yellow-400/10 text-yellow-400'
+              : 'border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-300'
+          }`}
+        >
+          {groupByTopic
+            ? (lang === 'he' ? '📁 לפי נושא' : '📁 Group by Topic')
+            : (lang === 'he' ? '📋 רשימה שטוחה' : '📋 Flat List')}
+        </button>
       </div>
 
       {/* Active filters indicator */}
@@ -335,47 +351,98 @@ export default function LiveWire() {
       )}
 
       {/* Article groups */}
-      {buckets.recent.length > 0 && (
-        <div className="space-y-1">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-yellow-400/70 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-            {lang === 'he' ? 'השעה האחרונה' : 'Last Hour'}
-            <span className="text-gray-600 font-normal">({buckets.recent.length})</span>
-          </h2>
-          <div className="space-y-0.5">
-            {buckets.recent.map((article) => (
-              <ArticleCard key={article.id} article={article} />
-            ))}
-          </div>
-        </div>
-      )}
+      {groupByTopic ? (
+        /* Topic-grouped view */
+        (() => {
+          const toggleGroup = (g: string) => setOpenGroups(prev => {
+            const next = new Set(prev);
+            if (next.has(g)) next.delete(g); else next.add(g);
+            return next;
+          });
+          const topicGroups = [
+            { id: 'il-mainstream', label: { en: 'IL Mainstream', he: 'מיינסטרים ישראלי' } },
+            { id: 'il-partisan',   label: { en: 'IL Partisan',   he: 'מפלגתי ישראלי' } },
+            { id: 'international', label: { en: 'International',  he: 'בינלאומי' } },
+          ].map(g => ({
+            ...g,
+            articles: filtered.filter(a => a.lensCategory === g.id),
+          })).filter(g => g.articles.length > 0);
 
-      {buckets.today.length > 0 && (
-        <div className="space-y-1">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-            {lang === 'he' ? 'היום' : 'Today'}
-            <span className="text-gray-600 font-normal ms-2">({buckets.today.length})</span>
-          </h2>
-          <div className="space-y-0.5">
-            {buckets.today.map((article) => (
-              <ArticleCard key={article.id} article={article} />
-            ))}
-          </div>
-        </div>
-      )}
+          return (
+            <div className="space-y-3">
+              {topicGroups.map(g => {
+                const isOpen = openGroups.has(g.id);
+                return (
+                  <div key={g.id} className="rounded-xl bg-gray-900/50 border border-gray-800 overflow-hidden">
+                    <button
+                      className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-800/30 transition-colors"
+                      onClick={() => toggleGroup(g.id)}
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wider text-yellow-400/70">
+                        {lang === 'he' ? g.label.he : g.label.en}
+                        <span className="text-gray-600 font-normal ms-2 normal-case tracking-normal">({g.articles.length})</span>
+                      </span>
+                      <span className="text-gray-600 text-xs">{isOpen ? '▲' : '▼'}</span>
+                    </button>
+                    {isOpen && (
+                      <div className="space-y-0.5 border-t border-gray-800/50">
+                        {g.articles.map(article => (
+                          <ArticleCard key={article.id} article={article} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()
+      ) : (
+        /* Flat time-bucket view */
+        <>
+          {buckets.recent.length > 0 && (
+            <div className="space-y-1">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-yellow-400/70 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+                {lang === 'he' ? 'השעה האחרונה' : 'Last Hour'}
+                <span className="text-gray-600 font-normal">({buckets.recent.length})</span>
+              </h2>
+              <div className="space-y-0.5">
+                {buckets.recent.map((article) => (
+                  <ArticleCard key={article.id} article={article} />
+                ))}
+              </div>
+            </div>
+          )}
 
-      {buckets.older.length > 0 && (
-        <div className="space-y-1">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-            {lang === 'he' ? 'קודם' : 'Earlier'}
-            <span className="text-gray-700 font-normal ms-2">({buckets.older.length})</span>
-          </h2>
-          <div className="space-y-0.5">
-            {buckets.older.map((article) => (
-              <ArticleCard key={article.id} article={article} />
-            ))}
-          </div>
-        </div>
+          {buckets.today.length > 0 && (
+            <div className="space-y-1">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                {lang === 'he' ? 'היום' : 'Today'}
+                <span className="text-gray-600 font-normal ms-2">({buckets.today.length})</span>
+              </h2>
+              <div className="space-y-0.5">
+                {buckets.today.map((article) => (
+                  <ArticleCard key={article.id} article={article} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {buckets.older.length > 0 && (
+            <div className="space-y-1">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-600">
+                {lang === 'he' ? 'קודם' : 'Earlier'}
+                <span className="text-gray-700 font-normal ms-2">({buckets.older.length})</span>
+              </h2>
+              <div className="space-y-0.5">
+                {buckets.older.map((article) => (
+                  <ArticleCard key={article.id} article={article} />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </section>
   );

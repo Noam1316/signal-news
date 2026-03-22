@@ -25,13 +25,27 @@ export default function MapEntities() {
       </h2>
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-gray-900/80 rounded-xl p-1 border border-gray-800 max-w-xs">
+      <div role="tablist" className="flex gap-1 bg-gray-900/80 rounded-xl p-1 border border-gray-800 max-w-xs">
         {TABS.map(tab => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={isActive}
+              tabIndex={isActive ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
+              onKeyDown={(e) => {
+                const tabs = TABS.map(t => t.id);
+                const currentIdx = tabs.indexOf(activeTab);
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setActiveTab(tabs[(currentIdx + 1) % tabs.length] as TabId);
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setActiveTab(tabs[(currentIdx - 1 + tabs.length) % tabs.length] as TabId);
+                }
+              }}
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-gray-800 text-white shadow-sm'
@@ -46,7 +60,7 @@ export default function MapEntities() {
       </div>
 
       {/* Tab content */}
-      <div>
+      <div role="tabpanel" aria-label={lang === 'he' ? TABS.find(t => t.id === activeTab)?.he : TABS.find(t => t.id === activeTab)?.en}>
         {activeTab === 'map' && <GeoMap />}
         {activeTab === 'entities' && <EntityGraph />}
       </div>
