@@ -118,35 +118,57 @@ body {
   border-radius: 3px;
 }
 
-/* Light theme */
+/* ─── Light theme ────────────────────────────────────────────────────────── */
+/*
+ * Strategy: override Tailwind v4's CSS color variables at the .light-theme
+ * root. Because every utility (bg-gray-900, bg-gray-900/80, hover:bg-gray-800,
+ * border-gray-700, etc.) resolves through these variables, a single variable
+ * override fixes ALL opacity/hover/focus variants automatically — no
+ * !important class hacks needed.
+ *
+ * Gray scale is "inverted": dark grays → light values, so components that
+ * were styled for dark mode look correct on a white background.
+ */
 .light-theme {
-  --color-bg-primary: #f8fafc;
-  --color-bg-surface: #ffffff;
-  --color-bg-surface-hover: #f1f5f9;
-  --color-border-subtle: #e2e8f0;
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
-}
-.light-theme body {
-  background: #f8fafc;
+  /* Page / layout */
+  --color-bg-primary:        #f1f5f9;
+  --color-bg-surface:        #ffffff;
+  --color-bg-surface-hover:  #f8fafc;
+  --color-border-subtle:     #e2e8f0;
+  --color-text-primary:      #0f172a;
+  --color-text-secondary:    #475569;
+  --color-text-muted:        #94a3b8;
+
+  /* Tailwind gray scale — remapped so dark-mode components become light */
+  --color-gray-950: #f1f5f9;   /* page bg  */
+  --color-gray-900: #ffffff;   /* card bg  */
+  --color-gray-800: #f1f5f9;   /* subtle input / hover bg */
+  --color-gray-700: #e2e8f0;   /* border   */
+  --color-gray-600: #cbd5e1;   /* subtle border / disabled */
+  --color-gray-500: #94a3b8;   /* placeholder / muted text */
+  --color-gray-400: #64748b;   /* secondary text */
+  --color-gray-300: #475569;   /* body text */
+  --color-gray-200: #334155;   /* strong body text */
+  --color-gray-100: #1e293b;   /* near-heading */
+  --color-gray-50:  #0f172a;   /* near-black */
+
+  /* white → dark, so text-white becomes readable on light backgrounds */
+  --color-white: #0f172a;
+
+  background-color: #f1f5f9;
   color: #0f172a;
 }
-.light-theme .bg-gray-950 { background-color: #f8fafc !important; }
-.light-theme .bg-gray-900 { background-color: #ffffff !important; }
-.light-theme .bg-gray-800 { background-color: #f1f5f9 !important; }
-.light-theme .bg-gray-700 { background-color: #e2e8f0 !important; }
-.light-theme .border-gray-900 { border-color: #e2e8f0 !important; }
-.light-theme .border-gray-800 { border-color: #e2e8f0 !important; }
-.light-theme .border-gray-700 { border-color: #cbd5e1 !important; }
-.light-theme .border-gray-600 { border-color: #94a3b8 !important; }
-.light-theme .text-white { color: #0f172a !important; }
-.light-theme .text-gray-100 { color: #1e293b !important; }
-.light-theme .text-gray-200 { color: #334155 !important; }
-.light-theme .text-gray-300 { color: #475569 !important; }
-.light-theme .text-gray-400 { color: #64748b !important; }
-.light-theme .text-gray-500 { color: #94a3b8 !important; }
-.light-theme .text-gray-600 { color: #94a3b8 !important; }
-.light-theme .text-gray-700 { color: #cbd5e1 !important; }
-.light-theme ::-webkit-scrollbar-track { background: #f8fafc; }
+
+.light-theme body {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* card-glow: softer shadow in light mode */
+.light-theme .card-glow::after {
+  box-shadow: 0 0 16px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* Scrollbar */
+.light-theme ::-webkit-scrollbar-track { background: #f1f5f9; }
 .light-theme ::-webkit-scrollbar-thumb { background: #cbd5e1; }
