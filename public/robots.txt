@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://signal-news-noam1316s-projects.vercel.app/sitemap.xml

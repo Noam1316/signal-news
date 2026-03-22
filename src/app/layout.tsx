@@ -18,9 +18,22 @@ const heebo = Heebo({
   weight: ["400", "500", "600", "700"],
 });
 
+const BASE_URL = 'https://signal-news-noam1316s-projects.vercel.app';
+
 export const metadata: Metadata = {
-  title: "Signal News — Know what's likely next",
-  description: "A real-time news intelligence layer that turns chaos into clarity: likelihood scores, narrative analysis, and lens differences — with sources and confidence.",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "Signal News — Know what's likely next",
+    template: "%s | Signal News",
+  },
+  description: "Real-time geopolitical news intelligence: likelihood scores, shock detection, media bias analysis, and Polymarket comparison — across 28+ sources. No noise, just signal.",
+  keywords: [
+    'news intelligence', 'geopolitical analysis', 'media bias', 'news likelihood',
+    'signal vs noise', 'polymarket', 'news analysis', 'real-time news',
+    'מודיעין חדשות', 'ניתוח גיאופוליטי', 'הטיה תקשורתית',
+  ],
+  authors: [{ name: 'Signal News' }],
+  creator: 'Signal News',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.svg',
@@ -32,15 +45,31 @@ export const metadata: Metadata = {
     title: 'Signal News',
   },
   openGraph: {
-    title: "Signal News",
-    description: "Know what's likely next — without the noise. Real-time news intelligence with likelihood scores and multi-lens analysis.",
+    title: "Signal News — Know what's likely next",
+    description: "Real-time geopolitical news intelligence with likelihood scores, shock detection, and media bias analysis across 28+ sources.",
     siteName: "Signal News",
     type: "website",
+    url: BASE_URL,
+    locale: 'en_US',
   },
   twitter: {
     card: "summary_large_image",
     title: "Signal News",
-    description: "Know what's likely next — without the noise.",
+    description: "Real-time news intelligence — likelihood scores, shock detection, Polymarket comparison.",
+    creator: "@signalnews",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-snippet': -1,
+      'max-image-preview': 'large',
+    },
+  },
+  alternates: {
+    canonical: BASE_URL,
   },
 };
 
