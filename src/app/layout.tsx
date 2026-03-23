@@ -79,8 +79,34 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Signal News',
+    description: 'Real-time geopolitical news intelligence with likelihood scores, shock detection, and media bias analysis.',
+    url: BASE_URL,
+    applicationCategory: 'NewsApplication',
+    operatingSystem: 'Web',
+    inLanguage: ['en', 'he'],
+    author: {
+      '@type': 'Organization',
+      name: 'Signal News',
+    },
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+    },
+  };
+
   return (
     <html lang="en" dir="ltr">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className={`${inter.variable} ${heebo.variable} antialiased`}>
         <a href="#brief" className="skip-to-content">
           Skip to content

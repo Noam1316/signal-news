@@ -101,7 +101,7 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
     return topics;
   }, [stories]);
 
-  const filtered = stories
+  const filtered = useMemo(() => stories
     .filter(s => lens === 'all' || s.lens === lens)
     .filter(s => !showWatchlistOnly || isWatched(s.slug))
     .filter(s => leanFilter === 'all' || getStoryLean(s) === leanFilter)
@@ -117,9 +117,9 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
     .filter(s => {
       if (topicFilter.length === 0) return true;
       return topicFilter.includes(s.category.he) || topicFilter.includes(s.category.en);
-    });
+    }), [stories, lens, showWatchlistOnly, isWatched, leanFilter, search, topicFilter]);
 
-  const sorted = [...filtered].sort((a, b) => {
+  const sorted = useMemo(() => [...filtered].sort((a, b) => {
     switch (sortKey) {
       case 'likelihood': return b.likelihood - a.likelihood;
       case 'delta':      return Math.abs(b.delta) - Math.abs(a.delta);
@@ -127,7 +127,7 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
       case 'newest':     return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
       default:           return 0;
     }
-  });
+  }), [filtered, sortKey]);
 
   const watchlistCount = watchlist.size;
   const activeFilterCount = (lens !== 'all' ? 1 : 0) + (leanFilter !== 'all' ? 1 : 0) + (showWatchlistOnly ? 1 : 0) + (search.trim() ? 1 : 0) + (topicFilter.length > 0 ? 1 : 0);

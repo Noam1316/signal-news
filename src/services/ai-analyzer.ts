@@ -104,15 +104,33 @@ const TOPIC_KEYWORDS: Record<string, string[]> = {
 };
 
 const NEGATIVE_WORDS = [
+  // English
   'war', 'attack', 'kill', 'dead', 'death', 'bomb', 'strike', 'crisis', 'threat', 'terror',
   'conflict', 'violence', 'casualties', 'destruction', 'collapse', 'danger', 'fear', 'warn',
-  'מלחמה', 'פיגוע', 'הרוג', 'מוות', 'משבר', 'איום', 'אזהרה',
+  'sanctions', 'escalation', 'invasion', 'shooting', 'explosion', 'hostage', 'siege',
+  'recession', 'crash', 'panic', 'disaster', 'catastrophe', 'famine', 'drought',
+  'assassination', 'coup', 'massacre', 'genocide', 'torture', 'arrest', 'detained',
+  'missile', 'shelling', 'airstrike', 'wounded', 'injured', 'refugee', 'displacement',
+  'scandal', 'corruption', 'fraud', 'breach', 'hack', 'leak', 'failure', 'shutdown',
+  // Hebrew
+  'מלחמה', 'פיגוע', 'הרוג', 'מוות', 'משבר', 'איום', 'אזהרה', 'הסלמה', 'פלישה',
+  'ירי', 'פיצוץ', 'חטיפה', 'מצור', 'מיתון', 'קריסה', 'פאניקה', 'אסון', 'רעידת אדמה',
+  'חיסול', 'הפיכה', 'טבח', 'עינויים', 'מעצר', 'עצור', 'טיל', 'הפגזה', 'תקיפה',
+  'פצוע', 'נפגע', 'פליט', 'עקירה', 'שחיתות', 'הונאה', 'פריצה', 'דליפה', 'כשל',
 ];
 
 const POSITIVE_WORDS = [
+  // English
   'peace', 'agreement', 'deal', 'progress', 'success', 'growth', 'hope', 'breakthrough',
-  'cooperation', 'ceasefire', 'release', 'rescue', 'reform', 'recovery',
-  'שלום', 'הסכם', 'התקדמות', 'הצלחה', 'פריצת דרך', 'שיתוף פעולה',
+  'cooperation', 'ceasefire', 'release', 'rescue', 'reform', 'recovery', 'victory',
+  'prosperity', 'innovation', 'milestone', 'historic', 'achievement', 'partnership',
+  'alliance', 'boost', 'surge', 'improvement', 'resolved', 'stabilize', 'de-escalation',
+  'reconciliation', 'liberation', 'reconstruction', 'aid', 'donation', 'investment',
+  'record high', 'breakthrough', 'elected', 'approved', 'ratified', 'signed',
+  // Hebrew
+  'שלום', 'הסכם', 'התקדמות', 'הצלחה', 'פריצת דרך', 'שיתוף פעולה', 'ניצחון',
+  'שגשוג', 'חדשנות', 'הישג', 'שותפות', 'ברית', 'עלייה', 'שיפור', 'ייצוב',
+  'פיוס', 'שחרור', 'שיקום', 'סיוע', 'תרומה', 'השקעה', 'שיא', 'אושר', 'נחתם',
 ];
 
 const SIGNAL_INDICATORS = [

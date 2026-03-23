@@ -32,7 +32,7 @@ export async function GET() {
     }
 
     // Generate stories from clusters
-    const stories = generateStories(articles, 8);
+    const stories = generateStories(articles, 15);
 
     if (stories.length === 0) {
       throw new Error('No clusters formed');

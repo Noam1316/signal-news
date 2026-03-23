@@ -31,7 +31,7 @@ export async function fetchFromSource(source: RssSource): Promise<FetchedArticle
   const feed = await parser.parseURL(source.url);
   const now = new Date().toISOString();
 
-  const items = (feed.items || []).slice(0, 20);
+  const items = (feed.items || []).slice(0, 50);
 
   return items
     .filter((item) => item.link)

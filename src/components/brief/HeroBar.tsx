@@ -28,18 +28,28 @@ export default function HeroBar() {
       const data = await res.json();
 
       let shockCount = 0;
+      let liveAccuracy = 78;
       try {
-        const shockRes = await fetch('/api/shocks');
-        if (shockRes.ok) {
-          const shockData = await shockRes.json();
+        const [shockRes, logRes] = await Promise.allSettled([
+          fetch('/api/shocks'),
+          fetch('/api/shock-log'),
+        ]);
+        if (shockRes.status === 'fulfilled' && shockRes.value.ok) {
+          const shockData = await shockRes.value.json();
           shockCount = Array.isArray(shockData) ? shockData.length : (shockData.shocks?.length || 0);
+        }
+        if (logRes.status === 'fulfilled' && logRes.value.ok) {
+          const logData = await logRes.value.json();
+          if (logData.accuracy?.rate != null) {
+            liveAccuracy = Math.round(logData.accuracy.rate);
+          }
         }
       } catch { /* silent */ }
 
       setStats({
         articles: data.stats?.total || 0,
         shocks: shockCount,
-        accuracy: 78,
+        accuracy: liveAccuracy,
         lastUpdate: data.analyzedAt || new Date().toISOString(),
       });
     } catch { /* silent */ }

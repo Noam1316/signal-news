@@ -17,14 +17,6 @@ import ShareButton from '@/components/shared/ShareButton';
 import ShareStoryButton from '@/components/shared/ShareStoryButton';
 import ReaderMode from '@/components/shared/ReaderMode';
 
-const STATIC_SLUGS = [
-  'iran-nuclear-talks',
-  'israel-saudi-normalization',
-  'global-tech-layoffs',
-  'us-midterms-middle-east',
-  'northern-border-security',
-];
-
 interface BriefCardProps {
   story: BriefStory;
   isWatched?: boolean;
@@ -38,7 +30,8 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
   const [expanded, setExpanded] = useState(false);
   const [readerOpen, setReaderOpen] = useState(false);
 
-  const hasDetailPage = STATIC_SLUGS.includes(story.slug);
+  // All stories are expandable — static slugs also get a detail page
+  const hasDetailPage = false; // all stories expand inline now
   const sourceCount = story.sources?.length || 0;
   const lean = getStoryLean(story);
   const leanData = lean ? LEAN_LABEL[lean] : null;
