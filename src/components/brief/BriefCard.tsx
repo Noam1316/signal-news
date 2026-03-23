@@ -16,6 +16,8 @@ import SourceList from '@/components/shared/SourceList';
 import ShareButton from '@/components/shared/ShareButton';
 import ShareStoryButton from '@/components/shared/ShareStoryButton';
 import ReaderMode from '@/components/shared/ReaderMode';
+import BiasBar from '@/components/shared/BiasBar';
+import BlindspotBadge from '@/components/shared/BlindspotBadge';
 
 interface BriefCardProps {
   story: BriefStory;
@@ -87,6 +89,9 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
               {lang === 'he' ? leanData.he : leanData.en}
             </span>
           )}
+
+          {/* Blindspot indicator */}
+          <BlindspotBadge sources={story.sources} />
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -185,6 +190,9 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
           </div>
         </div>
       )}
+
+      {/* Bias distribution bar */}
+      <BiasBar sources={story.sources} compact />
 
       {/* Sources + Share */}
       <div className="flex items-center justify-between">

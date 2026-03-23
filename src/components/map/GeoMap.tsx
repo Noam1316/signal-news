@@ -73,6 +73,23 @@ const SENTIMENT_COLORS = {
   mixed: { fill: '#f59e0b', glow: '#f59e0b40' },
 };
 
+/**
+ * Tension Index per country: composite of article volume, negative sentiment ratio, source diversity.
+ * Returns 0-100 score.
+ */
+function computeTension(country: CountryData, maxArticles: number): number {
+  const volumeScore = Math.min(40, (country.articles / Math.max(1, maxArticles)) * 40);
+  const negScore = country.sentiment === 'negative' ? 35 : country.sentiment === 'mixed' ? 20 : 5;
+  const diversityScore = Math.min(25, country.sources.length * 5);
+  return Math.round(volumeScore + negScore + diversityScore);
+}
+
+function getTensionLabel(tension: number): { he: string; en: string; color: string } {
+  if (tension >= 70) return { he: 'מתח גבוה', en: 'High Tension', color: 'text-red-400' };
+  if (tension >= 40) return { he: 'מתח בינוני', en: 'Moderate', color: 'text-yellow-400' };
+  return { he: 'יציב', en: 'Stable', color: 'text-emerald-400' };
+}
+
 interface RawArticle {
   title: string;
   link: string;
@@ -318,6 +335,21 @@ export default function GeoMap() {
                 <div className="font-bold text-white text-sm">
                   {lang === 'he' ? hoveredCountry.name.he : hoveredCountry.name.en}
                 </div>
+                {/* Tension Index */}
+                {(() => {
+                  const tension = computeTension(hoveredCountry, maxArticles);
+                  const tLabel = getTensionLabel(tension);
+                  return (
+                    <div className="flex items-center gap-2">
+                      <span className={`font-bold ${tLabel.color}`}>{tension}</span>
+                      <span className={`text-[10px] ${tLabel.color}`}>{lang === 'he' ? tLabel.he : tLabel.en}</span>
+                      <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${tension >= 70 ? 'bg-red-500' : tension >= 40 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
+                          style={{ width: `${tension}%` }} />
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className="flex items-center gap-2">
                   <span className="text-yellow-400 font-mono font-bold">{hoveredCountry.articles}</span>
                   <span className="text-gray-400">{lang === 'he' ? 'אזכורים' : 'mentions'}</span>
@@ -357,6 +389,7 @@ export default function GeoMap() {
               <thead>
                 <tr className="border-b border-gray-800">
                   <th className="text-start text-xs text-gray-500 font-medium p-3">{lang === 'he' ? 'מדינה' : 'Country'}</th>
+                  <th className="text-center text-xs text-gray-500 font-medium p-3">{lang === 'he' ? 'מתח' : 'Tension'}</th>
                   <th className="text-center text-xs text-gray-500 font-medium p-3">{lang === 'he' ? 'אזכורים' : 'Mentions'}</th>
                   <th className="text-center text-xs text-gray-500 font-medium p-3">{lang === 'he' ? 'סנטימנט' : 'Sentiment'}</th>
                   <th className="text-start text-xs text-gray-500 font-medium p-3">{lang === 'he' ? 'מקורות' : 'Sources'}</th>
@@ -369,6 +402,17 @@ export default function GeoMap() {
                     onClick={() => setSelectedCountry(selectedCountry === country.code ? null : country.code)}>
                     <td className="p-3 font-medium text-white">
                       {lang === 'he' ? country.name.he : country.name.en}
+                    </td>
+                    <td className="p-3 text-center">
+                      {(() => {
+                        const t = computeTension(country, maxArticles);
+                        const tl = getTensionLabel(t);
+                        return (
+                          <span className={`text-xs font-bold ${tl.color}`} title={lang === 'he' ? tl.he : tl.en}>
+                            {t}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="p-3 text-center">
                       <span className="font-mono font-bold text-yellow-400">{country.articles}</span>

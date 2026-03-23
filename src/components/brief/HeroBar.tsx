@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/i18n/context';
 import AlertBell from '@/components/alerts/AlertBell';
+import IntelScore from '@/components/shared/IntelScore';
 
 const STALE_THRESHOLD = 30; // minutes
 const STALE_DISMISS_KEY = 'signal_stale_dismissed';
@@ -151,8 +152,9 @@ export default function HeroBar() {
           )}
         </div>
 
-        {/* Right: Signal badge + Bell */}
+        {/* Right: Intel Score + Signal badge + Bell */}
         <div className="shrink-0 flex items-center gap-2">
+          <IntelScore />
           <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/20">
             <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-wider">Signal</span>
           </div>

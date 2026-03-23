@@ -10,6 +10,8 @@ import LensSwitcher from '@/components/shared/LensSwitcher';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import { getStoryLean, LEAN_LABEL, type Lean } from '@/utils/political-lean';
 import { useRecordStories } from '@/hooks/useLikelihoodHistory';
+import { usePersonalization } from '@/hooks/usePersonalization';
+import { useIntelScore } from '@/hooks/useIntelScore';
 
 type SortKey = 'default' | 'likelihood' | 'delta' | 'sources' | 'newest';
 
@@ -32,6 +34,8 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
   const [sortKey, setSortKey] = useState<SortKey>('default');
   const { toggle, isWatched, watchlist } = useWatchlist();
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const { recordClick, getInterestWeight, isOutsideLane, totalClicks } = usePersonalization();
+  const { recordStoryView } = useIntelScore();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [topicFilter, setTopicFilter] = useState<string[]>(() => {
     if (typeof window === 'undefined') return [];
@@ -125,9 +129,23 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
       case 'delta':      return Math.abs(b.delta) - Math.abs(a.delta);
       case 'sources':    return (b.sources?.length || 0) - (a.sources?.length || 0);
       case 'newest':     return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
-      default:           return 0;
+      default: {
+        // Personalized sort: boost stories in user's interest areas
+        if (totalClicks >= 5) {
+          const wA = getInterestWeight(a.category.en) || getInterestWeight(a.category.he);
+          const wB = getInterestWeight(b.category.en) || getInterestWeight(b.category.he);
+          if (Math.abs(wA - wB) > 0.1) return wB - wA;
+        }
+        return 0;
+      }
     }
-  }), [filtered, sortKey]);
+  }), [filtered, sortKey, totalClicks, getInterestWeight]);
+
+  // Anti-filter-bubble: stories outside user's interests
+  const outsideLaneStories = useMemo(() => {
+    if (totalClicks < 5) return [];
+    return sorted.filter(s => isOutsideLane(s.category.en) && isOutsideLane(s.category.he)).slice(0, 2);
+  }, [sorted, totalClicks, isOutsideLane]);
 
   const watchlistCount = watchlist.size;
   const activeFilterCount = (lens !== 'all' ? 1 : 0) + (leanFilter !== 'all' ? 1 : 0) + (showWatchlistOnly ? 1 : 0) + (search.trim() ? 1 : 0) + (topicFilter.length > 0 ? 1 : 0);
@@ -340,7 +358,11 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
       {/* Stories */}
       {sorted.map((story, i) => (
         <div key={story.slug} className="animate-slide-up"
-             style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'both' }}>
+             style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'both' }}
+             onClick={() => {
+               recordClick(story.category.en || story.category.he);
+               recordStoryView();
+             }}>
           <BriefCard
             story={story}
             isWatched={isWatched(story.slug)}
@@ -349,6 +371,36 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
           />
         </div>
       ))}
+
+      {/* Anti-filter-bubble: "Beyond your interests" */}
+      {outsideLaneStories.length > 0 && (
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-sm">🌍</span>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              {lang === 'he' ? 'מעבר לתחומי העניין שלך' : 'Beyond your interests'}
+            </h3>
+            <span className="text-[9px] text-gray-600">
+              {lang === 'he' ? 'קצין מודיעין קורא מחוץ לתחום' : 'Intel officers read outside their lane'}
+            </span>
+          </div>
+          {outsideLaneStories.map((story) => (
+            <div key={`outside-${story.slug}`}
+                 className="opacity-80 border-s-2 border-indigo-500/40 ps-3"
+                 onClick={() => {
+                   recordClick(story.category.en || story.category.he);
+                   recordStoryView();
+                 }}>
+              <BriefCard
+                story={story}
+                isWatched={isWatched(story.slug)}
+                onWatchToggle={() => toggle(story.slug)}
+                relatedShock={shockBySlug[story.slug]}
+              />
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Empty states */}
       {!loading && sorted.length === 0 && showWatchlistOnly && (
