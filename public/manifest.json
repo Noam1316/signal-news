@@ -1,24 +1,28 @@
 {
-  "name": "Signal News Intelligence",
-  "short_name": "Signal",
-  "description": "Know what's likely next — AI-powered news intelligence with prediction markets",
+  "name": "Signal News — מודיעין חדשות",
+  "short_name": "Signal News",
+  "description": "פלטפורמת מודיעין גיאופוליטי בזמן אמת — סיגנלים, זעזועים, ניתוח הטיה תקשורתית",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#030712",
-  "theme_color": "#facc15",
+  "background_color": "#0a0f1e",
+  "theme_color": "#6366f1",
   "orientation": "portrait-primary",
+  "lang": "he",
+  "dir": "rtl",
+  "scope": "/",
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-192.svg",
-      "sizes": "192x192",
+      "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512.svg",
@@ -27,9 +31,25 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["news", "intelligence", "analysis"],
-  "lang": "en",
-  "dir": "auto",
-  "scope": "/",
-  "prefer_related_applications": false
+  "categories": ["news", "politics", "finance"],
+  "shortcuts": [
+    {
+      "name": "תקציר יומי",
+      "short_name": "תקציר",
+      "url": "/dashboard#brief",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "זעזועים",
+      "short_name": "זעזועים",
+      "url": "/dashboard#shocks",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Signal vs Market",
+      "short_name": "Market",
+      "url": "/dashboard#intel",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
 }
