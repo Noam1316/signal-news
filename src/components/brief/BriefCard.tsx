@@ -15,6 +15,7 @@ import DeltaIndicator from '@/components/shared/DeltaIndicator';
 import SourceList from '@/components/shared/SourceList';
 import ShareButton from '@/components/shared/ShareButton';
 import ShareStoryButton from '@/components/shared/ShareStoryButton';
+import ReaderMode from '@/components/shared/ReaderMode';
 
 const STATIC_SLUGS = [
   'iran-nuclear-talks',
@@ -35,6 +36,7 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
   const { t, dir, lang } = useLanguage();
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
+  const [readerOpen, setReaderOpen] = useState(false);
 
   const hasDetailPage = STATIC_SLUGS.includes(story.slug);
   const sourceCount = story.sources?.length || 0;
@@ -58,6 +60,7 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
   };
 
   return (
+    <>
     <article
       dir={dir}
       onClick={handleClick}
@@ -101,6 +104,13 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
           )}
           <SignalLabel isSignal={story.isSignal} />
           <ShareStoryButton story={story} />
+          <button
+            onClick={e => { e.stopPropagation(); setReaderOpen(true); }}
+            title={lang === 'he' ? 'מצב קריאה' : 'Reader mode'}
+            className="text-sm text-gray-500 hover:text-yellow-400 transition-colors"
+          >
+            📖
+          </button>
           {onWatchToggle && (
             <button
               onClick={e => { e.stopPropagation(); onWatchToggle(); }}
@@ -189,5 +199,8 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
         <ShareButton title={t(story.headline)} text={t(story.summary)} />
       </div>
     </article>
+
+    {readerOpen && <ReaderMode story={story} onClose={() => setReaderOpen(false)} />}
+  </>
   );
 }

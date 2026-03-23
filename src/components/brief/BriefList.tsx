@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePolling } from '@/hooks/usePolling';
 import { useLanguage } from '@/i18n/context';
 import type { BriefStory, ShockEvent } from '@/lib/types';
@@ -12,6 +12,8 @@ import { getStoryLean, LEAN_LABEL, type Lean } from '@/utils/political-lean';
 import { useRecordStories } from '@/hooks/useLikelihoodHistory';
 
 type SortKey = 'default' | 'likelihood' | 'delta' | 'sources' | 'newest';
+
+const TOPIC_FILTER_KEY = 'signal_topic_filter';
 
 interface BriefListProps {
   compactMode?: boolean;
@@ -31,8 +33,26 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
   const { toggle, isWatched, watchlist } = useWatchlist();
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [topicFilter, setTopicFilter] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = localStorage.getItem(TOPIC_FILTER_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   useRecordStories(stories); // persist likelihood history for sparklines + real delta
+
+  // Persist topicFilter to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(TOPIC_FILTER_KEY, JSON.stringify(topicFilter));
+    } catch {
+      // ignore
+    }
+  }, [topicFilter]);
 
   // Build slug → shock map for shock indicators on Brief cards
   const shockBySlug = Object.fromEntries(
@@ -67,6 +87,20 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
 
   usePolling(fetchStories, 3 * 60 * 1000, autoRefresh);
 
+  // Extract unique categories from all stories
+  const uniqueTopics = useMemo(() => {
+    const seen = new Set<string>();
+    const topics: { he: string; en: string }[] = [];
+    for (const s of stories) {
+      const key = s.category.he || s.category.en;
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        topics.push({ he: s.category.he, en: s.category.en });
+      }
+    }
+    return topics;
+  }, [stories]);
+
   const filtered = stories
     .filter(s => lens === 'all' || s.lens === lens)
     .filter(s => !showWatchlistOnly || isWatched(s.slug))
@@ -79,6 +113,10 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
       const headline = (typeof h === 'string' ? h : h?.he || h?.en || '').toLowerCase();
       const summary = (typeof sm === 'string' ? sm : sm?.he || sm?.en || '').toLowerCase();
       return headline.includes(q) || summary.includes(q);
+    })
+    .filter(s => {
+      if (topicFilter.length === 0) return true;
+      return topicFilter.includes(s.category.he) || topicFilter.includes(s.category.en);
     });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -92,7 +130,7 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
   });
 
   const watchlistCount = watchlist.size;
-  const activeFilterCount = (lens !== 'all' ? 1 : 0) + (leanFilter !== 'all' ? 1 : 0) + (showWatchlistOnly ? 1 : 0) + (search.trim() ? 1 : 0);
+  const activeFilterCount = (lens !== 'all' ? 1 : 0) + (leanFilter !== 'all' ? 1 : 0) + (showWatchlistOnly ? 1 : 0) + (search.trim() ? 1 : 0) + (topicFilter.length > 0 ? 1 : 0);
 
   const SORT_OPTIONS: { key: SortKey; he: string; en: string }[] = [
     { key: 'default',    he: 'ברירת מחדל', en: 'Default' },
@@ -232,6 +270,53 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
             ))}
           </select>
         </div>
+
+        {/* Row 3: topic pills */}
+        {uniqueTopics.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => setTopicFilter([])}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors
+                          ${topicFilter.length === 0
+                            ? 'bg-yellow-400/20 border-yellow-400/50 text-yellow-300'
+                            : 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300'
+                          }`}
+            >
+              {lang === 'he' ? 'הכל' : 'All'}
+            </button>
+            {uniqueTopics.map(topic => {
+              const label = lang === 'he' ? topic.he : topic.en;
+              const key = topic.he || topic.en;
+              const isActive = topicFilter.includes(topic.he) || topicFilter.includes(topic.en);
+              return (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setTopicFilter(prev => {
+                      const inHe = prev.includes(topic.he);
+                      const inEn = prev.includes(topic.en);
+                      if (isActive) {
+                        return prev.filter(t => t !== topic.he && t !== topic.en);
+                      } else {
+                        const next = [...prev];
+                        if (topic.he && !inHe) next.push(topic.he);
+                        if (topic.en && !inEn) next.push(topic.en);
+                        return next;
+                      }
+                    });
+                  }}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors
+                              ${isActive
+                                ? 'bg-yellow-400/20 border-yellow-400/50 text-yellow-300'
+                                : 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300'
+                              }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Daily Intelligence Summary */}

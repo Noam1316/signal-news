@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useLanguage } from '@/i18n/context';
 import { usePreferences } from '@/contexts/PreferencesContext';
@@ -90,7 +91,10 @@ export default function SectionNav() {
           )}
         </button>
 
-        {showPrefs && <PreferencesPanel onClose={() => setShowPrefs(false)} />}
+        {showPrefs && typeof document !== 'undefined' && createPortal(
+          <PreferencesPanel onClose={() => setShowPrefs(false)} />,
+          document.body
+        )}
       </div>
     </nav>
   );
