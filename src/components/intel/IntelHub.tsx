@@ -6,11 +6,13 @@ import IntelDashboard from './IntelDashboard';
 import PolymarketComparison from './PolymarketComparison';
 import MediaBiasPanel from './MediaBiasPanel';
 import LiveWire from '@/components/explore/LiveWire';
+import GroupedFeed from './GroupedFeed';
 
 const TABS = [
   { id: 'overview', icon: '📊', en: 'Overview', he: 'סקירה' },
   { id: 'polymarket', icon: '📈', en: 'Signal vs Market', he: 'סיגנל vs שוק' },
   { id: 'bias', icon: '🏛️', en: 'Media Bias', he: 'הטיה תקשורתית' },
+  { id: 'grouped', icon: '🗞️', en: 'Grouped', he: 'מקובץ' },
   { id: 'feed', icon: '🌐', en: 'Live Feed', he: 'פיד חי' },
 ] as const;
 
@@ -70,6 +72,7 @@ export default function IntelHub() {
         {activeTab === 'overview' && <IntelDashboard />}
         {activeTab === 'polymarket' && <PolymarketComparison />}
         {activeTab === 'bias' && <MediaBiasPanel />}
+        {activeTab === 'grouped' && <GroupedFeed />}
         {activeTab === 'feed' && <LiveWire />}
       </div>
     </div>
