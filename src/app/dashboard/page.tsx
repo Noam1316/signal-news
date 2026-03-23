@@ -11,6 +11,7 @@ import TrackRecord from '@/components/brief/TrackRecord';
 import StoryOfTheDay from '@/components/brief/StoryOfTheDay';
 import ScrollToTop from '@/components/shared/ScrollToTop';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
+import EmailSubscribe from '@/components/alerts/EmailSubscribe';
 
 /* Lazy-load heavy sections — only ship JS when scrolled into view */
 const ShockFeed = dynamic(() => import('@/components/shocks/ShockFeed'), {
@@ -36,7 +37,10 @@ export default function DashboardPage() {
         {/* ── Brief ── */}
         {!prefs.hiddenSections.includes('brief') && (
           <section id="brief" className="scroll-mt-24">
-            <DateHeader />
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <DateHeader />
+              <EmailSubscribe />
+            </div>
             <div className="mt-4 space-y-4">
               <StoryOfTheDay />
               {/* 2-column on large screens: news feed left, track record right */}
