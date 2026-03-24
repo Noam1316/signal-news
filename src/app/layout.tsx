@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, Heebo } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 import { LanguageProvider } from "@/i18n/context";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PreferencesProvider } from "@/contexts/PreferencesContext";
@@ -106,6 +109,14 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        {GA_ID && (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+            <Script id="ga4" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');`}
+            </Script>
+          </>
+        )}
       </head>
       <body className={`${inter.variable} ${heebo.variable} antialiased`}>
         <a href="#brief" className="skip-to-content">

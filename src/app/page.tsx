@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/i18n/context';
+import { useReferral } from '@/hooks/useReferral';
 import { stories } from '@/data/stories';
 import LikelihoodMeter from '@/components/shared/LikelihoodMeter';
 import DeltaIndicator from '@/components/shared/DeltaIndicator';
@@ -41,11 +42,31 @@ function RevealSection({ children, className = '' }: { children: React.ReactNode
 export default function LandingPage() {
   const { ui, t, dir, lang, toggleLang } = useLanguage();
   const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const [emailValue, setEmailValue] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const previewStory = stories[0];
+  const { myCode, referralCount, shareUrl, copyShareLink, hasProUnlock, nextMilestone } = useReferral();
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setEmailSubmitted(true);
+    setEmailLoading(true);
+    try {
+      await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailValue, dailyBrief: true }),
+      });
+      setEmailSubmitted(true);
+    } catch { /* silent */ } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    await copyShareLink();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -252,6 +273,190 @@ export default function LandingPage() {
         </div>
       </RevealSection>
 
+      {/* ─── Stats Bar ─── */}
+      <RevealSection className="py-10 px-6 border-y border-gray-800/50">
+        <div className="max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          {[
+            { value: '28+', label: lang === 'he' ? 'מקורות חדשות' : 'News Sources' },
+            { value: '24/7', label: lang === 'he' ? 'ניטור רציף' : 'Live Monitoring' },
+            { value: '100%', label: lang === 'he' ? 'ללא עלות API' : 'No API Cost' },
+            { value: '0₪', label: lang === 'he' ? 'חינמי לחלוטין' : 'Free Forever' },
+          ].map(stat => (
+            <div key={stat.value}>
+              <div className="text-3xl font-black text-yellow-400">{stat.value}</div>
+              <div className="text-sm text-gray-400 mt-1">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </RevealSection>
+
+      {/* ─── Pricing ─── */}
+      <RevealSection className="py-20 px-6">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-center text-3xl font-black text-white mb-3">
+            {lang === 'he' ? 'תמחור פשוט' : 'Simple Pricing'}
+          </h2>
+          <p className="text-center text-gray-400 mb-12">
+            {lang === 'he' ? 'מתחיל חינמי — שדרג כשתרצה' : 'Start free — upgrade when ready'}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Free */}
+            <div className="rounded-2xl border border-gray-800 bg-gray-900/50 p-6 space-y-4">
+              <div className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Free</div>
+              <div className="text-4xl font-black text-white">₪0</div>
+              <div className="text-sm text-gray-500">{lang === 'he' ? 'לתמיד' : 'forever'}</div>
+              <hr className="border-gray-800" />
+              <ul className="space-y-2 text-sm text-gray-300">
+                {(lang === 'he' ? [
+                  '5 סיפורים ביום',
+                  'זיהוי זעזועים',
+                  'מפה גיאופוליטית',
+                  '5 שווקי Polymarket',
+                  'מייל יומי (תקציר קצר)',
+                ] : [
+                  '5 stories/day',
+                  'Shock detection',
+                  'Geopolitical map',
+                  '5 Polymarket markets',
+                  'Daily email brief',
+                ]).map(f => (
+                  <li key={f} className="flex items-center gap-2">
+                    <span className="text-green-400 text-xs">✓</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/dashboard"
+                className="block text-center py-2.5 rounded-xl border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors text-sm font-semibold">
+                {lang === 'he' ? 'התחל עכשיו' : 'Get Started'}
+              </Link>
+            </div>
+
+            {/* Pro */}
+            <div className="rounded-2xl border-2 border-indigo-500 bg-indigo-950/30 p-6 space-y-4 relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs bg-indigo-500 text-white px-3 py-1 rounded-full font-bold">
+                {lang === 'he' ? 'הכי פופולרי' : 'Most Popular'}
+              </div>
+              <div className="text-sm font-semibold text-indigo-400 uppercase tracking-wider">Pro</div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-black text-white">₪49</span>
+                <span className="text-gray-400 text-sm">{lang === 'he' ? '/חודש' : '/mo'}</span>
+              </div>
+              <div className="text-sm text-gray-500">₪470{lang === 'he' ? '/שנה (חיסכון 20%)' : '/yr (save 20%)'}</div>
+              <hr className="border-indigo-900" />
+              <ul className="space-y-2 text-sm text-gray-300">
+                {(lang === 'he' ? [
+                  'הכל בחינמי +',
+                  'סיפורים ללא הגבלה',
+                  'מייל מפורט מלא (דף שלם)',
+                  'כל שווקי Polymarket (50+)',
+                  'Watchlist + התראות',
+                  'כתבות מקובצות',
+                  'ייצוא PDF',
+                  'היסטוריה 90 יום',
+                ] : [
+                  'Everything in Free +',
+                  'Unlimited stories',
+                  'Full daily brief email',
+                  'All Polymarket markets (50+)',
+                  'Watchlist + alerts',
+                  'Grouped stories',
+                  'PDF export',
+                  '90-day history',
+                ]).map(f => (
+                  <li key={f} className="flex items-center gap-2">
+                    <span className="text-indigo-400 text-xs">✓</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <button className="block w-full text-center py-2.5 rounded-xl bg-indigo-500 text-white font-bold hover:bg-indigo-400 transition-colors text-sm">
+                {lang === 'he' ? 'בקרוב' : 'Coming Soon'}
+              </button>
+            </div>
+
+            {/* Enterprise */}
+            <div className="rounded-2xl border border-gray-800 bg-gray-900/50 p-6 space-y-4">
+              <div className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Enterprise</div>
+              <div className="text-4xl font-black text-white">₪990</div>
+              <div className="text-sm text-gray-500">{lang === 'he' ? '/חודש' : '/month'}</div>
+              <hr className="border-gray-800" />
+              <ul className="space-y-2 text-sm text-gray-300">
+                {(lang === 'he' ? [
+                  'הכל ב-Pro +',
+                  'API Access (JSON feed)',
+                  'Slack/Teams webhook',
+                  'White-label',
+                  'מקורות RSS מותאמים',
+                  'SLA + תמיכה ישירה',
+                ] : [
+                  'Everything in Pro +',
+                  'API Access (JSON feed)',
+                  'Slack/Teams webhook',
+                  'White-label',
+                  'Custom RSS sources',
+                  'SLA + direct support',
+                ]).map(f => (
+                  <li key={f} className="flex items-center gap-2">
+                    <span className="text-yellow-400 text-xs">✓</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <a href="mailto:noam@signal-news.io"
+                className="block text-center py-2.5 rounded-xl border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors text-sm font-semibold">
+                {lang === 'he' ? 'צור קשר' : 'Contact Us'}
+              </a>
+            </div>
+          </div>
+        </div>
+      </RevealSection>
+
+      {/* ─── Referral Section ─── */}
+      <RevealSection className="py-16 px-6 bg-indigo-950/20 border-y border-indigo-900/30">
+        <div className="max-w-2xl mx-auto text-center space-y-6">
+          <div className="text-4xl">🎁</div>
+          <h2 className="text-2xl font-black text-white">
+            {lang === 'he' ? 'שתף וקבל Pro בחינם' : 'Refer friends, get Pro free'}
+          </h2>
+          <p className="text-gray-400 text-sm">
+            {lang === 'he'
+              ? 'הזמן 5 חברים → קבל חודש Pro חינם. 3 הזמנות → שבוע Pro.'
+              : 'Invite 5 friends → get 1 month Pro free. 3 invites → 1 week Pro.'}
+          </p>
+
+          {/* Progress */}
+          {referralCount > 0 && (
+            <div className="flex items-center justify-center gap-3 text-sm">
+              <span className="text-indigo-400 font-bold">{referralCount}</span>
+              <div className="w-32 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-full bg-indigo-500 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, (referralCount / 5) * 100)}%` }} />
+              </div>
+              <span className="text-gray-500">/ 5</span>
+              {hasProUnlock && <span className="text-yellow-400 font-bold">🏆 Pro פתוח!</span>}
+            </div>
+          )}
+
+          {/* Share link */}
+          {myCode && (
+            <div className="flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-xl p-3 text-sm font-mono text-left" dir="ltr">
+              <span className="flex-1 text-gray-300 truncate">{shareUrl}</span>
+              <button onClick={handleCopy}
+                className="shrink-0 px-3 py-1 rounded-lg bg-indigo-500 text-white text-xs font-bold hover:bg-indigo-400 transition-colors">
+                {copied ? '✓' : lang === 'he' ? 'העתק' : 'Copy'}
+              </button>
+            </div>
+          )}
+
+          {nextMilestone && (
+            <p className="text-xs text-gray-500">
+              {lang === 'he'
+                ? `עוד ${nextMilestone - referralCount} הזמנות להטבה הבאה`
+                : `${nextMilestone - referralCount} more invites to next reward`}
+            </p>
+          )}
+        </div>
+      </RevealSection>
+
       {/* ─── Email Signup ─── */}
       <RevealSection className="py-20 px-6">
         <div className="max-w-lg mx-auto text-center space-y-6">
@@ -264,28 +469,46 @@ export default function LandingPage() {
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6L9 17l-5-5" />
               </svg>
-              {ui('emailThanks')}
+              {lang === 'he' ? '✅ נרשמת! התקציר הראשון יגיע מחר ב-07:00' : '✅ Subscribed! First brief arrives tomorrow at 7am'}
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
               <input
                 type="email"
                 required
+                value={emailValue}
+                onChange={e => setEmailValue(e.target.value)}
                 placeholder={ui('emailPlaceholder')}
                 className="flex-1 px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white placeholder-gray-500
                            focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/50 transition-all"
+                dir="ltr"
               />
               <button
                 type="submit"
-                className="px-6 py-3 rounded-xl bg-yellow-400 text-gray-950 font-bold hover:bg-yellow-300 transition-colors
-                           shrink-0"
+                disabled={emailLoading}
+                className="px-6 py-3 rounded-xl bg-yellow-400 text-gray-950 font-bold hover:bg-yellow-300 transition-colors shrink-0 disabled:opacity-60"
               >
-                {ui('subscribe')}
+                {emailLoading ? '...' : ui('subscribe')}
               </button>
             </form>
           )}
 
-          <p className="text-sm text-gray-500">{ui('emailSignupNote')}</p>
+          <p className="text-sm text-gray-500">{lang === 'he' ? '📧 תקציר מודיעיני כל בוקר ב-07:00 · ללא ספאם · ביטול בכל עת' : '📧 Daily brief at 7am · No spam · Unsubscribe anytime'}</p>
+        </div>
+      </RevealSection>
+
+      {/* ─── Embed Code ─── */}
+      <RevealSection className="py-12 px-6 border-t border-gray-800/50">
+        <div className="max-w-2xl mx-auto text-center space-y-4">
+          <h3 className="text-lg font-bold text-white">
+            {lang === 'he' ? '🔗 הטמע Signal News באתר שלך' : '🔗 Embed Signal News on your site'}
+          </h3>
+          <p className="text-sm text-gray-500">
+            {lang === 'he' ? 'העתק את הקוד והדבק בכל אתר' : 'Copy the code and paste anywhere'}
+          </p>
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 text-left font-mono text-xs text-gray-300" dir="ltr">
+            {'<iframe src="https://signal-news-noam1316s-projects.vercel.app/embed/signal-of-the-day" width="440" height="220" frameborder="0" style="border-radius:14px"></iframe>'}
+          </div>
         </div>
       </RevealSection>
 
