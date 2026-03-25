@@ -1,7 +1,7 @@
 /**
  * GET /api/cron/daily-brief
  * Triggered by Vercel Cron at 07:00 Israel time (05:00 UTC).
- * Sends daily brief email to all subscribers.
+ * Sends daily brief email to all subscribers via Gmail SMTP.
  * Protected by CRON_SECRET.
  */
 
@@ -10,7 +10,7 @@ import { getAllSubscribers } from '@/services/subscriber-store';
 import { getCachedArticles } from '@/services/article-cache';
 import { generateStories } from '@/services/story-clusterer';
 import { detectShocks } from '@/services/shock-detector';
-import { getResend, FROM_EMAIL } from '@/lib/resend';
+import { sendMail, isMailerConfigured } from '@/lib/mailer';
 import { buildDailyBriefEmail } from '@/lib/email-templates';
 
 export async function GET(req: NextRequest) {
@@ -21,9 +21,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const resend = getResend();
-  if (!resend) {
-    return NextResponse.json({ ok: false, reason: 'RESEND_API_KEY not configured' });
+  if (!isMailerConfigured()) {
+    return NextResponse.json({ ok: false, reason: 'GMAIL_USER or GMAIL_APP_PASSWORD not configured' });
   }
 
   // Fetch fresh data
@@ -51,12 +50,7 @@ export async function GET(req: NextRequest) {
         email: sub.email,
       });
 
-      await resend.emails.send({
-        from: FROM_EMAIL,
-        to: sub.email,
-        subject,
-        html,
-      });
+      await sendMail({ to: sub.email, subject, html });
 
       return sub.email;
     })
@@ -65,7 +59,14 @@ export async function GET(req: NextRequest) {
   const sent = results.filter(r => r.status === 'fulfilled').length;
   const failed = results.filter(r => r.status === 'rejected').length;
 
-  console.log(`[cron/daily-brief] Sent: ${sent}, Failed: ${failed}`);
+  // Log any failures
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      console.error(`[cron/daily-brief] Failed to send to ${dailySubs[i]?.email}:`, r.reason);
+    }
+  });
+
+  console.log(`[cron/daily-brief] Sent: ${sent}, Failed: ${failed}, Total: ${dailySubs.length}`);
 
   return NextResponse.json({ ok: true, sent, failed, total: dailySubs.length });
 }
