@@ -15,25 +15,31 @@ export interface FetchedArticle {
   fetchedAt: string;
 }
 
-const parser = new Parser({
-  timeout: 15_000,
-  headers: {
-    'User-Agent': 'Mozilla/5.0 (compatible; SignalNews/1.0; +https://signal-news.vercel.app)',
-    Accept: 'application/rss+xml, application/xml, text/xml, application/atom+xml',
-  },
-});
+const parser = new Parser({ timeout: 15_000 });
+
+const FETCH_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+  Accept: 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+};
+
+// Fix common XML issues: bare & and invalid control characters
+function sanitizeXml(xml: string): string {
+  return xml
+    .replace(/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[\da-fA-F]+);)/g, '&amp;')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+}
 
 function hashUrl(url: string): string {
   return createHash('sha256').update(url).digest('hex').slice(0, 16);
 }
 
-export async function fetchFromSource(source: RssSource): Promise<FetchedArticle[]> {
-  const feed = await parser.parseURL(source.url);
-  const now = new Date().toISOString();
-
-  const items = (feed.items || []).slice(0, 50);
-
-  return items
+function mapItems(
+  feed: Parser.Output<Record<string, unknown>>,
+  source: RssSource,
+  now: string,
+): FetchedArticle[] {
+  return (feed.items || [])
+    .slice(0, 50)
     .filter((item) => item.link)
     .map((item) => ({
       id: hashUrl(item.link!),
@@ -47,6 +53,18 @@ export async function fetchFromSource(source: RssSource): Promise<FetchedArticle
       pubDate: item.pubDate || item.isoDate || '',
       fetchedAt: now,
     }));
+}
+
+export async function fetchFromSource(source: RssSource): Promise<FetchedArticle[]> {
+  const now = new Date().toISOString();
+  const res = await fetch(source.url, {
+    headers: FETCH_HEADERS,
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) throw new Error(`Status code ${res.status}`);
+  const text = await res.text();
+  const feed = await parser.parseString(sanitizeXml(text));
+  return mapItems(feed, source, now);
 }
 
 export async function fetchAllSources(): Promise<{

@@ -11,10 +11,7 @@ export const rssSources: RssSource[] = [
   // ── Israeli Mainstream ──
   { id: 'ynet', name: 'Ynet', url: 'https://www.ynet.co.il/Integration/StoryRss2.xml', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
   { id: 'ynet-en', name: 'Ynet News (EN)', url: 'https://www.ynetnews.com/Integration/StoryRss2.xml', language: 'en', lensCategory: 'il-mainstream', country: 'IL' },
-  { id: 'mako', name: 'Mako/N12', url: 'https://rcs.mako.co.il/rss/31750a2610f26110VgnVCM1000004801000aRCRD.xml', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
-  { id: 'kan', name: 'Kan News', url: 'https://www.kan.org.il/Rss/', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
   { id: 'walla', name: 'Walla! News', url: 'https://rss.walla.co.il/feed/1', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
-  { id: 'calcalist', name: 'Calcalist', url: 'https://www.calcalist.co.il/GeneralRSS/0,16335,L-8,00.xml', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
   { id: 'globes', name: 'Globes', url: 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=2', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
 
   // ── Israeli Partisan / Opinion-leaning ──
@@ -43,7 +40,7 @@ export const rssSources: RssSource[] = [
   { id: 'aljazeera', name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml', language: 'en', lensCategory: 'international', country: 'QA' },
   { id: 'almonitor', name: 'Al-Monitor', url: 'https://www.al-monitor.com/rss', language: 'en', lensCategory: 'international', country: 'US' },
   { id: 'middleeasteye', name: 'Middle East Eye', url: 'https://www.middleeasteye.net/rss', language: 'en', lensCategory: 'international', country: 'UK' },
-  { id: 'thenational', name: 'The National (UAE)', url: 'https://www.thenationalnews.com/rss/mena.xml', language: 'en', lensCategory: 'international', country: 'AE' },
+  { id: 'thenational', name: 'The National (UAE)', url: 'https://www.thenationalnews.com/arc/outboundfeeds/rss/?outputType=xml', language: 'en', lensCategory: 'international', country: 'AE' },
   { id: 'arabnews', name: 'Arab News', url: 'https://www.arabnews.com/rss.xml', language: 'en', lensCategory: 'international', country: 'SA' },
 
   // ── International – Analysis / Think Tanks ──
