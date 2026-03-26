@@ -141,6 +141,24 @@ function fullStoryCard(story: BriefStory, index: number): string {
             </td>
           </tr>
 
+          <!-- Cross-sector impacts -->
+          ${story.impacts && story.impacts.length > 0 ? `
+          <tr>
+            <td style="padding:0 20px 14px;">
+              <div style="font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">🔗 השפעות צפויות</div>
+              <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                ${story.impacts.map(impact => {
+                  const bg = impact.direction === 'positive' ? '#052e16' : impact.direction === 'negative' ? '#2d0909' : '#1e293b';
+                  const color = impact.direction === 'positive' ? '#4ade80' : impact.direction === 'negative' ? '#f87171' : '#94a3b8';
+                  const border = impact.direction === 'positive' ? '#166534' : impact.direction === 'negative' ? '#7f1d1d' : '#334155';
+                  const arrow = impact.direction === 'positive' ? '↑' : impact.direction === 'negative' ? '↓' : '~';
+                  return `<span style="display:inline-block; background:${bg}; border:1px solid ${border}; color:${color}; font-size:11px; padding:3px 10px; border-radius:20px; font-weight:600; margin:0 4px 4px 0;">${arrow} ${impact.sector.he}</span>`;
+                }).join('')}
+              </div>
+            </td>
+          </tr>
+          ` : ''}
+
           <!-- Source names -->
           ${srcNames ? `
           <tr>
@@ -302,6 +320,18 @@ export function buildDailyBriefEmail(opts: {
                 <strong>נושאים מרכזיים:</strong> ${catSummary || 'כללי'}<br/>
                 <strong>סבירות ממוצעת:</strong> ${avgLikelihood}%
               </div>
+              ${(() => {
+                const allImpacts = stories.flatMap(s => s.impacts || []);
+                const negImpacts = [...new Set(allImpacts.filter(i => i.direction === 'negative').map(i => i.sector.he))].slice(0, 3);
+                const posImpacts = [...new Set(allImpacts.filter(i => i.direction === 'positive').map(i => i.sector.he))].slice(0, 3);
+                if (!negImpacts.length && !posImpacts.length) return '';
+                return `
+              <div style="margin-top:12px; padding:12px 14px; background:#0a0f1e; border-radius:8px; border-right:3px solid #6366f1;">
+                <div style="font-size:10px; color:#6366f1; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">🔗 השפעות צפויות לאזורים</div>
+                ${posImpacts.length ? `<div style="font-size:12px; color:#4ade80; margin-bottom:4px;">↑ עלייה צפויה: ${posImpacts.join(' · ')}</div>` : ''}
+                ${negImpacts.length ? `<div style="font-size:12px; color:#f87171;">↓ לחץ צפוי: ${negImpacts.join(' · ')}</div>` : ''}
+              </div>`;
+              })()}
             </td>
           </tr>
 
