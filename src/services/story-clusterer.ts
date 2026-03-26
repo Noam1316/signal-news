@@ -55,88 +55,95 @@ const TOPIC_HEADLINES: Record<string, { he: string; en: string }> = {
   'Diplomacy':           { he: 'דיפלומטיה בינלאומית',                   en: 'International Diplomacy' },
 };
 
-// Cross-sector impact map: topic → list of affected sectors with direction
+/**
+ * Cross-sector impact map.
+ * direction = actual movement direction of the indicator when this topic is in the news:
+ *   positive  = ↑ the indicator rises / sector strengthens
+ *   negative  = ↓ the indicator falls / sector weakens
+ *   uncertain = ~ direction depends on specifics
+ */
 const TOPIC_IMPACTS: Record<string, ImpactItem[]> = {
   'Iran Nuclear': [
-    { sector: { he: 'מחירי אנרגיה', en: 'Energy Prices' }, direction: 'negative' },
+    // Escalation → oil supply fears → prices spike
+    { sector: { he: 'מחירי נפט וגז', en: 'Oil & Gas Prices' }, direction: 'positive' },
+    // Defense demand rises
     { sector: { he: 'מניות ביטחון ישראליות', en: 'Israeli Defense Stocks' }, direction: 'positive' },
-    { sector: { he: 'שער הדולר/שקל', en: 'USD/ILS Rate' }, direction: 'negative' },
-    { sector: { he: 'ביטוח ואשראי', en: 'Insurance & Credit' }, direction: 'negative' },
+    // Risk-off → shekel weakens vs dollar
+    { sector: { he: 'שקל (מול דולר)', en: 'ILS vs USD' }, direction: 'negative' },
+    // Risk premium rises → credit tightens
+    { sector: { he: 'פרמיות סיכון', en: 'Risk Premiums' }, direction: 'positive' },
   ],
   'Gaza Conflict': [
-    { sector: { he: 'תיירות ישראל', en: 'Israeli Tourism' }, direction: 'negative' },
+    // Conflict → tourism collapses
+    { sector: { he: 'תיירות נכנסת לישראל', en: 'Inbound Tourism' }, direction: 'negative' },
+    // Defense budgets & orders grow
     { sector: { he: 'מניות ביטחון', en: 'Defense Stocks' }, direction: 'positive' },
+    // Uncertainty → real estate freezes
     { sector: { he: 'שוק הנדל"ן', en: 'Real Estate' }, direction: 'negative' },
+    // Logistics disruptions → exports drop
     { sector: { he: 'יצוא ישראלי', en: 'Israeli Exports' }, direction: 'negative' },
   ],
   'Lebanon/Hezbollah': [
     { sector: { he: 'תיירות הצפון', en: 'Northern Tourism' }, direction: 'negative' },
     { sector: { he: 'מניות ביטחון', en: 'Defense Stocks' }, direction: 'positive' },
-    { sector: { he: 'חברות ביטוח', en: 'Insurance Companies' }, direction: 'negative' },
+    { sector: { he: 'נדל"ן בצפון', en: 'Northern Real Estate' }, direction: 'negative' },
+    // More claims, reduced underwriting appetite
+    { sector: { he: 'ענף הביטוח', en: 'Insurance Sector' }, direction: 'negative' },
   ],
   'Saudi Normalization': [
     { sector: { he: 'תיירות אזורית', en: 'Regional Tourism' }, direction: 'positive' },
-    { sector: { he: 'מסחר ייצוא', en: 'Export Trade' }, direction: 'positive' },
+    { sector: { he: 'מסחר ויצוא', en: 'Trade & Exports' }, direction: 'positive' },
     { sector: { he: 'מניות תעופה', en: 'Aviation Stocks' }, direction: 'positive' },
-    { sector: { he: 'שוק ההון הישראלי', en: 'Israeli Capital Market' }, direction: 'positive' },
+    { sector: { he: 'שוק ההון הישראלי', en: 'Israeli Stock Market' }, direction: 'positive' },
   ],
   'US Politics': [
-    { sector: { he: 'סיוע ביטחוני לישראל', en: 'US Defense Aid to Israel' }, direction: 'uncertain' },
+    { sector: { he: 'סיוע ביטחוני לישראל', en: 'US Defense Aid' }, direction: 'uncertain' },
     { sector: { he: 'יצוא טכנולוגיה', en: 'Tech Exports' }, direction: 'uncertain' },
-    { sector: { he: 'שוק המניות הגלובלי', en: 'Global Stock Market' }, direction: 'uncertain' },
     { sector: { he: 'מחירי נפט', en: 'Oil Prices' }, direction: 'uncertain' },
+    { sector: { he: 'שוק המניות הגלובלי', en: 'Global Stock Markets' }, direction: 'uncertain' },
   ],
   'Technology': [
     { sector: { he: 'חברות שבבים ישראליות', en: 'Israeli Chip Companies' }, direction: 'positive' },
     { sector: { he: 'קרנות הון סיכון', en: 'VC Funding' }, direction: 'positive' },
-    { sector: { he: 'גיוס הייטק', en: 'Tech Hiring' }, direction: 'uncertain' },
-    { sector: { he: 'מדד נאסד"ק', en: 'Nasdaq Index' }, direction: 'uncertain' },
+    { sector: { he: 'מדד נאסד"ק', en: 'Nasdaq Index' }, direction: 'positive' },
+    { sector: { he: 'גיוס בהייטק', en: 'Tech Hiring' }, direction: 'positive' },
   ],
   'Economy': [
-    { sector: { he: 'שער השקל', en: 'Shekel Exchange Rate' }, direction: 'uncertain' },
+    { sector: { he: 'שקל (מול דולר)', en: 'ILS vs USD' }, direction: 'uncertain' },
     { sector: { he: 'שוק הנדל"ן', en: 'Real Estate Market' }, direction: 'uncertain' },
     { sector: { he: 'ריבית בנק ישראל', en: 'Bank of Israel Rate' }, direction: 'uncertain' },
   ],
   'Ukraine/Russia': [
-    { sector: { he: 'מחירי אנרגיה גלובליים', en: 'Global Energy Prices' }, direction: 'negative' },
+    // Supply disruption → energy prices spike globally
+    { sector: { he: 'מחירי אנרגיה גלובליים', en: 'Global Energy Prices' }, direction: 'positive' },
+    // War disrupts global supply chains
     { sector: { he: 'שרשראות אספקה', en: 'Supply Chains' }, direction: 'negative' },
-    { sector: { he: 'מחירי מזון', en: 'Food Prices' }, direction: 'negative' },
+    // Ukraine = major grain exporter → food prices rise
+    { sector: { he: 'מחירי מזון ודגנים', en: 'Food & Grain Prices' }, direction: 'positive' },
     { sector: { he: 'שוק ההון האירופי', en: 'European Markets' }, direction: 'negative' },
   ],
   'Judicial Reform': [
-    { sector: { he: 'השקעות זרות בישראל', en: 'Foreign Investment in Israel' }, direction: 'negative' },
-    { sector: { he: 'שוק ההון הישראלי', en: 'Israeli Capital Market' }, direction: 'negative' },
-    { sector: { he: 'שוק ההייטק', en: 'Israeli Tech Sector' }, direction: 'uncertain' },
+    // Capital flight → FDI drops
+    { sector: { he: 'השקעות זרות בישראל', en: 'Foreign Investment' }, direction: 'negative' },
+    { sector: { he: 'שוק ההון הישראלי', en: 'Israeli Stock Market' }, direction: 'negative' },
+    // Brain drain concern → valuations drop
+    { sector: { he: 'סטארטאפים ישראליים', en: 'Israeli Startups' }, direction: 'negative' },
+    { sector: { he: 'שקל (מול דולר)', en: 'ILS vs USD' }, direction: 'negative' },
   ],
   'Syria': [
     { sector: { he: 'יציבות אזורית', en: 'Regional Stability' }, direction: 'uncertain' },
     { sector: { he: 'מחירי נפט', en: 'Oil Prices' }, direction: 'uncertain' },
-    { sector: { he: 'תיירות ישראל', en: 'Israeli Tourism' }, direction: 'uncertain' },
+    { sector: { he: 'מניות ביטחון', en: 'Defense Stocks' }, direction: 'positive' },
   ],
   'West Bank': [
     { sector: { he: 'יחסי ישראל-פלסטין', en: 'Israel-PA Relations' }, direction: 'negative' },
-    { sector: { he: 'סיוע אמריקאי', en: 'US Aid' }, direction: 'uncertain' },
     { sector: { he: 'מניות ביטחון', en: 'Defense Stocks' }, direction: 'positive' },
+    { sector: { he: 'סיוע אמריקאי', en: 'US Aid' }, direction: 'uncertain' },
   ],
 };
 
-function detectImpacts(topic: string, sentiment: string): ImpactItem[] {
-  const impacts = TOPIC_IMPACTS[topic];
-  if (!impacts) return [];
-  // If overall sentiment is positive, flip uncertain → positive for positive-leaning items
-  if (sentiment === 'positive') {
-    return impacts.map((i) => ({
-      ...i,
-      direction: i.direction === 'uncertain' ? 'positive' : i.direction,
-    }));
-  }
-  if (sentiment === 'negative') {
-    return impacts.map((i) => ({
-      ...i,
-      direction: i.direction === 'uncertain' ? 'negative' : i.direction,
-    }));
-  }
-  return impacts;
+function detectImpacts(topic: string): ImpactItem[] {
+  return TOPIC_IMPACTS[topic] ?? [];
 }
 
 function slugify(text: string): string {
@@ -300,13 +307,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
     const isSignal = cluster.articles.some((a) => a.analysis.isSignal);
     const category = TOPIC_CATEGORIES[cluster.topic] || { he: 'כללי', en: 'General' };
 
-    // Dominant sentiment for impact direction
-    const sentimentCounts: Record<string, number> = {};
-    for (const a of cluster.articles) {
-      sentimentCounts[a.analysis.sentiment] = (sentimentCounts[a.analysis.sentiment] || 0) + 1;
-    }
-    const dominantSentiment = Object.entries(sentimentCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'neutral';
-    const impacts = detectImpacts(cluster.topic, dominantSentiment);
+    const impacts = detectImpacts(cluster.topic);
 
     // Collect unique sources
     const sourcesMap = new Map<string, string>();
