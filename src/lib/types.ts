@@ -14,6 +14,11 @@ export interface Source {
   url: string;
 }
 
+export interface ImpactItem {
+  sector: LocalizedText;
+  direction: 'positive' | 'negative' | 'uncertain';
+}
+
 export interface BriefStory {
   slug: string;
   headline: LocalizedText;
@@ -27,6 +32,7 @@ export interface BriefStory {
   lens: 'israel' | 'world';
   sources: Source[];
   updatedAt: string;
+  impacts?: ImpactItem[];
 }
 
 export interface ShockEvent {

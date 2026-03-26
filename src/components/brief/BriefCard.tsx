@@ -168,25 +168,59 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
         </div>
       )}
 
-      {/* Expanded: source links */}
+      {/* Expanded: cross-sector impacts + source links */}
       {expanded && !hasDetailPage && (
-        <div className="pt-2 border-t border-gray-800/50 space-y-2">
-          <p className="text-[11px] text-gray-400 uppercase tracking-wider">
-            {lang === 'he' ? 'מקורות' : 'Sources'}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {story.sources.map((src) => (
-              <a
-                key={src.name}
-                href={src.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="text-xs px-2.5 py-1 rounded-md bg-gray-800 border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 transition-colors"
-              >
-                {src.name} ↗
-              </a>
-            ))}
+        <div className="pt-2 border-t border-gray-800/50 space-y-3">
+
+          {/* Smart Connections */}
+          {story.impacts && story.impacts.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[11px] text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🔗</span>
+                {lang === 'he' ? 'השפעות צפויות' : 'Expected Impacts'}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {story.impacts.map((impact, i) => {
+                  const color =
+                    impact.direction === 'positive'
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                      : impact.direction === 'negative'
+                      ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                      : 'bg-gray-700/40 border-gray-600/40 text-gray-300';
+                  const arrow =
+                    impact.direction === 'positive' ? '↑' : impact.direction === 'negative' ? '↓' : '~';
+                  return (
+                    <span
+                      key={i}
+                      className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${color}`}
+                    >
+                      {arrow} {lang === 'he' ? impact.sector.he : impact.sector.en}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Sources */}
+          <div className="space-y-2">
+            <p className="text-[11px] text-gray-400 uppercase tracking-wider">
+              {lang === 'he' ? 'מקורות' : 'Sources'}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {story.sources.map((src) => (
+                <a
+                  key={src.name}
+                  href={src.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-xs px-2.5 py-1 rounded-md bg-gray-800 border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 transition-colors"
+                >
+                  {src.name} ↗
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       )}

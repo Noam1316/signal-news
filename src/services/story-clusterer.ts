@@ -5,7 +5,7 @@
  */
 
 import type { FetchedArticle } from './rss-fetcher';
-import type { BriefStory, Confidence } from '@/lib/types';
+import type { BriefStory, Confidence, ImpactItem } from '@/lib/types';
 import { analyzeArticle, type ArticleAnalysis } from './ai-analyzer';
 
 interface ArticleWithAnalysis {
@@ -54,6 +54,90 @@ const TOPIC_HEADLINES: Record<string, { he: string; en: string }> = {
   'Security':            { he: 'עדכוני ביטחון',                         en: 'Security Updates' },
   'Diplomacy':           { he: 'דיפלומטיה בינלאומית',                   en: 'International Diplomacy' },
 };
+
+// Cross-sector impact map: topic → list of affected sectors with direction
+const TOPIC_IMPACTS: Record<string, ImpactItem[]> = {
+  'Iran Nuclear': [
+    { sector: { he: 'מחירי אנרגיה', en: 'Energy Prices' }, direction: 'negative' },
+    { sector: { he: 'מניות ביטחון ישראליות', en: 'Israeli Defense Stocks' }, direction: 'positive' },
+    { sector: { he: 'שער הדולר/שקל', en: 'USD/ILS Rate' }, direction: 'negative' },
+    { sector: { he: 'ביטוח ואשראי', en: 'Insurance & Credit' }, direction: 'negative' },
+  ],
+  'Gaza Conflict': [
+    { sector: { he: 'תיירות ישראל', en: 'Israeli Tourism' }, direction: 'negative' },
+    { sector: { he: 'מניות ביטחון', en: 'Defense Stocks' }, direction: 'positive' },
+    { sector: { he: 'שוק הנדל"ן', en: 'Real Estate' }, direction: 'negative' },
+    { sector: { he: 'יצוא ישראלי', en: 'Israeli Exports' }, direction: 'negative' },
+  ],
+  'Lebanon/Hezbollah': [
+    { sector: { he: 'תיירות הצפון', en: 'Northern Tourism' }, direction: 'negative' },
+    { sector: { he: 'מניות ביטחון', en: 'Defense Stocks' }, direction: 'positive' },
+    { sector: { he: 'חברות ביטוח', en: 'Insurance Companies' }, direction: 'negative' },
+  ],
+  'Saudi Normalization': [
+    { sector: { he: 'תיירות אזורית', en: 'Regional Tourism' }, direction: 'positive' },
+    { sector: { he: 'מסחר ייצוא', en: 'Export Trade' }, direction: 'positive' },
+    { sector: { he: 'מניות תעופה', en: 'Aviation Stocks' }, direction: 'positive' },
+    { sector: { he: 'שוק ההון הישראלי', en: 'Israeli Capital Market' }, direction: 'positive' },
+  ],
+  'US Politics': [
+    { sector: { he: 'סיוע ביטחוני לישראל', en: 'US Defense Aid to Israel' }, direction: 'uncertain' },
+    { sector: { he: 'יצוא טכנולוגיה', en: 'Tech Exports' }, direction: 'uncertain' },
+    { sector: { he: 'שוק המניות הגלובלי', en: 'Global Stock Market' }, direction: 'uncertain' },
+    { sector: { he: 'מחירי נפט', en: 'Oil Prices' }, direction: 'uncertain' },
+  ],
+  'Technology': [
+    { sector: { he: 'חברות שבבים ישראליות', en: 'Israeli Chip Companies' }, direction: 'positive' },
+    { sector: { he: 'קרנות הון סיכון', en: 'VC Funding' }, direction: 'positive' },
+    { sector: { he: 'גיוס הייטק', en: 'Tech Hiring' }, direction: 'uncertain' },
+    { sector: { he: 'מדד נאסד"ק', en: 'Nasdaq Index' }, direction: 'uncertain' },
+  ],
+  'Economy': [
+    { sector: { he: 'שער השקל', en: 'Shekel Exchange Rate' }, direction: 'uncertain' },
+    { sector: { he: 'שוק הנדל"ן', en: 'Real Estate Market' }, direction: 'uncertain' },
+    { sector: { he: 'ריבית בנק ישראל', en: 'Bank of Israel Rate' }, direction: 'uncertain' },
+  ],
+  'Ukraine/Russia': [
+    { sector: { he: 'מחירי אנרגיה גלובליים', en: 'Global Energy Prices' }, direction: 'negative' },
+    { sector: { he: 'שרשראות אספקה', en: 'Supply Chains' }, direction: 'negative' },
+    { sector: { he: 'מחירי מזון', en: 'Food Prices' }, direction: 'negative' },
+    { sector: { he: 'שוק ההון האירופי', en: 'European Markets' }, direction: 'negative' },
+  ],
+  'Judicial Reform': [
+    { sector: { he: 'השקעות זרות בישראל', en: 'Foreign Investment in Israel' }, direction: 'negative' },
+    { sector: { he: 'שוק ההון הישראלי', en: 'Israeli Capital Market' }, direction: 'negative' },
+    { sector: { he: 'שוק ההייטק', en: 'Israeli Tech Sector' }, direction: 'uncertain' },
+  ],
+  'Syria': [
+    { sector: { he: 'יציבות אזורית', en: 'Regional Stability' }, direction: 'uncertain' },
+    { sector: { he: 'מחירי נפט', en: 'Oil Prices' }, direction: 'uncertain' },
+    { sector: { he: 'תיירות ישראל', en: 'Israeli Tourism' }, direction: 'uncertain' },
+  ],
+  'West Bank': [
+    { sector: { he: 'יחסי ישראל-פלסטין', en: 'Israel-PA Relations' }, direction: 'negative' },
+    { sector: { he: 'סיוע אמריקאי', en: 'US Aid' }, direction: 'uncertain' },
+    { sector: { he: 'מניות ביטחון', en: 'Defense Stocks' }, direction: 'positive' },
+  ],
+};
+
+function detectImpacts(topic: string, sentiment: string): ImpactItem[] {
+  const impacts = TOPIC_IMPACTS[topic];
+  if (!impacts) return [];
+  // If overall sentiment is positive, flip uncertain → positive for positive-leaning items
+  if (sentiment === 'positive') {
+    return impacts.map((i) => ({
+      ...i,
+      direction: i.direction === 'uncertain' ? 'positive' : i.direction,
+    }));
+  }
+  if (sentiment === 'negative') {
+    return impacts.map((i) => ({
+      ...i,
+      direction: i.direction === 'uncertain' ? 'negative' : i.direction,
+    }));
+  }
+  return impacts;
+}
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -216,6 +300,14 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
     const isSignal = cluster.articles.some((a) => a.analysis.isSignal);
     const category = TOPIC_CATEGORIES[cluster.topic] || { he: 'כללי', en: 'General' };
 
+    // Dominant sentiment for impact direction
+    const sentimentCounts: Record<string, number> = {};
+    for (const a of cluster.articles) {
+      sentimentCounts[a.analysis.sentiment] = (sentimentCounts[a.analysis.sentiment] || 0) + 1;
+    }
+    const dominantSentiment = Object.entries(sentimentCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'neutral';
+    const impacts = detectImpacts(cluster.topic, dominantSentiment);
+
     // Collect unique sources
     const sourcesMap = new Map<string, string>();
     for (const { article } of cluster.articles) {
@@ -255,6 +347,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       lens,
       sources,
       updatedAt: latestArticle?.article.pubDate || new Date().toISOString(),
+      impacts: impacts.length > 0 ? impacts : undefined,
     };
   });
 }
