@@ -22,10 +22,11 @@ const FETCH_HEADERS = {
   Accept: 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
 };
 
-// Fix common XML issues: bare & and invalid control characters
+// Fix common XML issues: bare &, stray <, and invalid control characters
 function sanitizeXml(xml: string): string {
   return xml
     .replace(/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[\da-fA-F]+);)/g, '&amp;')
+    .replace(/<(?![a-zA-Z\/!?])/g, '&lt;')
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
 }
 
