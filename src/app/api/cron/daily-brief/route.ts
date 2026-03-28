@@ -10,6 +10,7 @@ import { getAllSubscribers } from '@/services/subscriber-store';
 import { getCachedArticles } from '@/services/article-cache';
 import { generateStories } from '@/services/story-clusterer';
 import { detectShocks } from '@/services/shock-detector';
+import { fetchPolymarketEvents, matchStoriesWithMarkets, getTopAlpha } from '@/services/polymarket';
 import { sendMail, isMailerConfigured } from '@/lib/mailer';
 import { buildDailyBriefEmail } from '@/lib/email-templates';
 
@@ -26,11 +27,22 @@ export async function GET(req: NextRequest) {
   }
 
   // Fetch fresh data
-  let stories, shocks;
+  let stories, shocks, topAlpha = null;
   try {
     const articles = await getCachedArticles();
     stories = generateStories(articles, 5);
     shocks = detectShocks(articles);
+    // Polymarket alpha
+    const markets = await fetchPolymarketEvents();
+    const storiesForMatch = stories.map(s => ({
+      slug: s.slug,
+      headline: typeof s.headline === 'string' ? s.headline : s.headline.he,
+      likelihood: s.likelihood,
+      category: typeof s.category === 'string' ? s.category : s.category.he,
+      sourceCount: Array.isArray(s.sources) ? s.sources.length : 3,
+    }));
+    const matches = matchStoriesWithMarkets(storiesForMatch, markets);
+    topAlpha = getTopAlpha(matches);
   } catch {
     const { stories: s } = await import('@/data/stories');
     const { shocks: sh } = await import('@/data/shocks');
@@ -46,6 +58,7 @@ export async function GET(req: NextRequest) {
       const { subject, html } = buildDailyBriefEmail({
         stories,
         shocks,
+        topAlpha,
         unsubToken: sub.token,
         email: sub.email,
       });

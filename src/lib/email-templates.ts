@@ -5,6 +5,8 @@
  */
 
 import type { BriefStory, ShockEvent } from '@/lib/types';
+import type { SignalVsMarket } from '@/services/polymarket';
+import { SECTOR_STOCKS } from '@/services/polymarket';
 import { SITE_URL } from '@/lib/resend';
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
@@ -151,10 +153,11 @@ function fullShockCard(shock: ShockEvent): string {
 export function buildDailyBriefEmail(opts: {
   stories: BriefStory[];
   shocks: ShockEvent[];
+  topAlpha: SignalVsMarket | null;
   unsubToken: string;
   email: string;
 }): { subject: string; html: string } {
-  const { stories, shocks, unsubToken, email } = opts;
+  const { stories, shocks, topAlpha, unsubToken, email } = opts;
   const dateStr = new Date().toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
   const unsubUrl = `${SITE_URL}/api/unsubscribe?token=${unsubToken}&email=${encodeURIComponent(email)}`;
@@ -233,18 +236,41 @@ export function buildDailyBriefEmail(opts: {
               <div style="font-size:13px;color:#64748b;line-height:1.6;margin-bottom:12px;">
                 סיגנל מוביל · סבירות <span style="color:${getLikelihoodColor(topStory.likelihood)};font-weight:700;">${topStory.likelihood}%</span>${topStory.delta ? ` · ${topStory.delta > 0 ? '↑' : '↓'}${Math.abs(topStory.delta)}% מאתמול` : ''}
               </div>` : ''}
-              <!-- Sector impacts summary -->
+              <!-- Sector impacts + stocks -->
               ${(() => {
                 const allImpacts = stories.flatMap(s => s.impacts || []);
                 const neg = [...new Set(allImpacts.filter(i => i.direction === 'negative').map(i => i.sector.he))].slice(0, 3);
                 const pos = [...new Set(allImpacts.filter(i => i.direction === 'positive').map(i => i.sector.he))].slice(0, 3);
+                // Build stock tickers for impacted sectors
+                const stockHints = [...pos, ...neg]
+                  .map(s => SECTOR_STOCKS[s])
+                  .filter(Boolean)
+                  .slice(0, 3)
+                  .map(s => `${s.label} (${s.tickers.slice(0,2).join(', ')})`)
+                  .join(' · ');
                 if (!neg.length && !pos.length) return '';
-                return `<div style="font-size:12px;color:#475569;line-height:1.8;">
+                return `
+                <div style="font-size:12px;color:#475569;line-height:1.8;margin-bottom:6px;">
                   ${pos.length ? `<span style="color:#4ade80;">↑ ${pos.join(' · ')}</span>` : ''}
                   ${pos.length && neg.length ? `<span style="color:#374151;"> &nbsp;|&nbsp; </span>` : ''}
                   ${neg.length ? `<span style="color:#f87171;">↓ ${neg.join(' · ')}</span>` : ''}
-                </div>`;
+                </div>
+                ${stockHints ? `<div style="font-size:11px;color:#374151;">📈 השפעה אפשרית: ${stockHints}</div>` : ''}`;
               })()}
+
+              <!-- Polymarket Alpha Opportunity -->
+              ${topAlpha && topAlpha.alphaScore >= 30 ? `
+              <div style="margin-top:12px;padding:10px 14px;background:#0a0f1e;border-radius:8px;border-right:3px solid ${topAlpha.alphaDirection === 'signal-higher' ? '#22c55e' : '#f59e0b'};">
+                <div style="font-size:10px;color:#6366f1;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">⚡ הזדמנות — Signal vs Polymarket</div>
+                <div style="font-size:13px;color:#e2e8f0;font-weight:600;margin-bottom:4px;">${topAlpha.polymarketTitle.slice(0, 70)}${topAlpha.polymarketTitle.length > 70 ? '...' : ''}</div>
+                <div style="font-size:12px;color:#94a3b8;line-height:1.6;">
+                  Signal: <strong style="color:${topAlpha.alphaDirection === 'signal-higher' ? '#22c55e' : '#f87171'};">${topAlpha.signalLikelihood}%</strong>
+                  &nbsp;·&nbsp; שוק: <strong style="color:#94a3b8;">${topAlpha.marketProbability}%</strong>
+                  &nbsp;·&nbsp; פער: <strong style="color:#fbbf24;">${topAlpha.delta > 0 ? '+' : ''}${topAlpha.delta}%</strong>
+                  &nbsp;·&nbsp; Alpha: <strong style="color:#818cf8;">${topAlpha.alphaScore}</strong>
+                </div>
+                <div style="font-size:11px;color:#64748b;margin-top:4px;">${topAlpha.whyDifferent}</div>
+              </div>` : ''}
             </td>
           </tr>
 

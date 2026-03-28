@@ -36,21 +36,39 @@ export interface SignalVsMarket {
   sourceCount: number;            // how many RSS sources back our Signal
 }
 
-// Keywords to match our topics with Polymarket events
+// Keywords to match our topics with Polymarket events (English + Hebrew)
 const TOPIC_KEYWORDS: Record<string, string[]> = {
-  'iran': ['iran', 'nuclear', 'jcpoa', 'tehran', 'enrichment', 'sanctions'],
-  'israel': ['israel', 'israeli', 'netanyahu', 'idf', 'gaza', 'west bank'],
-  'saudi': ['saudi', 'arabia', 'mbs', 'normalization', 'abraham accords'],
-  'ukraine': ['ukraine', 'russia', 'putin', 'zelensky', 'nato', 'crimea'],
-  'china': ['china', 'taiwan', 'beijing', 'xi jinping', 'south china sea'],
-  'us-election': ['trump', 'biden', 'election', 'republican', 'democrat', 'presidential'],
-  'ai': ['artificial intelligence', 'ai regulation', 'openai', 'chatgpt'],
-  'oil': ['oil', 'opec', 'crude', 'energy', 'petroleum', 'barrel'],
-  'crypto': ['bitcoin', 'crypto', 'ethereum', 'blockchain'],
-  'ceasefire': ['ceasefire', 'hostage', 'hamas', 'truce', 'deal'],
-  'hezbollah': ['hezbollah', 'lebanon', 'nasrallah', 'northern border'],
-  'syria': ['syria', 'assad', 'damascus', 'rebel'],
-  'economy': ['recession', 'inflation', 'fed', 'interest rate', 'gdp'],
+  'iran': ['iran', 'nuclear', 'jcpoa', 'tehran', 'enrichment', 'sanctions', 'איראן', 'גרעין', 'טהרן', 'העשרה'],
+  'israel': ['israel', 'israeli', 'netanyahu', 'idf', 'gaza', 'west bank', 'ישראל', 'נתניהו', 'צהל', 'עזה', 'גדה'],
+  'saudi': ['saudi', 'arabia', 'mbs', 'normalization', 'abraham accords', 'סעודיה', 'נורמליזציה', 'הסכמי אברהם'],
+  'ukraine': ['ukraine', 'russia', 'putin', 'zelensky', 'nato', 'crimea', 'אוקראינה', 'רוסיה', 'פוטין', 'נאטו'],
+  'china': ['china', 'taiwan', 'beijing', 'xi jinping', 'south china sea', 'סין', 'טייוואן', 'בייג\'ינג'],
+  'us-election': ['trump', 'biden', 'election', 'republican', 'democrat', 'presidential', 'טראמפ', 'בחירות', 'קונגרס'],
+  'ai': ['artificial intelligence', 'ai regulation', 'openai', 'chatgpt', 'בינה מלאכותית', 'בינה'],
+  'oil': ['oil', 'opec', 'crude', 'energy', 'petroleum', 'barrel', 'נפט', 'אנרגיה', 'אופ\'ק', 'חביות'],
+  'crypto': ['bitcoin', 'crypto', 'ethereum', 'blockchain', 'ביטקוין', 'קריפטו', 'בלוקצ\'יין'],
+  'ceasefire': ['ceasefire', 'hostage', 'hamas', 'truce', 'deal', 'הפסקת אש', 'חטופים', 'חמאס', 'עסקה', 'שבויים'],
+  'hezbollah': ['hezbollah', 'lebanon', 'nasrallah', 'northern border', 'חיזבאללה', 'לבנון', 'נסראללה', 'הצפון'],
+  'syria': ['syria', 'assad', 'damascus', 'rebel', 'סוריה', 'אסד', 'דמשק'],
+  'economy': ['recession', 'inflation', 'fed', 'interest rate', 'gdp', 'מיתון', 'אינפלציה', 'ריבית', 'תוצר'],
+  'hamas': ['hamas', 'sinwar', 'rafah', 'חמאס', 'רפיח', 'סינוואר', 'פלסטין'],
+  'elections-israel': ['כנסת', 'בחירות', 'ממשלה', 'קואליציה', 'אופוזיציה', 'polling', 'coalition'],
+};
+
+// Sector → stock tickers mapping for Israeli/global markets
+export const SECTOR_STOCKS: Record<string, { label: string; tickers: string[] }> = {
+  'מניות ביטחון ישראליות': { label: 'ביטחון IL', tickers: ['ESLT', 'MNTC', 'AVAV'] },
+  'מחירי נפט וגז':         { label: 'אנרגיה',    tickers: ['XOM', 'CVX', 'OIL'] },
+  'מניות שבבים ישראליות':  { label: 'שבבים IL',   tickers: ['NVMI', 'TSEM', 'INTC'] },
+  'שקל (מול דולר)':        { label: 'USD/ILS',    tickers: ['USD/ILS'] },
+  'תיירות נכנסת לישראל':   { label: 'תיירות',     tickers: ['ELAL.TA', 'DAL'] },
+  'מדד הנדל"ן':            { label: 'נדל"ן',      tickers: ['IYR', 'REIT'] },
+  'פרמיות סיכון':          { label: 'ריבית',      tickers: ['TLT', 'AGG'] },
+  'מניות ביטחון':          { label: 'ביטחון',     tickers: ['LMT', 'RTX', 'NOC'] },
+  'חברות שבבים':           { label: 'שבבים',      tickers: ['NVDA', 'AMD', 'TSM'] },
+  'גיוס בהייטק':           { label: 'הייטק',      tickers: ['QQQ', 'XLK'] },
+  'מדד נאסד"ק':            { label: 'נאסד"ק',     tickers: ['QQQ', 'TQQQ'] },
+  'ביטוח ואשראי':          { label: 'פיננסים',    tickers: ['XLF', 'JPM'] },
 };
 
 /**
@@ -197,7 +215,7 @@ export function matchStoriesWithMarkets(
 }
 
 /**
- * Auto-generate explanation for why Signal differs from Market
+ * Auto-generate explanation for why Signal differs from Market (Hebrew)
  */
 function generateWhyDifferent(
   direction: SignalVsMarket['alphaDirection'],
@@ -207,40 +225,44 @@ function generateWhyDifferent(
   sourceCount: number,
 ): string {
   if (direction === 'aligned') {
-    return `Signal analysis aligns with market consensus within 10%. ${sourceCount} sources confirm the market's assessment.`;
+    return `Signal מסכים עם השוק — פער של פחות מ-10%. ${sourceCount} מקורות מאשרים את הסבירות.`;
   }
 
   const parts: string[] = [];
 
   if (direction === 'signal-higher') {
-    parts.push(`Signal rates this ${absDelta}% higher than the market.`);
-
+    parts.push(`Signal מעריך סבירות גבוהה ב-${absDelta}% מהשוק.`);
     if (sourceCount >= 5) {
-      parts.push(`Strong cross-source verification: ${sourceCount} independent sources are reporting escalation signals.`);
+      parts.push(`${sourceCount} מקורות עצמאיים מדווחים על סיגנלים שהשוק עדיין לא תמחר.`);
     } else if (sourceCount >= 3) {
-      parts.push(`${sourceCount} sources show emerging indicators not yet priced in by traders.`);
+      parts.push(`${sourceCount} מקורות מראים מגמות מתפתחות שעשויות להפתיע את השוק.`);
     } else {
-      parts.push('Early signals detected from limited sources — higher uncertainty.');
+      parts.push('סיגנל מוקדם ממקורות מוגבלים — אי-ודאות גבוהה יותר.');
     }
-
     if (market.volume < 1_000_000) {
-      parts.push('Low market volume suggests thin liquidity — market may be slow to react.');
+      parts.push('נזילות נמוכה בשוק — השוק עשוי לפגר אחרי החדשות.');
     }
   } else {
-    parts.push(`Market rates this ${absDelta}% higher than our Signal.`);
-
+    parts.push(`השוק מעריך סבירות גבוהה ב-${absDelta}% מ-Signal.`);
     if (sourceCount <= 2) {
-      parts.push('Limited source coverage may explain the gap — Signal has less data to work with.');
+      parts.push('כיסוי תקשורתי מוגבל — Signal עובד עם פחות נתונים בנושא זה.');
     } else {
-      parts.push(`Despite ${sourceCount} sources, sentiment analysis shows lower confidence than market pricing.`);
+      parts.push(`למרות ${sourceCount} מקורות, ניתוח הסנטימנט מצביע על ביטחון נמוך יותר מהשוק.`);
     }
-
     if (market.volume > 5_000_000) {
-      parts.push('High-volume market with strong trader conviction.');
+      parts.push('שוק בעל נפח גבוה — סוחרים מחויבים חזק לעמדה זו.');
     }
   }
 
   return parts.join(' ');
+}
+
+/**
+ * Get top alpha opportunity for email summary
+ */
+export function getTopAlpha(matches: SignalVsMarket[]): SignalVsMarket | null {
+  const nonAligned = matches.filter(m => m.alphaDirection !== 'aligned' && m.alphaScore >= 30);
+  return nonAligned.sort((a, b) => b.alphaScore - a.alphaScore)[0] || null;
 }
 
 /**
