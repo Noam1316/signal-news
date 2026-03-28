@@ -32,10 +32,6 @@ function getSourceCount(s: BriefStory): number {
   return (s.sources as unknown as number) || 0;
 }
 
-function getSourceNames(s: BriefStory): string {
-  if (!Array.isArray(s.sources)) return '';
-  return s.sources.map(src => src.name).join(' · ');
-}
 
 /* ─── Story card (compact Axios-style) ───────────────────────── */
 
@@ -175,9 +171,13 @@ export function buildDailyBriefEmail(opts: {
 
   const subject = `⚡ תקציר מודיעיני — ${dateStr}`;
 
-  // Show up to 8 stories and up to 4 shocks for a full-page brief
-  const displayStories = stories.slice(0, 8);
-  const displayShocks = shocks.slice(0, 4);
+  const displayStories = stories.slice(0, 5);
+  const displayShocks = shocks.slice(0, 2);
+
+  // Preview text — shown in inbox before opening
+  const previewText = topStory
+    ? `${highLikelihood > 0 ? `${highLikelihood} אירועים חשובים · ` : ''}${topHeadline}${shocks.length > 0 ? ` · ${shocks.length} זעזועים` : ''}`
+    : `תקציר מודיעיני — ${dateStr}`;
 
   const html = `
 <!DOCTYPE html>
@@ -188,6 +188,8 @@ export function buildDailyBriefEmail(opts: {
 <title>${subject}</title>
 </head>
 <body style="margin:0; padding:0; background:#060a14; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction:rtl;">
+  <!-- Preheader: shows in inbox preview -->
+  <div style="display:none;font-size:1px;color:#060a14;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${previewText}&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#060a14; padding:24px 12px;">
     <tr>
       <td>
