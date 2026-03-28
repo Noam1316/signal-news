@@ -180,36 +180,62 @@ function pickHeadline(cluster: Cluster): { he: string; en: string } {
   const sorted = [...cluster.articles].sort(
     (a, b) => b.analysis.signalScore - a.analysis.signalScore
   );
-  const best = sorted[0];
-
-  // Use article title as headline, with fallback to topic template
   const template = TOPIC_HEADLINES[cluster.topic] || { he: cluster.topic, en: cluster.topic };
 
-  // If best article is in Hebrew, use it for he and template for en, and vice versa
+  // Filter out titles that are channel/feed names (contain " | " pattern with source name)
+  const isJunkTitle = (title: string) =>
+    /\|\s*(רשת|ערוץ|חדשות|ynet|walla|mako|n12|kan|globes|calcalist|haaretz|jpost|times of israel)/i.test(title) ||
+    /^(חדשות|ידיעות|וואלה|מאקו|גלובס)\s*\d*\s*\|/i.test(title) ||
+    title.length < 15;
+
+  // Find best headline — skip junk titles
+  const best = sorted.find(a => !isJunkTitle(a.article.title)) || sorted[0];
+
   if (best.article.language === 'he') {
-    return { he: best.article.title, en: template.en };
+    return { he: isJunkTitle(best.article.title) ? template.he : best.article.title, en: template.en };
   } else {
-    return { he: template.he, en: best.article.title };
+    return { he: template.he, en: isJunkTitle(best.article.title) ? template.en : best.article.title };
   }
 }
 
 /**
  * Build summary from top articles in cluster
  */
+// Clean a raw RSS description — remove junk metadata
+function cleanDescription(desc: string): string {
+  return desc
+    .replace(/\d+\s*כתבות\s*מ-\d+\s*מקורות[^.]*\./g, '')   // "386 כתבות מ-32 מקורות שונים."
+    .replace(/רמת ביטחון:[^.]*\./g, '')                       // "רמת ביטחון: גבוה (81%)."
+    .replace(/זוהה כסיגנל[^.]*\./g, '')                       // "זוהה כסיגנל חדשותי משמעותי."
+    .replace(/[A-Za-z]{2,}\s+en\s+\w+\s*\|[^|]*/g, '')       // "Kan en français | ..."
+    .replace(/^\d{1,2}\.\d{1,2}\.\d{4}\s*/g, '')             // leading dates
+    .replace(/\|[^|]{0,40}$/g, '')                            // trailing " | source name"
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 function buildSummary(cluster: Cluster): { he: string; en: string } {
-  const heArticles = cluster.articles.filter((a) => a.article.language === 'he');
-  const enArticles = cluster.articles.filter((a) => a.article.language !== 'he');
+  const isJunkDesc = (d: string) =>
+    !d || d.length < 20 ||
+    /^\d+\s*כתבות/.test(d) ||
+    /en\s+fran[çc]ais/i.test(d) ||
+    /^[\d./ ]+$/.test(d);
 
-  // Pick top 2 descriptions per language
-  const heSummary = heArticles
-    .slice(0, 2)
-    .map((a) => a.article.description.slice(0, 150))
-    .join(' | ') || `${cluster.articles.length} כתבות על ${TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic}`;
+  const heArticles = cluster.articles
+    .filter((a) => a.article.language === 'he')
+    .map((a) => ({ ...a, cleaned: cleanDescription(a.article.description) }))
+    .filter((a) => !isJunkDesc(a.cleaned));
 
-  const enSummary = enArticles
-    .slice(0, 2)
-    .map((a) => a.article.description.slice(0, 150))
-    .join(' | ') || `${cluster.articles.length} articles about ${cluster.topic}`;
+  const enArticles = cluster.articles
+    .filter((a) => a.article.language !== 'he')
+    .map((a) => ({ ...a, cleaned: cleanDescription(a.article.description) }))
+    .filter((a) => !isJunkDesc(a.cleaned));
+
+  const heSummary = heArticles.slice(0, 2).map((a) => a.cleaned.slice(0, 160)).join(' ') ||
+    `${cluster.articles.length} כתבות על ${TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic}`;
+
+  const enSummary = enArticles.slice(0, 2).map((a) => a.cleaned.slice(0, 160)).join(' ') ||
+    `${cluster.articles.length} articles about ${cluster.topic}`;
 
   return { he: heSummary, en: enSummary };
 }

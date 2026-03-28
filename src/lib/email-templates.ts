@@ -84,7 +84,7 @@ function fullStoryCard(story: BriefStory, index: number): string {
               <div style="font-size:17px;font-weight:800;color:#f1f5f9;line-height:1.4;margin-bottom:8px;">${headline}</div>
 
               <!-- Summary -->
-              <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:10px;">${summary}${why ? ` <span style="color:#64748b;">— ${why}</span>` : ''}</div>
+              <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:10px;">${summary}</div>
 
               <!-- Footer row: delta + sources + impacts -->
               <table width="100%" cellpadding="0" cellspacing="0">
