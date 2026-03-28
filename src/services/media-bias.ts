@@ -48,7 +48,8 @@ export const SOURCE_BIAS_DB: Record<string, Omit<SourceBias, 'sourceId' | 'sourc
   'i24': { bias: 'center-right', factual: 'mostly-factual', country: 'IL', type: 'mainstream', methodology: 'International Israeli channel, leans center-right' },
   'walla': { bias: 'center', factual: 'high', country: 'IL', type: 'mainstream', methodology: 'IDI: perceived center, commercial portal' },
   'mako': { bias: 'center', factual: 'high', country: 'IL', type: 'mainstream', methodology: 'Channel 12 digital, mainstream center' },
-  'n12': { bias: 'center', factual: 'high', country: 'IL', type: 'mainstream', methodology: 'Channel 12 news site' },
+  'n12': { bias: 'center', factual: 'high', country: 'IL', type: 'mainstream', methodology: 'Channel 12 news site, mainstream center' },
+  'reshet13': { bias: 'center-left', factual: 'high', country: 'IL', type: 'mainstream', methodology: 'Channel 13, commercial TV, center-left editorial' },
   'israelhayom': { bias: 'right', factual: 'mostly-factual', country: 'IL', type: 'partisan', methodology: 'MBFC: right. Free daily, historically aligned with Likud' },
   'ch7': { bias: 'far-right', factual: 'mixed', country: 'IL', type: 'partisan', methodology: 'Arutz 7/INN: religious-nationalist editorial line' },
   'ch14': { bias: 'right', factual: 'mostly-factual', country: 'IL', type: 'partisan', methodology: 'Channel 14: right-wing editorial stance' },
@@ -77,6 +78,12 @@ export const SOURCE_BIAS_DB: Record<string, Omit<SourceBias, 'sourceId' | 'sourc
 
   // Arab/Middle East
   'alarabiya': { bias: 'center-right', factual: 'mostly-factual', country: 'SA', type: 'state', methodology: 'Saudi-owned, pro-Saudi editorial line' },
+
+  // Left / Progressive
+  '972mag': { bias: 'far-left', factual: 'mostly-factual', country: 'IL', type: 'independent', methodology: 'Israeli-Palestinian independent, explicitly progressive, anti-occupation' },
+  'intercept': { bias: 'left', factual: 'mostly-factual', country: 'US', type: 'independent', methodology: 'MBFC: left. Investigative, progressive editorial line' },
+  'thenation': { bias: 'left', factual: 'high', country: 'US', type: 'independent', methodology: 'AllSides: left. Oldest US progressive magazine' },
+  'huffpost': { bias: 'left', factual: 'mostly-factual', country: 'US', type: 'mainstream', methodology: 'AllSides: left. MBFC: left-center. Large digital outlet' },
 };
 
 /**

@@ -11,7 +11,9 @@ export const rssSources: RssSource[] = [
   // ── Israeli Mainstream ──
   { id: 'ynet', name: 'Ynet', url: 'https://www.ynet.co.il/Integration/StoryRss2.xml', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
   { id: 'ynet-en', name: 'Ynet News (EN)', url: 'https://www.ynetnews.com/Integration/StoryRss2.xml', language: 'en', lensCategory: 'il-mainstream', country: 'IL' },
-  { id: 'mako', name: 'Mako/N12', url: 'https://news.google.com/rss/search?q=site:mako.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
+  { id: 'mako', name: 'Mako', url: 'https://news.google.com/rss/search?q=site:mako.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
+  { id: 'n12', name: 'N12', url: 'https://news.google.com/rss/search?q=site:n12.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
+  { id: 'reshet13', name: 'רשת 13', url: 'https://news.google.com/rss/search?q=site:13tv.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
   { id: 'kan', name: 'Kan News', url: 'https://news.google.com/rss/search?q=site:kan.org.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
   { id: 'walla', name: 'Walla! News', url: 'https://rss.walla.co.il/feed/1', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
   { id: 'calcalist', name: 'Calcalist', url: 'https://news.google.com/rss/search?q=site:calcalist.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
@@ -49,4 +51,10 @@ export const rssSources: RssSource[] = [
   // ── International – Analysis / Think Tanks ──
   { id: 'foreignpolicy', name: 'Foreign Policy', url: 'https://foreignpolicy.com/feed/', language: 'en', lensCategory: 'international', country: 'US' },
   { id: 'economist', name: 'The Economist', url: 'https://www.economist.com/middle-east-and-africa/rss.xml', language: 'en', lensCategory: 'international', country: 'UK' },
+
+  // ── Left-leaning / Progressive ──
+  { id: '972mag', name: '+972 Magazine', url: 'https://www.972mag.com/feed/', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
+  { id: 'intercept', name: 'The Intercept', url: 'https://theintercept.com/feed/?rss', language: 'en', lensCategory: 'international', country: 'US' },
+  { id: 'thenation', name: 'The Nation', url: 'https://www.thenation.com/feed/?post_type=article', language: 'en', lensCategory: 'international', country: 'US' },
+  { id: 'huffpost', name: 'HuffPost World', url: 'https://www.huffpost.com/section/world-news/feed', language: 'en', lensCategory: 'international', country: 'US' },
 ];
