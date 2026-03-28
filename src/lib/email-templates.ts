@@ -37,7 +37,7 @@ function getSourceNames(s: BriefStory): string {
   return s.sources.map(src => src.name).join(' · ');
 }
 
-/* ─── Story card (full detail) ────────────────────────────────── */
+/* ─── Story card (compact Axios-style) ───────────────────────── */
 
 function fullStoryCard(story: BriefStory, index: number): string {
   const headline = getT(story.headline);
@@ -47,163 +47,101 @@ function fullStoryCard(story: BriefStory, index: number): string {
   const color = getLikelihoodColor(story.likelihood);
   const label = getLikelihoodLabel(story.likelihood);
   const srcCount = getSourceCount(story);
-  const srcNames = getSourceNames(story);
 
-  // Detailed analysis text based on data
-  const analysisLines: string[] = [];
+  const impactsHtml = story.impacts && story.impacts.length > 0
+    ? story.impacts.map(impact => {
+        const bg   = impact.direction === 'positive' ? '#052e16' : impact.direction === 'negative' ? '#2d0909' : '#1e293b';
+        const col  = impact.direction === 'positive' ? '#4ade80' : impact.direction === 'negative' ? '#f87171' : '#94a3b8';
+        const brd  = impact.direction === 'positive' ? '#166534' : impact.direction === 'negative' ? '#7f1d1d' : '#334155';
+        const arr  = impact.direction === 'positive' ? '↑' : impact.direction === 'negative' ? '↓' : '~';
+        return `<span style="display:inline-block;background:${bg};border:1px solid ${brd};color:${col};font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;margin:0 3px 3px 0;">${arr} ${impact.sector.he}</span>`;
+      }).join('')
+    : '';
 
-  // Likelihood assessment
-  if (story.likelihood >= 70) {
-    analysisLines.push(`הערכת סבירות: <strong style="color:${color}">${story.likelihood}%</strong> — סיפור זה מסווג כבעל סבירות גבוהה להתממשות. הכיסוי התקשורתי רחב ועקבי.`);
-  } else if (story.likelihood >= 45) {
-    analysisLines.push(`הערכת סבירות: <strong style="color:${color}">${story.likelihood}%</strong> — מגמה מתפתחת שטרם התגבשה. עדיין יש פערים בכיסוי — מומלץ לעקוב.`);
-  } else {
-    analysisLines.push(`הערכת סבירות: <strong style="color:${color}">${story.likelihood}%</strong> — סיגנל חלש. ייתכן שמדובר בספקולציה או דיווח מוקדם.`);
-  }
-
-  // Delta / trend
-  if (story.delta && Math.abs(story.delta) >= 3) {
-    const dir = story.delta > 0 ? 'עלייה' : 'ירידה';
-    const arrow = story.delta > 0 ? '↑' : '↓';
-    analysisLines.push(`מגמה: ${arrow} ${dir} של ${Math.abs(story.delta)}% ב-24 השעות האחרונות. ${story.delta > 0 ? 'הסיפור צובר תאוצה — מקורות נוספים מצטרפים לדיווח.' : 'הסיפור מאבד עניין או שהוכחש חלקית.'}`);
-  }
-
-  // Why it matters
-  if (why) {
-    analysisLines.push(`למה חשוב: ${why}`);
-  }
+  const deltaHtml = story.delta && Math.abs(story.delta) >= 3
+    ? `<span style="font-size:11px;color:${story.delta > 0 ? '#22c55e' : '#ef4444'};font-weight:700;margin-right:8px;">${story.delta > 0 ? '▲' : '▼'}${Math.abs(story.delta)}%</span>`
+    : '';
 
   return `
     <tr>
-      <td style="padding:0 0 24px 0;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#111827; border-radius:12px; border:1px solid #1e293b; overflow:hidden;">
-          <!-- Card header -->
+      <td style="padding:0 0 16px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0"
+               style="background:#111827;border-radius:10px;border-right:3px solid ${color};overflow:hidden;">
           <tr>
-            <td style="padding:16px 20px 12px; border-bottom:1px solid #1e293b;">
-              <table width="100%" cellpadding="0" cellspacing="0">
+            <td style="padding:16px 18px 14px;">
+
+              <!-- Meta row -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;">
                 <tr>
                   <td>
-                    <span style="font-size:10px; color:#6366f1; font-weight:700; text-transform:uppercase; letter-spacing:2px;">${category}</span>
+                    <span style="font-size:10px;color:#6366f1;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">${category}</span>
+                    ${story.isSignal ? `<span style="font-size:10px;background:#422006;color:#fbbf24;padding:1px 7px;border-radius:8px;font-weight:700;margin-right:6px;">⚡ SIGNAL</span>` : ''}
                   </td>
-                  <td style="text-align:left;">
-                    <span style="font-size:10px; background:${story.isSignal ? '#422006' : '#1e293b'}; color:${story.isSignal ? '#fbbf24' : '#64748b'}; padding:2px 8px; border-radius:10px; font-weight:600;">
-                      ${story.isSignal ? '⚡ SIGNAL' : `#${index + 1}`}
-                    </span>
+                  <td style="text-align:left;white-space:nowrap;">
+                    <span style="font-size:11px;font-weight:800;color:${color};">${story.likelihood}%</span>
+                    <span style="font-size:10px;color:#475569;margin-right:4px;">${label}</span>
                   </td>
                 </tr>
               </table>
-            </td>
-          </tr>
 
-          <!-- Headline -->
-          <tr>
-            <td style="padding:16px 20px 8px;">
-              <div style="font-size:18px; font-weight:800; color:#f1f5f9; line-height:1.4; margin-bottom:8px;">${headline}</div>
-            </td>
-          </tr>
+              <!-- Headline -->
+              <div style="font-size:17px;font-weight:800;color:#f1f5f9;line-height:1.4;margin-bottom:8px;">${headline}</div>
 
-          <!-- Summary -->
-          <tr>
-            <td style="padding:0 20px 12px;">
-              <div style="font-size:14px; color:#cbd5e1; line-height:1.7;">${summary}</div>
-            </td>
-          </tr>
+              <!-- Summary -->
+              <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:10px;">${summary}${why ? ` <span style="color:#64748b;">— ${why}</span>` : ''}</div>
 
-          <!-- Analysis section -->
-          <tr>
-            <td style="padding:0 20px 16px;">
-              <div style="background:#0f172a; border-radius:8px; padding:14px 16px; border-right:3px solid ${color};">
-                <div style="font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">🔍 ניתוח מודיעיני</div>
-                ${analysisLines.map(line => `<div style="font-size:13px; color:#94a3b8; line-height:1.7; margin-bottom:6px;">${line}</div>`).join('')}
-              </div>
-            </td>
-          </tr>
-
-          <!-- Likelihood bar -->
-          <tr>
-            <td style="padding:0 20px 16px;">
+              <!-- Footer row: delta + sources + impacts -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="width:60px;">
-                    <div style="font-size:28px; font-weight:900; color:${color}; line-height:1;">${story.likelihood}%</div>
-                    <div style="font-size:9px; color:#64748b; margin-top:2px;">${label}</div>
-                  </td>
-                  <td style="padding-right:12px; vertical-align:middle;">
-                    <div style="background:#0f172a; border-radius:6px; height:8px; width:100%;">
-                      <div style="background:${color}; width:${story.likelihood}%; height:8px; border-radius:6px;"></div>
-                    </div>
-                    ${story.delta ? `<div style="font-size:11px; color:${story.delta > 0 ? '#22c55e' : '#ef4444'}; margin-top:4px; font-weight:600;">${story.delta > 0 ? '▲' : '▼'} ${Math.abs(story.delta)}% מאתמול</div>` : ''}
+                  <td style="vertical-align:top;">
+                    ${deltaHtml}
+                    <span style="font-size:10px;color:#374151;">${srcCount} מקורות</span>
                   </td>
                 </tr>
+                ${impactsHtml ? `
+                <tr>
+                  <td style="padding-top:8px;">${impactsHtml}</td>
+                </tr>` : ''}
               </table>
+
             </td>
           </tr>
-
-          <!-- Cross-sector impacts -->
-          ${story.impacts && story.impacts.length > 0 ? `
-          <tr>
-            <td style="padding:0 20px 14px;">
-              <div style="font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">🔗 השפעות צפויות</div>
-              <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                ${story.impacts.map(impact => {
-                  const bg = impact.direction === 'positive' ? '#052e16' : impact.direction === 'negative' ? '#2d0909' : '#1e293b';
-                  const color = impact.direction === 'positive' ? '#4ade80' : impact.direction === 'negative' ? '#f87171' : '#94a3b8';
-                  const border = impact.direction === 'positive' ? '#166534' : impact.direction === 'negative' ? '#7f1d1d' : '#334155';
-                  const arrow = impact.direction === 'positive' ? '↑' : impact.direction === 'negative' ? '↓' : '~';
-                  return `<span style="display:inline-block; background:${bg}; border:1px solid ${border}; color:${color}; font-size:11px; padding:3px 10px; border-radius:20px; font-weight:600; margin:0 4px 4px 0;">${arrow} ${impact.sector.he}</span>`;
-                }).join('')}
-              </div>
-            </td>
-          </tr>
-          ` : ''}
-
         </table>
       </td>
     </tr>
   `;
 }
 
-/* ─── Shock card ────────────────────────────────────────────────── */
+/* ─── Shock card (compact) ──────────────────────────────────────── */
 
 function fullShockCard(shock: ShockEvent): string {
   const headline = getT(shock.headline);
-  const whatMoved = getT(shock.whatMoved);
   const whyNow = getT(shock.whyNow);
-  const whoDriving = getT(shock.whoDriving);
-  const timeWindow = getT(shock.timeWindow);
-
   const typeLabel: Record<string, string> = {
     likelihood: '📊 זעזוע סבירות',
     narrative: '📰 פיצול נרטיבי',
     fragmentation: '🔀 פרגמנטציה',
   };
+  const confColor = shock.confidence === 'high' ? '#818cf8' : shock.confidence === 'medium' ? '#a5b4fc' : '#64748b';
 
   return `
     <tr>
-      <td style="padding:0 0 16px 0;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#1e1b4b; border-radius:12px; border:1px solid #312e81; overflow:hidden;">
+      <td style="padding:0 0 10px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0"
+               style="background:#1e1b4b;border-radius:8px;border-right:3px solid #6366f1;overflow:hidden;">
           <tr>
-            <td style="padding:16px 20px;">
-              <div style="font-size:10px; color:#818cf8; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:8px;">
-                ${typeLabel[shock.type] || '⚡ זעזוע'}
-              </div>
-              <div style="font-size:16px; font-weight:800; color:#f1f5f9; line-height:1.4; margin-bottom:10px;">${headline}</div>
-              ${whatMoved ? `<div style="font-size:13px; color:#c7d2fe; line-height:1.6; margin-bottom:8px;"><strong>מה זז:</strong> ${whatMoved}</div>` : ''}
-              ${whyNow ? `<div style="font-size:13px; color:#c7d2fe; line-height:1.6; margin-bottom:8px;"><strong>למה עכשיו:</strong> ${whyNow}</div>` : ''}
-              ${whoDriving ? `<div style="font-size:13px; color:#c7d2fe; line-height:1.6; margin-bottom:8px;"><strong>מי מניע:</strong> ${whoDriving}</div>` : ''}
-              <table cellpadding="0" cellspacing="0" style="margin-top:8px;">
+            <td style="padding:12px 16px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding-left:12px;">
-                    <span style="font-size:20px; font-weight:900; color:${shock.delta >= 0 ? '#22c55e' : '#ef4444'};">${shock.delta >= 0 ? '+' : ''}${shock.delta}%</span>
-                  </td>
-                  ${timeWindow ? `<td style="padding-right:12px;"><span style="font-size:11px; color:#818cf8;">⏱ ${timeWindow}</span></td>` : ''}
-                  <td>
-                    <span style="font-size:11px; background:#312e81; color:#a5b4fc; padding:2px 8px; border-radius:10px; font-weight:600;">
-                      ${shock.confidence === 'high' ? 'ביטחון גבוה' : shock.confidence === 'medium' ? 'ביטחון בינוני' : 'ביטחון נמוך'}
-                    </span>
+                  <td><span style="font-size:10px;color:#818cf8;font-weight:700;">${typeLabel[shock.type] || '⚡ זעזוע'}</span></td>
+                  <td style="text-align:left;">
+                    <span style="font-size:14px;font-weight:900;color:${shock.delta >= 0 ? '#22c55e' : '#ef4444'};">${shock.delta >= 0 ? '+' : ''}${shock.delta}%</span>
+                    <span style="font-size:10px;color:${confColor};margin-right:6px;">${shock.confidence === 'high' ? '● גבוה' : shock.confidence === 'medium' ? '● בינוני' : '● נמוך'}</span>
                   </td>
                 </tr>
               </table>
+              <div style="font-size:14px;font-weight:700;color:#f1f5f9;line-height:1.4;margin:6px 0 4px;">${headline}</div>
+              ${whyNow ? `<div style="font-size:12px;color:#94a3b8;line-height:1.5;">${whyNow}</div>` : ''}
             </td>
           </tr>
         </table>
@@ -227,7 +165,6 @@ export function buildDailyBriefEmail(opts: {
 
   // Aggregate stats
   const totalStories = stories.length;
-  const totalSources = new Set(stories.flatMap(s => Array.isArray(s.sources) ? s.sources.map(src => src.name) : [])).size;
   const highLikelihood = stories.filter(s => s.likelihood >= 70).length;
   const signalCount = stories.filter(s => s.isSignal).length;
   const avgLikelihood = totalStories > 0 ? Math.round(stories.reduce((sum, s) => sum + s.likelihood, 0) / totalStories) : 0;
@@ -235,18 +172,6 @@ export function buildDailyBriefEmail(opts: {
   // Top story for the executive summary lead
   const topStory = stories[0];
   const topHeadline = topStory ? getT(topStory.headline) : '';
-
-  // Categories overview
-  const categories = new Map<string, number>();
-  stories.forEach(s => {
-    const cat = getT(s.category);
-    categories.set(cat, (categories.get(cat) || 0) + 1);
-  });
-  const catSummary = [...categories.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([cat, count]) => `${cat} (${count})`)
-    .join(' · ');
 
   const subject = `⚡ תקציר מודיעיני — ${dateStr}`;
 
@@ -291,61 +216,33 @@ export function buildDailyBriefEmail(opts: {
 
           <!-- ═══════ EXECUTIVE SUMMARY ═══════ -->
           <tr>
-            <td style="padding:24px 20px; background:#0f172a; border-bottom:1px solid #1e293b;">
-              <div style="font-size:10px; color:#22c55e; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin-bottom:12px;">🧠 תמצית מנהלים</div>
-              <div style="font-size:14px; color:#e2e8f0; line-height:1.8; margin-bottom:12px;">
-                ${highLikelihood > 0 ? `<strong style="color:#22c55e;">${highLikelihood} אירועים</strong> מרכזיים זוהו הבוקר בסבירות גבוהה.` : 'אין אירועים בסבירות גבוהה מיוחדת הבוקר.'}
-                ${signalCount > 0 ? ` <strong style="color:#fbbf24;">${signalCount} סיגנלים חריגים</strong> דורשים תשומת לב.` : ''}
-                ${shocks.length > 0 ? ` <strong style="color:#818cf8;">${shocks.length} זעזועים סטטיסטיים</strong> זוהו ב-24 השעות האחרונות.` : ''}
-              </div>
-              ${topStory ? `
-              <div style="font-size:14px; color:#e2e8f0; line-height:1.8; margin-bottom:12px;">
-                <strong>סיגנל מוביל:</strong> "${topHeadline}" — ${topStory.likelihood >= 70 ? 'נתמך ע"י מקורות מרובים בכיסוי נרחב.' : 'מגמה מתפתחת הדורשת מעקב.'}
-                סבירות: <strong style="color:${getLikelihoodColor(topStory.likelihood)}">${topStory.likelihood}%</strong>${topStory.delta ? ` (${topStory.delta > 0 ? '↑' : '↓'}${Math.abs(topStory.delta)}% מאתמול)` : ''}.
-              </div>
-              ` : ''}
-              <div style="font-size:12px; color:#64748b; line-height:1.6;">
-                <strong>נושאים מרכזיים:</strong> ${catSummary || 'כללי'}<br/>
-                <strong>סבירות ממוצעת:</strong> ${avgLikelihood}%
-              </div>
-              ${(() => {
-                const allImpacts = stories.flatMap(s => s.impacts || []);
-                const negImpacts = [...new Set(allImpacts.filter(i => i.direction === 'negative').map(i => i.sector.he))].slice(0, 3);
-                const posImpacts = [...new Set(allImpacts.filter(i => i.direction === 'positive').map(i => i.sector.he))].slice(0, 3);
-                if (!negImpacts.length && !posImpacts.length) return '';
-                return `
-              <div style="margin-top:12px; padding:12px 14px; background:#0a0f1e; border-radius:8px; border-right:3px solid #6366f1;">
-                <div style="font-size:10px; color:#6366f1; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">🔗 השפעות צפויות לאזורים</div>
-                ${posImpacts.length ? `<div style="font-size:12px; color:#4ade80; margin-bottom:4px;">↑ עלייה צפויה: ${posImpacts.join(' · ')}</div>` : ''}
-                ${negImpacts.length ? `<div style="font-size:12px; color:#f87171;">↓ לחץ צפוי: ${negImpacts.join(' · ')}</div>` : ''}
-              </div>`;
-              })()}
-            </td>
-          </tr>
-
-          <!-- ═══════ STATS BAR ═══════ -->
-          <tr>
-            <td style="padding:0;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#111827;">
+            <td style="padding:20px; background:#0f172a; border-bottom:1px solid #1e293b;">
+              <!-- Stats pills -->
+              <table cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
                 <tr>
-                  <td style="padding:12px; text-align:center; border-left:1px solid #1e293b;">
-                    <div style="font-size:20px; font-weight:900; color:#22c55e;">${highLikelihood}</div>
-                    <div style="font-size:9px; color:#64748b;">סבירות גבוהה</div>
-                  </td>
-                  <td style="padding:12px; text-align:center; border-left:1px solid #1e293b;">
-                    <div style="font-size:20px; font-weight:900; color:#818cf8;">${shocks.length}</div>
-                    <div style="font-size:9px; color:#64748b;">זעזועים</div>
-                  </td>
-                  <td style="padding:12px; text-align:center; border-left:1px solid #1e293b;">
-                    <div style="font-size:20px; font-weight:900; color:#fbbf24;">${signalCount}</div>
-                    <div style="font-size:9px; color:#64748b;">סיגנלים</div>
-                  </td>
-                  <td style="padding:12px; text-align:center;">
-                    <div style="font-size:20px; font-weight:900; color:#94a3b8;">${avgLikelihood}%</div>
-                    <div style="font-size:9px; color:#64748b;">סבירות ממוצעת</div>
-                  </td>
+                  <td style="padding-left:8px;"><span style="background:#052e16;color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${highLikelihood} בסבירות גבוהה</span></td>
+                  ${shocks.length > 0 ? `<td style="padding-left:8px;"><span style="background:#1e1b4b;color:#818cf8;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${shocks.length} זעזועים</span></td>` : ''}
+                  ${signalCount > 0 ? `<td style="padding-left:8px;"><span style="background:#422006;color:#fbbf24;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">⚡ ${signalCount} סיגנלים</span></td>` : ''}
                 </tr>
               </table>
+              <!-- Top story lead -->
+              ${topStory ? `
+              <div style="font-size:15px;color:#f1f5f9;font-weight:700;line-height:1.5;margin-bottom:6px;">${topHeadline}</div>
+              <div style="font-size:13px;color:#64748b;line-height:1.6;margin-bottom:12px;">
+                סיגנל מוביל · סבירות <span style="color:${getLikelihoodColor(topStory.likelihood)};font-weight:700;">${topStory.likelihood}%</span>${topStory.delta ? ` · ${topStory.delta > 0 ? '↑' : '↓'}${Math.abs(topStory.delta)}% מאתמול` : ''}
+              </div>` : ''}
+              <!-- Sector impacts summary -->
+              ${(() => {
+                const allImpacts = stories.flatMap(s => s.impacts || []);
+                const neg = [...new Set(allImpacts.filter(i => i.direction === 'negative').map(i => i.sector.he))].slice(0, 3);
+                const pos = [...new Set(allImpacts.filter(i => i.direction === 'positive').map(i => i.sector.he))].slice(0, 3);
+                if (!neg.length && !pos.length) return '';
+                return `<div style="font-size:12px;color:#475569;line-height:1.8;">
+                  ${pos.length ? `<span style="color:#4ade80;">↑ ${pos.join(' · ')}</span>` : ''}
+                  ${pos.length && neg.length ? `<span style="color:#374151;"> &nbsp;|&nbsp; </span>` : ''}
+                  ${neg.length ? `<span style="color:#f87171;">↓ ${neg.join(' · ')}</span>` : ''}
+                </div>`;
+              })()}
             </td>
           </tr>
 
@@ -370,24 +267,6 @@ export function buildDailyBriefEmail(opts: {
               <table width="100%" cellpadding="0" cellspacing="0">
                 ${displayStories.map((s, i) => fullStoryCard(s, i)).join('')}
               </table>
-            </td>
-          </tr>
-
-          <!-- ═══════ WHAT TO WATCH ═══════ -->
-          <tr>
-            <td style="padding:20px; background:#111827; border-top:1px solid #1e293b;">
-              <div style="font-size:10px; color:#f59e0b; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin-bottom:12px;">👁️ מה לעקוב אחריו</div>
-              <div style="font-size:13px; color:#94a3b8; line-height:1.8;">
-                ${stories.filter(s => s.likelihood >= 45 && s.likelihood < 70).length > 0
-                  ? `• <strong style="color:#f59e0b;">${stories.filter(s => s.likelihood >= 45 && s.likelihood < 70).length} סיפורים</strong> בטווח הסבירות 45-70% — עדיין לא סבירות גבוהה, אבל מגמות שיכולות להתפתח.`
-                  : '• אין כרגע מגמות בתפר — רוב הסיפורים ברורים בכיוונם.'}
-                <br/>
-                ${shocks.filter(s => s.confidence === 'high').length > 0
-                  ? `• <strong style="color:#818cf8;">זעזועים בביטחון גבוה:</strong> ${shocks.filter(s => s.confidence === 'high').length} — אלו דורשים תשומת לב מיידית.`
-                  : `• אין זעזועים בביטחון גבוה — יום יחסית יציב.`}
-                <br/>
-                • <strong>סבירות ממוצעת ${avgLikelihood >= 55 ? 'גבוהה מהרגיל' : avgLikelihood >= 40 ? 'בטווח הנורמלי' : 'נמוכה מהרגיל'}</strong> — ${avgLikelihood}% (ממוצע רגיל: 50%).
-              </div>
             </td>
           </tr>
 
