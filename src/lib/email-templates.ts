@@ -54,11 +54,11 @@ function fullStoryCard(story: BriefStory, index: number): string {
 
   // Likelihood assessment
   if (story.likelihood >= 70) {
-    analysisLines.push(`הערכת סבירות: <strong style="color:${color}">${story.likelihood}%</strong> — סיפור זה נתמך ע"י ${srcCount} מקורות עצמאיים ומסווג כבעל סבירות גבוהה להתממשות. הכיסוי התקשורתי רחב ועקבי.`);
+    analysisLines.push(`הערכת סבירות: <strong style="color:${color}">${story.likelihood}%</strong> — סיפור זה מסווג כבעל סבירות גבוהה להתממשות. הכיסוי התקשורתי רחב ועקבי.`);
   } else if (story.likelihood >= 45) {
-    analysisLines.push(`הערכת סבירות: <strong style="color:${color}">${story.likelihood}%</strong> — מגמה מתפתחת שטרם התגבשה. ${srcCount} מקורות מדווחים על כך, אך עדיין יש פערים בכיסוי. מומלץ לעקוב.`);
+    analysisLines.push(`הערכת סבירות: <strong style="color:${color}">${story.likelihood}%</strong> — מגמה מתפתחת שטרם התגבשה. עדיין יש פערים בכיסוי — מומלץ לעקוב.`);
   } else {
-    analysisLines.push(`הערכת סבירות: <strong style="color:${color}">${story.likelihood}%</strong> — סיגנל חלש שנצפה במספר מצומצם של מקורות (${srcCount}). ייתכן שמדובר בספקולציה או דיווח בודד.`);
+    analysisLines.push(`הערכת סבירות: <strong style="color:${color}">${story.likelihood}%</strong> — סיגנל חלש. ייתכן שמדובר בספקולציה או דיווח מוקדם.`);
   }
 
   // Delta / trend
@@ -84,8 +84,6 @@ function fullStoryCard(story: BriefStory, index: number): string {
                 <tr>
                   <td>
                     <span style="font-size:10px; color:#6366f1; font-weight:700; text-transform:uppercase; letter-spacing:2px;">${category}</span>
-                    <span style="font-size:10px; color:#374151; margin:0 6px;">|</span>
-                    <span style="font-size:10px; color:#64748b;">${srcCount} מקורות</span>
                   </td>
                   <td style="text-align:left;">
                     <span style="font-size:10px; background:${story.isSignal ? '#422006' : '#1e293b'}; color:${story.isSignal ? '#fbbf24' : '#64748b'}; padding:2px 8px; border-radius:10px; font-weight:600;">
@@ -159,14 +157,6 @@ function fullStoryCard(story: BriefStory, index: number): string {
           </tr>
           ` : ''}
 
-          <!-- Source names -->
-          ${srcNames ? `
-          <tr>
-            <td style="padding:0 20px 14px;">
-              <div style="font-size:11px; color:#475569; line-height:1.5;">📰 ${srcNames}</div>
-            </td>
-          </tr>
-          ` : ''}
         </table>
       </td>
     </tr>
@@ -304,10 +294,8 @@ export function buildDailyBriefEmail(opts: {
             <td style="padding:24px 20px; background:#0f172a; border-bottom:1px solid #1e293b;">
               <div style="font-size:10px; color:#22c55e; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin-bottom:12px;">🧠 תמצית מנהלים</div>
               <div style="font-size:14px; color:#e2e8f0; line-height:1.8; margin-bottom:12px;">
-                בתקציר היום ניתחנו <strong style="color:#f1f5f9;">${totalStories} סיפורים</strong> מתוך
-                <strong style="color:#f1f5f9;">${totalSources} מקורות חדשותיים</strong>.
-                ${highLikelihood > 0 ? `<strong style="color:#22c55e;">${highLikelihood} סיפורים</strong> זוהו בסבירות גבוהה (70%+).` : 'אין סיפורים בסבירות גבוהה מיוחדת הבוקר.'}
-                ${signalCount > 0 ? ` <strong style="color:#fbbf24;">${signalCount} סיגנלים חריגים</strong> מוינו כדרושים תשומת לב.` : ''}
+                ${highLikelihood > 0 ? `<strong style="color:#22c55e;">${highLikelihood} אירועים</strong> מרכזיים זוהו הבוקר בסבירות גבוהה.` : 'אין אירועים בסבירות גבוהה מיוחדת הבוקר.'}
+                ${signalCount > 0 ? ` <strong style="color:#fbbf24;">${signalCount} סיגנלים חריגים</strong> דורשים תשומת לב.` : ''}
                 ${shocks.length > 0 ? ` <strong style="color:#818cf8;">${shocks.length} זעזועים סטטיסטיים</strong> זוהו ב-24 השעות האחרונות.` : ''}
               </div>
               ${topStory ? `
@@ -353,8 +341,8 @@ export function buildDailyBriefEmail(opts: {
                     <div style="font-size:9px; color:#64748b;">סיגנלים</div>
                   </td>
                   <td style="padding:12px; text-align:center;">
-                    <div style="font-size:20px; font-weight:900; color:#94a3b8;">${totalSources}</div>
-                    <div style="font-size:9px; color:#64748b;">מקורות</div>
+                    <div style="font-size:20px; font-weight:900; color:#94a3b8;">${avgLikelihood}%</div>
+                    <div style="font-size:9px; color:#64748b;">סבירות ממוצעת</div>
                   </td>
                 </tr>
               </table>
@@ -420,7 +408,7 @@ export function buildDailyBriefEmail(opts: {
               <div style="font-size:11px; color:#374151; font-weight:700; letter-spacing:2px; margin-bottom:8px;">SIGNAL NEWS</div>
               <div style="font-size:11px; color:#475569; line-height:1.8;">
                 תקציר מודיעיני אוטומטי · נשלח כל בוקר ב-07:00<br/>
-                ניתוח ע"י AI ללא הטיה פוליטית · ${totalSources} מקורות<br/>
+                ניתוח ע"י AI ללא הטיה פוליטית<br/>
                 <a href="${unsubUrl}" style="color:#6366f1; text-decoration:none; font-weight:600;">הסר אותי מהרשימה</a>
                 <span style="color:#1e293b;"> | </span>
                 <a href="${SITE_URL}/dashboard" style="color:#6366f1; text-decoration:none;">פתח דשבורד</a>
