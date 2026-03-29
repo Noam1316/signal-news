@@ -13,6 +13,9 @@ const KV_TTL_S = 300; // 5 minutes in seconds
 // In-memory fallback (single instance, works in dev)
 let memCache: { articles: FetchedArticle[]; timestamp: number } | null = null;
 
+// In-flight fetch deduplication — prevents cache stampede
+let pendingFetch: Promise<FetchedArticle[]> | null = null;
+
 // Try to get Vercel KV — only if env vars are set
 async function kvGet<T>(key: string): Promise<T | null> {
   try {
@@ -33,32 +36,36 @@ async function kvSet(key: string, value: unknown, ttlSeconds: number): Promise<v
 export async function getCachedArticles(): Promise<FetchedArticle[]> {
   const now = Date.now();
 
-  // 1. Try KV first
+  // 1. Memory cache first — fastest, no network
+  if (memCache && now - memCache.timestamp < CACHE_TTL_MS) {
+    return memCache.articles;
+  }
+
+  // 2. Try KV (shared across serverless instances)
   const kvCached = await kvGet<{ articles: FetchedArticle[]; timestamp: number }>(KV_KEY);
   if (kvCached && now - kvCached.timestamp < CACHE_TTL_MS) {
     memCache = kvCached; // sync memory cache
     return kvCached.articles;
   }
 
-  // 2. Fall back to memory cache
-  if (memCache && now - memCache.timestamp < CACHE_TTL_MS) {
-    return memCache.articles;
-  }
+  // 3. Fetch fresh — deduplicated to prevent stampede
+  if (pendingFetch) return pendingFetch;
 
-  // 3. Fetch fresh
-  const { articles } = await fetchAllSources();
-  const deduped = deduplicateArticles(articles);
-  deduped.sort((a, b) => {
-    const da = a.pubDate ? new Date(a.pubDate).getTime() : 0;
-    const db = b.pubDate ? new Date(b.pubDate).getTime() : 0;
-    return db - da;
-  });
+  pendingFetch = (async () => {
+    const { articles } = await fetchAllSources();
+    const deduped = deduplicateArticles(articles);
+    deduped.sort((a, b) => {
+      const da = a.pubDate ? new Date(a.pubDate).getTime() : 0;
+      const db = b.pubDate ? new Date(b.pubDate).getTime() : 0;
+      return db - da;
+    });
+    const entry = { articles: deduped, timestamp: Date.now() };
+    memCache = entry;
+    await kvSet(KV_KEY, entry, KV_TTL_S);
+    return deduped;
+  })().finally(() => { pendingFetch = null; });
 
-  const entry = { articles: deduped, timestamp: now };
-  memCache = entry;
-  await kvSet(KV_KEY, entry, KV_TTL_S);
-
-  return deduped;
+  return pendingFetch;
 }
 
 export function getCacheTimestamp(): string | null {

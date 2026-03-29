@@ -3,6 +3,36 @@
 import { useState } from 'react';
 import { useLanguage } from '@/i18n/context';
 import type { GroupedArticle } from '@/utils/news-grouper';
+import ArticleLink from '@/components/layout/ArticleLink';
+import type { SidebarArticle } from '@/contexts/SidebarContext';
+
+/** Build a SidebarArticle from a FetchedArticle + group keywords */
+function buildSidebarArticle(
+  article: { title: string; description?: string; link: string; sourceId?: string; sourceName: string; pubDate?: string },
+  keywords: string[],
+): SidebarArticle {
+  // Naive sentiment from description keywords
+  const text = (article.title + ' ' + (article.description ?? '')).toLowerCase();
+  const positiveWords = ['ceasefire', 'deal', 'agreement', 'peace', 'rise', 'growth', 'win', 'success', 'הסכם', 'שלום', 'עסקה'];
+  const negativeWords = ['attack', 'kill', 'war', 'conflict', 'crash', 'fail', 'crisis', 'threat', 'missile', 'bomb', 'מלחמה', 'פיגוע', 'מתקפה'];
+  const posCount = positiveWords.filter(w => text.includes(w)).length;
+  const negCount = negativeWords.filter(w => text.includes(w)).length;
+  const sentiment: SidebarArticle['sentiment'] = negCount > posCount ? 'negative' : posCount > negCount ? 'positive' : 'neutral';
+  const signalScore = Math.min(100, keywords.length * 12 + 20);
+
+  return {
+    title: article.title,
+    description: article.description?.replace(/<[^>]*>/g, '') ?? '',
+    url: article.link,
+    sourceId: article.sourceId ?? '',
+    sourceName: article.sourceName,
+    pubDate: article.pubDate ?? '',
+    topics: keywords.slice(0, 6),
+    sentiment,
+    signalScore,
+    isSignal: signalScore > 50,
+  };
+}
 
 interface Props {
   group: GroupedArticle;
@@ -65,9 +95,14 @@ export default function GroupedStoryCard({ group }: Props) {
         <span>{active.pubDate ? new Date(active.pubDate).toLocaleTimeString(lang === 'he' ? 'he-IL' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
       </div>
 
-      {/* Headline — switches with active source */}
+      {/* Headline — switches with active source; opens sidebar on click */}
       <h3 className="font-semibold text-sm sm:text-base leading-snug text-white line-clamp-2 min-h-[2.5rem]">
-        {active.title}
+        <ArticleLink
+          article={buildSidebarArticle(active, group.sharedKeywords)}
+          className="hover:text-indigo-300 transition-colors"
+        >
+          {active.title}
+        </ArticleLink>
       </h3>
 
       {/* Description */}

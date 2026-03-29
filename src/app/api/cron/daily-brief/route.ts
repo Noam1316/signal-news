@@ -15,7 +15,7 @@ import { sendMail, isMailerConfigured } from '@/lib/mailer';
 import { buildDailyBriefEmail } from '@/lib/email-templates';
 
 export async function GET(req: NextRequest) {
-  // Auth check
+  // Auth check — only enforce if CRON_SECRET is configured
   const auth = req.headers.get('authorization');
   const secret = process.env.CRON_SECRET;
   if (secret && auth !== `Bearer ${secret}`) {
@@ -63,7 +63,9 @@ export async function GET(req: NextRequest) {
         email: sub.email,
       });
 
-      await sendMail({ to: sub.email, subject, html });
+      const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://signal-news-demo.vercel.app';
+      const unsubscribeUrl = `${BASE}/api/unsubscribe?token=${sub.token}&email=${encodeURIComponent(sub.email)}`;
+      await sendMail({ to: sub.email, subject, html, unsubscribeUrl });
 
       return sub.email;
     })

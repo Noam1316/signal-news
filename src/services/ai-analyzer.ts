@@ -257,10 +257,22 @@ function detectPoliticalLeaning(article: FetchedArticle): PoliticalLeaning {
   return SOURCE_POLITICAL_MAP[article.sourceId] || 'unknown';
 }
 
+// Module-level analysis cache — keyed by article ID
+// Cleared when getCachedArticles() refreshes (articles get new IDs on each fetch cycle)
+const _analysisCache = new Map<string, ArticleAnalysis>();
+
+export function clearAnalysisCache(): void {
+  _analysisCache.clear();
+}
+
 export function analyzeArticle(article: FetchedArticle): ArticleAnalysis {
+  // Return cached result if available
+  if (_analysisCache.has(article.id)) {
+    return _analysisCache.get(article.id)!;
+  }
+
   const enrichment = getEnrichment(article.id);
   const baseText = `${article.title} ${article.description}`;
-  // Use full text if enriched, otherwise fall back to title + description
   const analysisText = enrichment ? `${baseText} ${enrichment.fullText}` : baseText;
 
   const topics = detectTopics(analysisText);
@@ -268,13 +280,12 @@ export function analyzeArticle(article: FetchedArticle): ArticleAnalysis {
   const { isSignal, score } = detectSignal(analysisText);
   const region = detectRegion(article);
 
-  // Enhanced political leaning: content-based when enriched, source-based otherwise
   const sourceLeaning = detectPoliticalLeaning(article);
   const politicalLeaning = enrichment
     ? classifyPoliticalLeaning(enrichment.fullText, sourceLeaning)
     : sourceLeaning;
 
-  return {
+  const result: ArticleAnalysis = {
     articleId: article.id,
     topics,
     sentiment,
@@ -284,6 +295,9 @@ export function analyzeArticle(article: FetchedArticle): ArticleAnalysis {
     politicalLeaning,
     isEnriched: !!enrichment,
   };
+
+  _analysisCache.set(article.id, result);
+  return result;
 }
 
 export function analyzeArticles(articles: FetchedArticle[]): ArticleAnalysis[] {

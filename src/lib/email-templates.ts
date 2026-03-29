@@ -34,14 +34,22 @@ function getSourceCount(s: BriefStory): number {
   return (s.sources as unknown as number) || 0;
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 
 /* ─── Story card (compact Axios-style) ───────────────────────── */
 
 function fullStoryCard(story: BriefStory, index: number): string {
-  const headline = getT(story.headline);
-  const summary = getT(story.summary);
-  const why = getT(story.why);
-  const category = getT(story.category);
+  const headline = escapeHtml(getT(story.headline));
+  const summary = escapeHtml(getT(story.summary));
+  const why = escapeHtml(getT(story.why));
+  const category = escapeHtml(getT(story.category));
   const color = getLikelihoodColor(story.likelihood);
   const label = getLikelihoodLabel(story.likelihood);
   const srcCount = getSourceCount(story);
@@ -113,8 +121,8 @@ function fullStoryCard(story: BriefStory, index: number): string {
 /* ─── Shock card (compact) ──────────────────────────────────────── */
 
 function fullShockCard(shock: ShockEvent): string {
-  const headline = getT(shock.headline);
-  const whyNow = getT(shock.whyNow);
+  const headline = escapeHtml(getT(shock.headline));
+  const whyNow = escapeHtml(getT(shock.whyNow));
   const typeLabel: Record<string, string> = {
     likelihood: '📊 זעזוע סבירות',
     narrative: '📰 פיצול נרטיבי',

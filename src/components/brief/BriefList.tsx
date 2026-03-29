@@ -59,8 +59,9 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
   }, [topicFilter]);
 
   // Build slug → shock map for shock indicators on Brief cards
-  const shockBySlug = Object.fromEntries(
-    shocks.filter(sh => sh.relatedStorySlug).map(sh => [sh.relatedStorySlug!, sh])
+  const shockBySlug = useMemo(
+    () => Object.fromEntries(shocks.filter(sh => sh.relatedStorySlug).map(sh => [sh.relatedStorySlug!, sh])),
+    [shocks]
   );
 
   const fetchStories = useCallback(async () => {
@@ -358,7 +359,7 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
       {/* Stories */}
       {sorted.map((story, i) => (
         <div key={story.slug} className="animate-slide-up"
-             style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'both' }}
+             style={{ animationDelay: `${Math.min(i * 30, 300)}ms`, animationFillMode: 'both' }}
              onClick={() => {
                recordClick(story.category.en || story.category.he);
                recordStoryView();

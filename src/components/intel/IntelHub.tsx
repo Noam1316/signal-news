@@ -7,11 +7,13 @@ import PolymarketComparison from './PolymarketComparison';
 import MediaBiasPanel from './MediaBiasPanel';
 import LiveWire from '@/components/explore/LiveWire';
 import GroupedFeed from './GroupedFeed';
+import CredibilityDashboard from '@/components/credibility/CredibilityDashboard';
 
 const TABS = [
   { id: 'overview', icon: '📊', en: 'Overview', he: 'סקירה' },
   { id: 'polymarket', icon: '📈', en: 'Signal vs Market', he: 'סיגנל vs שוק' },
   { id: 'bias', icon: '🏛️', en: 'Media Bias', he: 'הטיה תקשורתית' },
+  { id: 'credibility', icon: '🛡️', en: 'Credibility', he: 'אמינות' },
   { id: 'grouped', icon: '🗞️', en: 'Grouped', he: 'מקובץ' },
   { id: 'feed', icon: '🌐', en: 'Live Feed', he: 'פיד חי' },
 ] as const;
@@ -46,10 +48,13 @@ export default function IntelHub() {
               onKeyDown={(e) => {
                 const tabs = TABS.map(t => t.id);
                 const currentIdx = tabs.indexOf(activeTab);
-                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                const isRtl = dir === 'rtl';
+                const nextKey = isRtl ? 'ArrowLeft' : 'ArrowRight';
+                const prevKey = isRtl ? 'ArrowRight' : 'ArrowLeft';
+                if (e.key === nextKey || e.key === 'ArrowDown') {
                   e.preventDefault();
                   setActiveTab(tabs[(currentIdx + 1) % tabs.length] as TabId);
-                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                } else if (e.key === prevKey || e.key === 'ArrowUp') {
                   e.preventDefault();
                   setActiveTab(tabs[(currentIdx - 1 + tabs.length) % tabs.length] as TabId);
                 }
@@ -72,6 +77,7 @@ export default function IntelHub() {
         {activeTab === 'overview' && <IntelDashboard />}
         {activeTab === 'polymarket' && <PolymarketComparison />}
         {activeTab === 'bias' && <MediaBiasPanel />}
+        {activeTab === 'credibility' && <CredibilityDashboard />}
         {activeTab === 'grouped' && <GroupedFeed />}
         {activeTab === 'feed' && <LiveWire />}
       </div>

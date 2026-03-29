@@ -42,6 +42,15 @@ export function getStoryLean(story: BriefStory): Lean | null {
   return 'center';
 }
 
+export function getSourceLeanBreakdown(sources: { name: string }[]): { left: number; center: number; right: number } {
+  const counts = { left: 0, center: 0, right: 0 };
+  for (const src of sources) {
+    const lean = toLean(src.name);
+    if (lean) counts[lean]++;
+  }
+  return counts;
+}
+
 export const LEAN_LABEL: Record<Lean, { he: string; en: string; color: string; bg: string }> = {
   left:   { he: 'שמאל', en: 'Left',   color: 'text-blue-400',  bg: 'bg-blue-400/10 border-blue-400/30' },
   center: { he: 'מרכז', en: 'Center', color: 'text-gray-400',  bg: 'bg-gray-700/50 border-gray-600/30' },

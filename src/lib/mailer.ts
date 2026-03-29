@@ -15,6 +15,8 @@ export interface SendMailOptions {
   to: string;
   subject: string;
   html: string;
+  text?: string;
+  unsubscribeUrl?: string;
 }
 
 let _transporter: nodemailer.Transporter | null = null;
@@ -45,15 +47,24 @@ export function getFromAddress(): string {
   return `${FROM_NAME} <${user}>`;
 }
 
-export async function sendMail({ to, subject, html }: SendMailOptions): Promise<void> {
+export async function sendMail({ to, subject, html, text, unsubscribeUrl }: SendMailOptions): Promise<void> {
   const transporter = getTransporter();
   if (!transporter) throw new Error('Mailer not configured (missing GMAIL_USER / GMAIL_APP_PASSWORD)');
+
+  const user = process.env.GMAIL_USER ?? '';
+  const headers: Record<string, string> = {};
+  if (unsubscribeUrl) {
+    headers['List-Unsubscribe'] = `<${unsubscribeUrl}>, <mailto:${user}?subject=unsubscribe>`;
+    headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
+  }
 
   await transporter.sendMail({
     from: getFromAddress(),
     to,
     subject,
     html,
+    text: text ?? html.replace(/<[^>]*>/g, ' ').replace(/\s{2,}/g, ' ').trim(),
+    ...(Object.keys(headers).length > 0 ? { headers } : {}),
   });
 }
 

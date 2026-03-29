@@ -22,7 +22,7 @@ export interface Subscriber {
 const memStore = new Map<string, Subscriber>();
 
 function generateToken(): string {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  return crypto.randomUUID().replace(/-/g, '');
 }
 
 // ─── Resend Contacts helpers ───────────────────────────────────────────────

@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/i18n/context';
 import type { ShockEvent } from '@/lib/types';
 import ShockCard from '@/components/shocks/ShockCard';
+import ShockHistory from '@/components/shocks/ShockHistory';
+import ShockAlertPanel from '@/components/shocks/ShockAlertPanel';
 import { usePolling } from '@/hooks/usePolling';
 
 export default function ShockFeed() {
@@ -81,6 +83,8 @@ export default function ShockFeed() {
               ? (lang === 'he' ? 'רענון אוטומטי' : 'AUTO REFRESH')
               : (lang === 'he' ? 'מושהה' : 'PAUSED')}
           </button>
+          {/* Alert panel trigger */}
+          <ShockAlertPanel />
         </div>
         <p className="text-sm text-gray-400">
           {dir === 'rtl'
@@ -88,6 +92,9 @@ export default function ShockFeed() {
             : 'Sudden shifts in likelihood, narrative, or media fragmentation — auto-detected from RSS'}
         </p>
       </header>
+
+      {/* Shock history timeline */}
+      <ShockHistory />
 
       {/* Loading state */}
       {source === 'loading' && (

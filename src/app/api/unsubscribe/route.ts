@@ -6,6 +6,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSubscriber, removeSubscriber } from '@/services/subscriber-store';
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const email = searchParams.get('email') ?? '';
@@ -23,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   await removeSubscriber(email);
 
-  return new NextResponse(page('הסרה בוצעה ✓', `הכתובת ${email} הוסרה מרשימת התפוצה של Signal News.`), {
+  return new NextResponse(page('הסרה בוצעה ✓', `הכתובת ${escapeHtml(email)} הוסרה מרשימת התפוצה של Signal News.`), {
     headers: { 'Content-Type': 'text/html; charset=utf-8' },
   });
 }

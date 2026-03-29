@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/i18n/context';
 import type { BriefStory, ShockEvent } from '@/lib/types';
+import { useSidebar } from '@/contexts/SidebarContext';
+import type { SidebarArticle } from '@/contexts/SidebarContext';
 import SignalLabel from '@/components/shared/SignalLabel';
-import { getStoryLean, LEAN_LABEL } from '@/utils/political-lean';
+import { getStoryLean, LEAN_LABEL, getSourceLeanBreakdown } from '@/utils/political-lean';
 import { computeGrade, GRADE_STYLE } from '@/utils/credibility-grade';
 import { getSparklineData, getRealDelta } from '@/hooks/useLikelihoodHistory';
 import SparkLine from '@/components/shared/SparkLine';
@@ -31,6 +33,7 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [readerOpen, setReaderOpen] = useState(false);
+  const { open: openSidebar } = useSidebar();
 
   // All stories are expandable — static slugs also get a detail page
   const hasDetailPage = false; // all stories expand inline now
@@ -45,13 +48,48 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
   // Sparkline from localStorage history
   const sparkData = getSparklineData(story.slug, 8);
 
+  // Source political breakdown for confidence tooltip
+  const leanBreakdown = getSourceLeanBreakdown(story.sources || []);
+  const breakdownTitle = [
+    leanBreakdown.left > 0 ? `${leanBreakdown.left} ${lang === 'he' ? 'שמאל' : 'Left'}` : '',
+    leanBreakdown.center > 0 ? `${leanBreakdown.center} ${lang === 'he' ? 'מרכז' : 'Center'}` : '',
+    leanBreakdown.right > 0 ? `${leanBreakdown.right} ${lang === 'he' ? 'ימין' : 'Right'}` : '',
+  ].filter(Boolean).join(' · ');
+
   // Real delta from localStorage (null if not enough history yet)
   const realDelta = getRealDelta(story.slug, story.likelihood);
   const displayDelta = realDelta !== null ? realDelta : story.delta;
 
   const handleClick = () => {
-    if (hasDetailPage) router.push(`/story/${story.slug}`);
-    else setExpanded(!expanded);
+    if (hasDetailPage) {
+      router.push(`/story/${story.slug}`);
+      return;
+    }
+    // Open sidebar with AI analysis of the primary source article
+    const primarySource = story.sources?.[0];
+    if (primarySource) {
+      const headline = typeof story.headline === 'string' ? story.headline : (lang === 'he' ? story.headline.he : story.headline.en);
+      const summary = typeof story.summary === 'string' ? story.summary : (lang === 'he' ? story.summary.he : story.summary.en);
+      const category = typeof story.category === 'string' ? story.category : (lang === 'he' ? story.category.he : story.category.en);
+      const sidebarArticle: SidebarArticle = {
+        title: headline,
+        description: summary,
+        url: primarySource.url,
+        sourceId: '',
+        sourceName: primarySource.name,
+        pubDate: story.updatedAt,
+        topics: [category].filter(Boolean),
+        sentiment: story.isSignal ? 'positive' : 'neutral',
+        signalScore: story.likelihood,
+        isSignal: story.isSignal,
+        impacts: story.impacts,
+        category,
+        allSources: story.sources?.map(s => ({ name: s.name, url: s.url })),
+      };
+      openSidebar(sidebarArticle);
+    } else {
+      setExpanded(!expanded);
+    }
   };
 
   return (
@@ -68,10 +106,20 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
             {t(story.category)}
           </span>
 
-          {/* Source count badge */}
+          {/* Source count badge with political breakdown tooltip */}
           {sourceCount > 0 && (
-            <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-gray-800 border border-gray-700 text-gray-400 font-medium shrink-0">
+            <span
+              title={breakdownTitle || undefined}
+              className="text-[11px] px-1.5 py-0.5 rounded-full bg-gray-800 border border-gray-700 text-gray-400 font-medium shrink-0 cursor-default"
+            >
               {sourceCount} {lang === 'he' ? 'מקורות' : 'src'}
+              {sourceCount >= 3 && breakdownTitle && (
+                <span className="ms-1 opacity-60">
+                  {leanBreakdown.left > 0 && <span className="text-blue-400">{leanBreakdown.left}←</span>}
+                  {leanBreakdown.center > 0 && <span className="text-gray-400">{leanBreakdown.center}·</span>}
+                  {leanBreakdown.right > 0 && <span className="text-red-400">{leanBreakdown.right}→</span>}
+                </span>
+              )}
             </span>
           )}
 
@@ -141,6 +189,29 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
 
       {/* Why */}
       <p className="text-sm italic text-gray-400">{t(story.why)}</p>
+
+      {/* Always-visible compact impact badges (top 3) */}
+      {story.impacts && story.impacts.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {story.impacts.slice(0, 3).map((impact, i) => {
+            const cls =
+              impact.direction === 'positive'
+                ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                : impact.direction === 'negative'
+                ? 'text-red-400 bg-red-500/10 border-red-500/20'
+                : 'text-gray-400 bg-gray-700/40 border-gray-600/30';
+            const arrow = impact.direction === 'positive' ? '↑' : impact.direction === 'negative' ? '↓' : '~';
+            return (
+              <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${cls}`}>
+                {arrow} {lang === 'he' ? impact.sector.he : impact.sector.en}
+              </span>
+            );
+          })}
+          {story.impacts.length > 3 && (
+            <span className="text-[10px] text-gray-500 px-1 py-0.5">+{story.impacts.length - 3}</span>
+          )}
+        </div>
+      )}
 
       {/* Shock indicator — links this story to a detected shock */}
       {relatedShock && (

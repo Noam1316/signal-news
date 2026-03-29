@@ -7,7 +7,9 @@ const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 import { LanguageProvider } from "@/i18n/context";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PreferencesProvider } from "@/contexts/PreferencesContext";
+import { SidebarProvider } from "@/contexts/SidebarContext";
 import LayoutShell from "@/components/layout/LayoutShell";
+import ArticleSidebar from "@/components/layout/ArticleSidebar";
 import ServiceWorkerRegistrar from "@/components/shared/ServiceWorkerRegistrar";
 
 const inter = Inter({
@@ -54,13 +56,15 @@ export const metadata: Metadata = {
     siteName: "Signal News",
     type: "website",
     url: BASE_URL,
-    locale: 'en_US',
+    locale: 'he_IL',
+    images: [{ url: `${BASE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Signal News — Real-time geopolitical intelligence' }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Signal News",
     description: "Real-time news intelligence — likelihood scores, shock detection, Polymarket comparison.",
     creator: "@signalnews",
+    images: [`${BASE_URL}/opengraph-image`],
   },
   robots: {
     index: true,
@@ -103,7 +107,7 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en" dir="ltr">
+    <html lang="he" dir="rtl">
       <head>
         <script
           type="application/ld+json"
@@ -125,8 +129,11 @@ export default function RootLayout({
         <ThemeProvider>
           <LanguageProvider>
             <PreferencesProvider>
-              <LayoutShell>{children}</LayoutShell>
-              <ServiceWorkerRegistrar />
+              <SidebarProvider>
+                <LayoutShell>{children}</LayoutShell>
+                <ArticleSidebar />
+                <ServiceWorkerRegistrar />
+              </SidebarProvider>
             </PreferencesProvider>
           </LanguageProvider>
         </ThemeProvider>
