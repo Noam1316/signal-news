@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { fetchPolymarketEvents, matchStoriesWithMarkets } from '@/services/polymarket';
 import { getCachedArticles } from '@/services/article-cache';
 import { generateStories } from '@/services/story-clusterer';
+import { savePredictionSnapshots } from '@/services/prediction-tracker';
 
 let cache: { data: any; ts: number } | null = null;
 const TTL = 10 * 60 * 1000; // 10 min
@@ -31,6 +32,9 @@ export async function GET() {
     }));
 
     const matches = matchStoriesWithMarkets(storyData, markets);
+
+    // Save prediction snapshots for track record (non-blocking)
+    savePredictionSnapshots(matches).catch(() => {});
 
     const result = {
       matches,

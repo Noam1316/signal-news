@@ -97,6 +97,173 @@ function daysToClose(endDate: string): number | null {
   return days >= 0 ? Math.round(days) : null;
 }
 
+// ─── Track Record ───────────────────────────────────────────────────────────
+
+interface TrackRecordData {
+  total: number;
+  signalWins: number;
+  marketWins: number;
+  ties: number;
+  signalWinRate: number;
+  avgSignalError: number;
+  avgMarketError: number;
+  byCategory: Record<string, { total: number; signalWins: number; winRate: number }>;
+  recent: Array<{
+    slug: string;
+    topic: string;
+    category: string;
+    signalLikelihood: number;
+    marketProbability: number;
+    actualOutcome: number;
+    signalWasCloser: boolean;
+    signalError: number;
+    marketError: number;
+    resolvedAt: string;
+  }>;
+  pending: number;
+}
+
+function TrackRecord({ lang }: { lang: string }) {
+  const [data, setData] = useState<TrackRecordData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/track-record')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setData(d); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return (
+    <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 animate-pulse">
+      <div className="h-4 bg-gray-800 rounded w-1/3 mb-3" />
+      <div className="h-16 bg-gray-800 rounded" />
+    </div>
+  );
+
+  if (!data) return null;
+
+  const hasResolved = data.total > 0;
+  const signalBetter = data.avgSignalError < data.avgMarketError;
+
+  return (
+    <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 space-y-3">
+      <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+        <span>📊</span>
+        {lang === 'he' ? 'Track Record — Signal מול השוק' : 'Track Record — Signal vs Market'}
+      </h5>
+
+      {!hasResolved ? (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500">
+            {lang === 'he'
+              ? 'אין עדיין שווקים שנסגרו לבדיקה. המערכת שומרת תחזיות ובודקת תוצאות כל שבוע.'
+              : 'No resolved markets yet. The system saves predictions and checks outcomes weekly.'}
+          </p>
+          {data.pending > 0 && (
+            <div className="flex items-center gap-2 text-[10px] text-amber-400/80">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              {lang === 'he'
+                ? `${data.pending} תחזיות ממתינות לבדיקה`
+                : `${data.pending} predictions pending verification`}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Win rate headline */}
+          <div className="flex items-center gap-3">
+            <div className={`text-3xl font-black ${data.signalWinRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {data.signalWinRate}%
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-white font-medium">
+                {lang === 'he' ? 'שיעור ניצחון Signal' : 'Signal Win Rate'}
+              </div>
+              <div className="text-[10px] text-gray-500">
+                {lang === 'he'
+                  ? `${data.signalWins} ניצחונות מתוך ${data.total} תחזיות שנבדקו`
+                  : `${data.signalWins} wins out of ${data.total} resolved predictions`}
+              </div>
+            </div>
+          </div>
+
+          {/* Signal vs Market bar */}
+          <div className="flex items-center gap-1 h-5 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-yellow-400/80 rounded-s-full flex items-center justify-center"
+              style={{ width: `${Math.max(10, (data.signalWins / data.total) * 100)}%` }}
+            >
+              <span className="text-[9px] font-bold text-gray-900">⚡{data.signalWins}</span>
+            </div>
+            {data.ties > 0 && (
+              <div
+                className="h-full bg-gray-600 flex items-center justify-center"
+                style={{ width: `${(data.ties / data.total) * 100}%` }}
+              >
+                <span className="text-[9px] text-gray-300">{data.ties}</span>
+              </div>
+            )}
+            <div
+              className="h-full bg-blue-400/80 rounded-e-full flex items-center justify-center"
+              style={{ width: `${Math.max(10, (data.marketWins / data.total) * 100)}%` }}
+            >
+              <span className="text-[9px] font-bold text-gray-900">📈{data.marketWins}</span>
+            </div>
+          </div>
+
+          {/* Error comparison */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className={`p-2 rounded-lg border text-center ${signalBetter ? 'bg-yellow-500/5 border-yellow-500/20' : 'bg-gray-800 border-gray-700'}`}>
+              <div className="text-[9px] text-gray-500 uppercase">Signal Error</div>
+              <div className={`text-sm font-bold ${signalBetter ? 'text-yellow-400' : 'text-gray-300'}`}>
+                ±{data.avgSignalError}%
+              </div>
+            </div>
+            <div className={`p-2 rounded-lg border text-center ${!signalBetter ? 'bg-blue-500/5 border-blue-500/20' : 'bg-gray-800 border-gray-700'}`}>
+              <div className="text-[9px] text-gray-500 uppercase">Market Error</div>
+              <div className={`text-sm font-bold ${!signalBetter ? 'text-blue-400' : 'text-gray-300'}`}>
+                ±{data.avgMarketError}%
+              </div>
+            </div>
+          </div>
+
+          {/* Recent resolved */}
+          {data.recent.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="text-[9px] text-gray-600 uppercase tracking-wider">
+                {lang === 'he' ? 'אחרונים שנבדקו' : 'Recently Resolved'}
+              </div>
+              {data.recent.slice(0, 5).map((r, i) => (
+                <div key={i} className="flex items-center gap-2 text-[10px] py-1 border-b border-gray-800/50 last:border-0">
+                  <span className={r.signalWasCloser ? 'text-emerald-400' : 'text-red-400'}>
+                    {r.signalWasCloser ? '✓' : '✗'}
+                  </span>
+                  <span className="text-gray-300 flex-1 truncate">{r.topic}</span>
+                  <span className="text-gray-500 shrink-0">
+                    S:{r.signalLikelihood}% M:{r.marketProbability}% → {r.actualOutcome}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Pending count */}
+          {data.pending > 0 && (
+            <div className="flex items-center gap-2 text-[10px] text-amber-400/70 pt-1 border-t border-gray-800/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              {lang === 'he'
+                ? `${data.pending} תחזיות נוספות ממתינות`
+                : `${data.pending} more predictions pending`}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Category Alpha Leaderboard ─────────────────────────────────────────────
 
 const CATEGORY_LABELS: Record<string, { he: string; en: string; icon: string }> = {
@@ -650,6 +817,9 @@ export default function PolymarketComparison() {
             );
           });
       })()}
+
+      {/* Track Record — Signal vs Market accuracy */}
+      <TrackRecord lang={lang} />
 
       {/* Category Alpha Leaderboard */}
       <CategoryLeaderboard matches={data.matches} lang={lang} />
