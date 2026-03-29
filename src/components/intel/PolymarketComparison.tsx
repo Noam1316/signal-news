@@ -6,6 +6,7 @@ import type { AlphaBreakdown } from '@/services/polymarket';
 
 interface SignalVsMarket {
   topic: string;
+  topicCategory: string;
   signalLikelihood: number;
   marketProbability: number;
   delta: number;
@@ -43,6 +44,145 @@ function formatDate(d: string): string {
   try {
     return new Date(d).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   } catch { return ''; }
+}
+
+// ─── Convergence tracking (localStorage) ───────────────────────────────────
+
+const HISTORY_KEY = 'signal_market_history';
+
+interface HistoryEntry { prob: number; ts: number }
+
+function loadHistory(): Record<string, HistoryEntry[]> {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}'); } catch { return {}; }
+}
+
+function saveHistory(matches: SignalVsMarket[]) {
+  try {
+    const history = loadHistory();
+    const now = Date.now();
+    const cutoff = now - 7 * 24 * 60 * 60 * 1000; // 7 days
+    for (const m of matches) {
+      const slug = m.polymarketSlug;
+      if (!slug) continue;
+      if (!history[slug]) history[slug] = [];
+      const last = history[slug][history[slug].length - 1];
+      if (!last || now - last.ts > 10 * 60 * 1000) {
+        history[slug].push({ prob: m.marketProbability, ts: now });
+      }
+      history[slug] = history[slug].filter(e => e.ts > cutoff);
+    }
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  } catch { /* silent */ }
+}
+
+function getConvergence(slug: string, currentProb: number, signalLikelihood: number) {
+  try {
+    const entries = loadHistory()[slug];
+    if (!entries || entries.length < 2) return null;
+    const oldest = entries[0];
+    const movement = currentProb - oldest.prob; // positive = market went up
+    if (Math.abs(movement) < 2) return null;
+    const signalWantsUp = signalLikelihood > currentProb;
+    const toward = signalWantsUp ? movement > 0 : movement < 0;
+    const hoursAgo = Math.max(1, Math.round((Date.now() - oldest.ts) / (60 * 60 * 1000)));
+    return { movement, toward, hoursAgo };
+  } catch { return null; }
+}
+
+// ─── Days to close ─────────────────────────────────────────────────────────
+
+function daysToClose(endDate: string): number | null {
+  if (!endDate) return null;
+  const days = (new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+  return days >= 0 ? Math.round(days) : null;
+}
+
+// ─── Category Alpha Leaderboard ─────────────────────────────────────────────
+
+const CATEGORY_LABELS: Record<string, { he: string; en: string; icon: string }> = {
+  iran:            { he: 'איראן', en: 'Iran', icon: '🇮🇷' },
+  israel:          { he: 'ישראל', en: 'Israel', icon: '🇮🇱' },
+  ukraine:         { he: 'אוקראינה', en: 'Ukraine', icon: '🇺🇦' },
+  china:           { he: 'סין', en: 'China', icon: '🇨🇳' },
+  'us-election':   { he: 'בחירות ארה"ב', en: 'US Election', icon: '🗳️' },
+  ceasefire:       { he: 'הפסקת אש', en: 'Ceasefire', icon: '🕊️' },
+  hezbollah:       { he: 'חיזבאללה', en: 'Hezbollah', icon: '⚔️' },
+  hamas:           { he: 'חמאס', en: 'Hamas', icon: '⚔️' },
+  economy:         { he: 'כלכלה', en: 'Economy', icon: '📉' },
+  oil:             { he: 'נפט', en: 'Oil', icon: '🛢️' },
+  crypto:          { he: 'קריפטו', en: 'Crypto', icon: '₿' },
+  ai:              { he: 'בינה מלאכותית', en: 'AI', icon: '🤖' },
+  saudi:           { he: 'סעודיה', en: 'Saudi', icon: '🇸🇦' },
+  syria:           { he: 'סוריה', en: 'Syria', icon: '🇸🇾' },
+  'elections-israel': { he: 'בחירות ישראל', en: 'IL Elections', icon: '🗳️' },
+  other:           { he: 'אחר', en: 'Other', icon: '🌐' },
+};
+
+function CategoryLeaderboard({ matches, lang }: { matches: SignalVsMarket[]; lang: string }) {
+  type CatRow = { cat: string; avgDelta: number; count: number; signalBias: number; avgAlpha: number };
+  const map: Record<string, { deltas: number[]; alphas: number[]; signalHigher: number }> = {};
+  for (const m of matches) {
+    const cat = m.topicCategory || 'other';
+    if (!map[cat]) map[cat] = { deltas: [], alphas: [], signalHigher: 0 };
+    map[cat].deltas.push(Math.abs(m.delta));
+    map[cat].alphas.push(m.alphaScore);
+    if (m.alphaDirection === 'signal-higher') map[cat].signalHigher++;
+  }
+  const rows: CatRow[] = Object.entries(map)
+    .map(([cat, d]) => ({
+      cat,
+      avgDelta: Math.round(d.deltas.reduce((a, b) => a + b, 0) / d.deltas.length),
+      avgAlpha: Math.round(d.alphas.reduce((a, b) => a + b, 0) / d.alphas.length),
+      count: d.deltas.length,
+      signalBias: Math.round((d.signalHigher / d.deltas.length) * 100),
+    }))
+    .sort((a, b) => b.avgAlpha - a.avgAlpha)
+    .slice(0, 6);
+
+  if (rows.length === 0) return null;
+  const maxAlpha = rows[0].avgAlpha || 1;
+
+  return (
+    <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 space-y-3">
+      <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+        <span>🏆</span>
+        {lang === 'he' ? 'Alpha לפי קטגוריה' : 'Alpha by Category'}
+      </h5>
+      <div className="space-y-2">
+        {rows.map((row, i) => {
+          const lbl = CATEGORY_LABELS[row.cat] ?? CATEGORY_LABELS.other;
+          const barPct = (row.avgAlpha / maxAlpha) * 100;
+          const signalColor = row.signalBias > 60 ? 'text-yellow-400' : row.signalBias < 40 ? 'text-blue-400' : 'text-gray-400';
+          return (
+            <div key={row.cat} className="relative flex items-center gap-2 py-1.5 px-2 rounded-lg bg-gray-900 border border-gray-800 overflow-hidden">
+              {/* Background bar */}
+              <div className="absolute inset-y-0 start-0 bg-yellow-400/5 rounded-lg" style={{ width: `${barPct}%` }} />
+              {/* Rank */}
+              <span className="relative text-[9px] font-mono text-gray-600 w-3 shrink-0">{i + 1}</span>
+              {/* Icon + name */}
+              <span className="relative text-xs shrink-0">{lbl.icon}</span>
+              <span className="relative text-xs text-white font-medium flex-1 truncate">
+                {lang === 'he' ? lbl.he : lbl.en}
+              </span>
+              {/* Stats */}
+              <div className="relative flex items-center gap-2 shrink-0">
+                <span className="text-[10px] text-amber-400 font-mono">Δ{row.avgDelta}%</span>
+                <span className={`text-[10px] font-mono ${signalColor}`}>
+                  {row.signalBias}%⚡
+                </span>
+                <span className="text-[10px] font-bold text-yellow-400 w-6 text-end">{row.avgAlpha}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[9px] text-gray-600">
+        {lang === 'he'
+          ? 'Δ = פער ממוצע · ⚡ = % שיטים ש-Signal גבוה מהשוק · Alpha = ציון ממוצע'
+          : 'Δ = avg gap · ⚡ = % where Signal > Market · Alpha = avg score'}
+      </p>
+    </div>
+  );
 }
 
 /** Single axis position gauge — shows Signal and Market as dots on 0-100 scale */
@@ -186,7 +326,12 @@ export default function PolymarketComparison() {
     setLoading(true);
     try {
       const res = await fetch('/api/polymarket');
-      if (res.ok) setData(await res.json());
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
+        // Save market snapshots for convergence tracking
+        if (json.matches) saveHistory(json.matches);
+      }
     } catch { /* silent */ }
     setLoading(false);
   }, []);
@@ -357,6 +502,13 @@ export default function PolymarketComparison() {
             const signalHigher = match.alphaDirection === 'signal-higher';
             const isExpanded = expandedIdx === i;
 
+            // Convergence tracking
+            const convergence = getConvergence(match.polymarketSlug, match.marketProbability, match.signalLikelihood);
+
+            // Days to close
+            const days = daysToClose(match.endDate);
+            const isUrgent = days !== null && days <= 7;
+
             const alphaColor = isAligned
               ? 'text-gray-400'
               : match.alphaScore >= 60
@@ -384,6 +536,19 @@ export default function PolymarketComparison() {
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-semibold text-white leading-snug">{match.topic}</h4>
                     <p className="text-[10px] text-gray-500 truncate mt-0.5">📊 {match.polymarketTitle}</p>
+                    {/* Convergence badge */}
+                    {convergence && (
+                      <div className={`mt-1.5 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium ${
+                        convergence.toward
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                          : 'bg-red-500/10 border-red-500/30 text-red-400'
+                      }`}>
+                        {convergence.toward ? '📈' : '📉'}
+                        {lang === 'he'
+                          ? `שוק ${convergence.toward ? 'מתקרב ל' : 'מתרחק מ'}Signal · ${convergence.movement > 0 ? '+' : ''}${convergence.movement}% ב-${convergence.hoursAgo}ש'`
+                          : `Market ${convergence.toward ? '→ Signal' : '← away'} · ${convergence.movement > 0 ? '+' : ''}${convergence.movement}% in ${convergence.hoursAgo}h`}
+                      </div>
+                    )}
                   </div>
                   <div className={`shrink-0 flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg ${
                     isAligned
@@ -415,6 +580,11 @@ export default function PolymarketComparison() {
                     <span className="hidden sm:inline text-gray-600">
                       {lang === 'he' ? 'ביטחון:' : 'Conf:'} {match.confidence}%
                     </span>
+                    {isUrgent && days !== null && (
+                      <span className="font-bold px-1.5 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400">
+                        ⏳ {days === 0 ? (lang === 'he' ? 'היום' : 'today') : `${days}${lang === 'he' ? 'י' : 'd'}`}
+                      </span>
+                    )}
                   </div>
                   <a
                     href={match.polymarketUrl || `https://polymarket.com/event/${match.polymarketSlug}`}
@@ -480,6 +650,9 @@ export default function PolymarketComparison() {
             );
           });
       })()}
+
+      {/* Category Alpha Leaderboard */}
+      <CategoryLeaderboard matches={data.matches} lang={lang} />
     </div>
   );
 }

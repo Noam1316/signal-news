@@ -26,6 +26,7 @@ export interface AlphaBreakdown {
 
 export interface SignalVsMarket {
   topic: string;
+  topicCategory: string;          // which TOPIC_KEYWORDS category matched best (e.g. 'iran', 'ukraine')
   signalLikelihood: number;       // our score 0-100
   marketProbability: number;      // polymarket 0-100
   delta: number;                  // signal - market (positive = we think more likely)
@@ -148,20 +149,23 @@ export function matchStoriesWithMarkets(
     let bestMatch: PolymarketEvent | null = null;
     let bestScore = 0;
     let bestKeywords: string[] = [];
+    let bestCategory = 'other';
 
     for (const market of markets) {
       const marketText = market.title.toLowerCase();
       let matchScore = 0;
       const matched: string[] = [];
+      const categoryScores: Record<string, number> = {};
 
       // Check each topic keyword set
-      for (const [, keywords] of Object.entries(TOPIC_KEYWORDS)) {
+      for (const [category, keywords] of Object.entries(TOPIC_KEYWORDS)) {
         for (const kw of keywords) {
           const storyHas = storyText.includes(kw);
           const marketHas = marketText.includes(kw);
           if (storyHas && marketHas) {
             matchScore += 2;
             matched.push(kw);
+            categoryScores[category] = (categoryScores[category] || 0) + 2;
           }
         }
       }
@@ -180,6 +184,8 @@ export function matchStoriesWithMarkets(
         bestScore = matchScore;
         bestMatch = market;
         bestKeywords = matched;
+        // Winning category = the one with the most keyword hits for this market
+        bestCategory = Object.entries(categoryScores).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'other';
       }
     }
 
@@ -204,6 +210,7 @@ export function matchStoriesWithMarkets(
 
       matches.push({
         topic: story.headline,
+        topicCategory: bestCategory,
         signalLikelihood: story.likelihood,
         marketProbability: marketProb,
         delta,
