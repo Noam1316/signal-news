@@ -17,6 +17,13 @@ export interface PolymarketEvent {
   category: string;
 }
 
+export interface AlphaBreakdown {
+  deltaScore: number;    // 0-50: contribution from Signal/Market gap
+  volumeScore: number;   // 0-25: how committed the market is (high vol = meaningful divergence)
+  sourceScore: number;   // 0-15: how many RSS sources back our Signal
+  matchScore: number;    // 0-10: keyword match quality between story and market
+}
+
 export interface SignalVsMarket {
   topic: string;
   signalLikelihood: number;       // our score 0-100
@@ -24,7 +31,8 @@ export interface SignalVsMarket {
   delta: number;                  // signal - market (positive = we think more likely)
   alphaDirection: 'signal-higher' | 'market-higher' | 'aligned';
   alphaScore: number;             // 0-100 — how significant is the divergence
-  whyDifferent: string;           // auto-generated explanation for the delta
+  alphaBreakdown: AlphaBreakdown; // component breakdown of the alpha score
+  whyDifferent: string;           // auto-generated explanation (paragraphs separated by \n\n)
   polymarketTitle: string;
   polymarketSlug: string;
   polymarketUrl: string;          // direct link to the market
@@ -181,12 +189,18 @@ export function matchStoriesWithMarkets(
       const absDelta = Math.abs(delta);
       const direction: SignalVsMarket['alphaDirection'] = absDelta <= 10 ? 'aligned' : (delta > 0 ? 'signal-higher' : 'market-higher');
 
-      // Alpha score: how significant is the divergence (factors: delta size, volume, confidence)
-      const volumeWeight = Math.min(30, Math.log10(bestMatch.volume + 1) * 5);
-      const alphaScore = Math.min(100, Math.round(absDelta * 0.8 + volumeWeight + bestScore * 2));
+      // --- New Alpha Score formula (4 named components, max 100) ---
+      const srcCount = story.sourceCount || 3;
+      const breakdown = computeAlphaBreakdown(absDelta, bestMatch.volume, srcCount, bestScore);
+      const alphaScore = breakdown.deltaScore + breakdown.volumeScore + breakdown.sourceScore + breakdown.matchScore;
 
-      // Generate explanation for why Signal differs from Market
-      const whyDifferent = generateWhyDifferent(direction, absDelta, story, bestMatch, story.sourceCount || 3);
+      // Generate structured explanation for why Signal differs from Market
+      const whyDifferent = generateWhyDifferent(direction, absDelta, story.likelihood, marketProb, bestMatch, srcCount);
+
+      // Confidence: asymptotic scale — requires 3+ keywords + penalises thin markets
+      const rawConf = Math.round((bestScore / (bestScore + 4)) * 100);
+      const thinPenalty = bestMatch.volume < 50_000 ? 15 : 0;
+      const confidence = Math.min(88, Math.max(15, rawConf - thinPenalty));
 
       matches.push({
         topic: story.headline,
@@ -195,6 +209,7 @@ export function matchStoriesWithMarkets(
         delta,
         alphaDirection: direction,
         alphaScore,
+        alphaBreakdown: breakdown,
         whyDifferent,
         polymarketTitle: bestMatch.title,
         polymarketSlug: bestMatch.slug,
@@ -204,9 +219,9 @@ export function matchStoriesWithMarkets(
         volume: bestMatch.volume,
         liquidity: bestMatch.liquidity,
         endDate: bestMatch.endDate,
-        confidence: Math.min(95, bestScore * 12),
+        confidence,
         matchedKeywords: bestKeywords.slice(0, 5),
-        sourceCount: story.sourceCount || 3,
+        sourceCount: srcCount,
       });
     }
   }
@@ -215,46 +230,121 @@ export function matchStoriesWithMarkets(
 }
 
 /**
- * Auto-generate explanation for why Signal differs from Market (Hebrew)
+ * Compute alpha score breakdown — 4 named components totalling max 100 pts
+ */
+function computeAlphaBreakdown(
+  absDelta: number,
+  volume: number,
+  sourceCount: number,
+  keywordMatchScore: number,
+): AlphaBreakdown {
+  // Delta (0-50): core disagreement size
+  const deltaScore = Math.min(50, absDelta);
+
+  // Volume (0-25): how committed is the market?
+  // High vol = market is right with conviction → divergence is more meaningful
+  const volumeScore =
+    volume > 10_000_000 ? 25 :
+    volume >  5_000_000 ? 20 :
+    volume >  1_000_000 ? 14 :
+    volume >    100_000 ?  8 :
+    volume >     10_000 ?  4 : 2;
+
+  // Sources (0-15): how many independent RSS sources back our read?
+  const sourceScore = Math.min(15, Math.round(sourceCount * 2.5));
+
+  // Match quality (0-10): how well does the story actually match this market?
+  const matchScore = Math.min(10, Math.round(keywordMatchScore * 1.2));
+
+  return {
+    deltaScore,
+    volumeScore,
+    sourceScore,
+    matchScore,
+  };
+}
+
+/**
+ * Generate structured explanation for why Signal differs from Market.
+ * Returns paragraphs separated by \n\n — component splits and renders each.
  */
 function generateWhyDifferent(
   direction: SignalVsMarket['alphaDirection'],
   absDelta: number,
-  story: { headline: string; sourceCount?: number },
+  signalLikelihood: number,
+  marketProb: number,
   market: PolymarketEvent,
   sourceCount: number,
 ): string {
+  const volLabel =
+    market.volume > 10_000_000 ? 'גבוה מאוד (>$10M)' :
+    market.volume >  1_000_000 ? 'גבוה ($1M-$10M)' :
+    market.volume >    100_000 ? 'בינוני ($100K-$1M)' :
+    market.volume >     10_000 ? 'נמוך ($10K-$100K)' : 'דל מאוד (<$10K)';
+
+  const sourceStrength =
+    sourceCount >= 8 ? 'גבוה מאוד' :
+    sourceCount >= 5 ? 'גבוה' :
+    sourceCount >= 3 ? 'בינוני' : 'חלש';
+
   if (direction === 'aligned') {
-    return `Signal מסכים עם השוק — פער של פחות מ-10%. ${sourceCount} מקורות מאשרים את הסבירות.`;
+    return [
+      `✓ Signal מסכים עם השוק — פער של ${absDelta}% בלבד (מתחת לסף המהותיות של 10%).`,
+      `כיסוי תקשורתי ${sourceStrength} (${sourceCount} מקורות). נפח שוק ${volLabel}. `,
+      `כאשר Signal והשוק מסכימים, הסיכוי גבוה שהתחזית מדויקת — אך אין כאן הזדמנות Alpha.`,
+    ].join('\n\n');
   }
 
-  const parts: string[] = [];
+  const sections: string[] = [];
 
   if (direction === 'signal-higher') {
-    parts.push(`Signal מעריך סבירות גבוהה ב-${absDelta}% מהשוק.`);
-    if (sourceCount >= 5) {
-      parts.push(`${sourceCount} מקורות עצמאיים מדווחים על סיגנלים שהשוק עדיין לא תמחר.`);
-    } else if (sourceCount >= 3) {
-      parts.push(`${sourceCount} מקורות מראים מגמות מתפתחות שעשויות להפתיע את השוק.`);
-    } else {
-      parts.push('סיגנל מוקדם ממקורות מוגבלים — אי-ודאות גבוהה יותר.');
-    }
-    if (market.volume < 1_000_000) {
-      parts.push('נזילות נמוכה בשוק — השוק עשוי לפגר אחרי החדשות.');
-    }
+    // Section 1: What Signal sees
+    sections.push(
+      sourceCount >= 6
+        ? `📡 Signal רואה: ${sourceCount} מקורות עצמאיים מדווחים על התפתחויות בנושא זה עם ביטחון ${sourceStrength}. כיסוי רחב כזה מצביע על שינוי בשטח שטרם חלחל לקונסנסוס השוק.`
+        : sourceCount >= 3
+        ? `📡 Signal רואה: ${sourceCount} מקורות מדווחים על הנושא. אמנם הכיסוי אינו רחב במיוחד, אך הסיגנל עקבי.`
+        : `📡 Signal רואה: ${sourceCount} מקורות בלבד — זהירות. ייתכן שמדובר בסיגנל מוקדם.`
+    );
+
+    // Section 2: What the market prices
+    sections.push(
+      market.volume > 5_000_000
+        ? `📈 השוק מתמחר: ${marketProb}% — שוק עמוק (נפח ${volLabel}). סוחרים מחויבים חזק. פער של ${absDelta}% מול שוק כה נזיל הוא הזדמנות Alpha משמעותית, אך גם אזהרה: השוק אולי יודע משהו שה-RSS לא מכסה.`
+        : market.volume > 100_000
+        ? `📈 השוק מתמחר: ${marketProb}% עם נפח ${volLabel}. שוק בעל גודל סביר — הפיגור אחרי החדשות אפשרי.`
+        : `📈 השוק מתמחר: ${marketProb}% אך הנפח דל (${volLabel}). שוק דק עלול לפגר אחרי הכיסוי התקשורתי ולא לשקף מידע חדש.`
+    );
+
+    // Section 3: Gap analysis
+    sections.push(
+      market.volume < 100_000
+        ? `⚡ הפער (${absDelta}%): לשוק דל אין מספיק סוחרים לעדכן מחירים בזמן אמת. Signal מנתח ${sourceCount} מקורות RSS — הפיד החדשותי לרוב מקדים את שוקי התחזיות בשוקים קטנים.`
+        : `⚡ הפער (${absDelta}%): Signal מזהה כיסוי חדשותי ${sourceStrength} שלא בא לידי ביטוי בתמחור השוק. ייתכן שמדובר בפיגור שהשוק יתקן, או בשוק שמעריך גורמים שה-RSS לא מודד (כמו גורמי מדיניות מאחורי הקלעים).`
+    );
   } else {
-    parts.push(`השוק מעריך סבירות גבוהה ב-${absDelta}% מ-Signal.`);
-    if (sourceCount <= 2) {
-      parts.push('כיסוי תקשורתי מוגבל — Signal עובד עם פחות נתונים בנושא זה.');
-    } else {
-      parts.push(`למרות ${sourceCount} מקורות, ניתוח הסנטימנט מצביע על ביטחון נמוך יותר מהשוק.`);
-    }
-    if (market.volume > 5_000_000) {
-      parts.push('שוק בעל נפח גבוה — סוחרים מחויבים חזק לעמדה זו.');
-    }
+    // market-higher
+
+    sections.push(
+      sourceCount <= 2
+        ? `📡 Signal רואה: ${sourceCount} מקורות בלבד — כיסוי ${sourceStrength}. ייתכן שהחדשות טרם חלחלו למקורות שאנו מנטרים, או שמדובר בנושא שמכוסה בערוצים שאינם ב-RSS שלנו.`
+        : `📡 Signal רואה: ${sourceCount} מקורות עם ביטחון ${sourceStrength} — ניתוח הסנטימנט מצביע על מגמה שונה ממה שהשוק מתמחר.`
+    );
+
+    sections.push(
+      market.volume > 5_000_000
+        ? `📈 השוק מתמחר: ${marketProb}% עם נפח עצום (${volLabel}). שוק עמוק כזה לרוב אינו טועה — הסוחרים מחויבים חזק לעמדה זו ומביאים מידע שה-RSS שלנו לא מכסה.`
+        : `📈 השוק מתמחר: ${marketProb}% עם נפח ${volLabel}. הנפח הסביר מצביע על שוק שיכול לטעות, אך גם על קונסנסוס מסוים.`
+    );
+
+    sections.push(
+      market.volume > 5_000_000
+        ? `⚡ הפער (${absDelta}%): במקרים כאלה — שוק עמוק vs. כיסוי RSS מוגבל — כדאי לשקול ששוק הניבוי "יודע" יותר. זה יכול להיות alpha לנגד עינינו, או שה-RSS שלנו מפספס הקשר רחב יותר.`
+        : `⚡ הפער (${absDelta}%): ייתכן שה-RSS מפגר אחרי ציפיות השוק, במיוחד בנושאים שמונעים ממידע שאינו ציבורי. מומלץ לבחון האם יש חדשות שלא כוסו.`
+    );
   }
 
-  return parts.join(' ');
+  return sections.join('\n\n');
 }
 
 /**
