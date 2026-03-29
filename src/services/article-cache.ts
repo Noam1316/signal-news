@@ -5,6 +5,7 @@
  */
 
 import { fetchAllSources, deduplicateArticles, type FetchedArticle } from './rss-fetcher';
+import { scrapeArticles } from './article-scraper';
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const KV_KEY = 'signal:articles';
@@ -62,6 +63,12 @@ export async function getCachedArticles(): Promise<FetchedArticle[]> {
     const entry = { articles: deduped, timestamp: Date.now() };
     memCache = entry;
     await kvSet(KV_KEY, entry, KV_TTL_S);
+
+    // Background: scrape full text for newest articles (non-blocking)
+    scrapeArticles(
+      deduped.slice(0, 20).map(a => ({ id: a.id, sourceId: a.sourceId, link: a.link }))
+    ).catch(() => {});
+
     return deduped;
   })().finally(() => { pendingFetch = null; });
 

@@ -138,6 +138,21 @@ export default function IntelDashboard() {
             ))}
           </div>
 
+          {/* Enrichment stats — full text scraping */}
+          {data.stats.enrichment && data.stats.enrichment.enrichedArticles > 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[11px] text-emerald-400 font-medium">
+                {lang === 'he'
+                  ? `${data.stats.enrichment.enrichedArticles}/${data.stats.enrichment.totalInCache} כתבות מועשרות בטקסט מלא`
+                  : `${data.stats.enrichment.enrichedArticles}/${data.stats.enrichment.totalInCache} articles enriched with full text`}
+              </span>
+              <span className="text-[9px] text-gray-600 ms-auto">
+                {lang === 'he' ? 'ניתוח פוליטי מבוסס תוכן' : 'Content-based political analysis'}
+              </span>
+            </div>
+          )}
+
           {/* Sentiment + Political — compact side-by-side */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="p-3 rounded-lg bg-gray-900 border border-gray-800 space-y-2">
