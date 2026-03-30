@@ -101,6 +101,8 @@ const TOPIC_KEYWORDS: Record<string, string[]> = {
   'Judicial Reform': ['judicial', 'supreme court', 'democracy', 'protest', 'רפורמה', 'בג"צ', 'מחאה'],
   'Security': ['security', 'terror', 'attack', 'missile', 'rocket', 'defense', 'ביטחון', 'טרור', 'טיל'],
   'Diplomacy': ['diplomat', 'summit', 'agreement', 'treaty', 'ambassador', 'un', 'דיפלומטיה'],
+  'Sports': ['football', 'soccer', 'basketball', 'tennis', 'olympic', 'world cup', 'champions league', 'fifa', 'nba', 'premier league', 'la liga', 'מכבי', 'הפועל', 'בית"ר', 'כדורגל', 'כדורסל', 'טניס', 'אולימפי', 'ליגה', 'גביע', 'אליפות'],
+  'General': ['society', 'culture', 'education', 'health', 'crime', 'law', 'religion', 'tourism', 'חברה', 'תרבות', 'חינוך', 'בריאות', 'פשע', 'משפט', 'דת', 'תיירות'],
 };
 
 const NEGATIVE_WORDS = [

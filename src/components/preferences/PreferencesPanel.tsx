@@ -12,6 +12,8 @@ const TOPICS: { id: TopicPreference; en: string; he: string; icon: string }[] = 
   { id: 'china',       en: 'China',        he: 'סין',         icon: '🇨🇳' },
   { id: 'energy',      en: 'Energy',       he: 'אנרגיה',      icon: '⚡' },
   { id: 'tech',        en: 'Tech',         he: 'טכנולוגיה',   icon: '💻' },
+  { id: 'sports',      en: 'Sports',       he: 'ספורט',       icon: '⚽' },
+  { id: 'general',     en: 'General',      he: 'כללי',        icon: '📰' },
 ];
 
 const SECTIONS = [

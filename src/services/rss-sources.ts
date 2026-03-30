@@ -52,6 +52,11 @@ export const rssSources: RssSource[] = [
   { id: 'foreignpolicy', name: 'Foreign Policy', url: 'https://foreignpolicy.com/feed/', language: 'en', lensCategory: 'international', country: 'US' },
   { id: 'economist', name: 'The Economist', url: 'https://www.economist.com/middle-east-and-africa/rss.xml', language: 'en', lensCategory: 'international', country: 'UK' },
 
+  // ── Sports ──
+  { id: 'espn', name: 'ESPN', url: 'https://www.espn.com/espn/rss/news', language: 'en', lensCategory: 'international', country: 'US' },
+  { id: 'sport5', name: 'Sport5', url: 'https://news.google.com/rss/search?q=site:sport5.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
+  { id: 'one', name: 'ONE', url: 'https://news.google.com/rss/search?q=site:one.co.il+ספורט&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
+
   // ── Left-leaning / Progressive ──
   { id: '972mag', name: '+972 Magazine', url: 'https://www.972mag.com/feed/', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
   { id: 'intercept', name: 'The Intercept', url: 'https://theintercept.com/feed/?rss', language: 'en', lensCategory: 'international', country: 'US' },

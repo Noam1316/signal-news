@@ -34,6 +34,7 @@ const TOPIC_CATEGORIES: Record<string, { he: string; en: string }> = {
   'Judicial Reform':     { he: 'פוליטיקה',         en: 'Politics' },
   'Security':            { he: 'ביטחון',           en: 'Security' },
   'Diplomacy':           { he: 'דיפלומטיה',       en: 'Diplomacy' },
+  'Sports':              { he: 'ספורט',            en: 'Sports' },
   'General':             { he: 'כללי',             en: 'General' },
 };
 
