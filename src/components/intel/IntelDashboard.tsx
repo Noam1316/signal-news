@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/i18n/context';
+import IntelDigest from './IntelDigest';
 
 interface TrendingTopic {
   topic: string;
@@ -99,6 +100,9 @@ export default function IntelDashboard() {
 
   return (
     <div dir={dir} className="space-y-4">
+      {/* Intelligence Digest — synthesized top insights */}
+      <IntelDigest />
+
       {/* Compact header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-400">
