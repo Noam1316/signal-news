@@ -13,8 +13,7 @@ const TABS = [
   { id: 'overview', icon: '📊', en: 'Overview', he: 'סקירה' },
   { id: 'polymarket', icon: '📈', en: 'Signal vs Market', he: 'סיגנל vs שוק' },
   { id: 'bias', icon: '🏛️', en: 'Media Bias', he: 'הטיה תקשורתית' },
-  { id: 'credibility', icon: '🛡️', en: 'Credibility', he: 'אמינות' },
-  { id: 'grouped', icon: '🗞️', en: 'Grouped', he: 'מקובץ' },
+  { id: 'sources', icon: '🛡️', en: 'Sources', he: 'מקורות' },
   { id: 'feed', icon: '🌐', en: 'Live Feed', he: 'פיד חי' },
 ] as const;
 
@@ -77,8 +76,14 @@ export default function IntelHub() {
         {activeTab === 'overview' && <IntelDashboard />}
         {activeTab === 'polymarket' && <PolymarketComparison />}
         {activeTab === 'bias' && <MediaBiasPanel />}
-        {activeTab === 'credibility' && <CredibilityDashboard />}
-        {activeTab === 'grouped' && <GroupedFeed />}
+        {activeTab === 'sources' && (
+          <div className="space-y-6">
+            <GroupedFeed />
+            <div className="border-t border-gray-800 pt-6">
+              <CredibilityDashboard />
+            </div>
+          </div>
+        )}
         {activeTab === 'feed' && <LiveWire />}
       </div>
     </div>
