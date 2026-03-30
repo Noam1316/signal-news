@@ -23,6 +23,8 @@ interface SignalVsMarket {
   confidence: number;
   matchedKeywords: string[];
   sourceCount: number;
+  intelBoost: number;
+  intelSummary: string;
 }
 
 interface PolyData {
@@ -714,6 +716,12 @@ export default function PolymarketComparison() {
                         {lang === 'he'
                           ? `שוק ${convergence.toward ? 'מתקרב ל' : 'מתרחק מ'}Signal · ${convergence.movement > 0 ? '+' : ''}${convergence.movement}% ב-${convergence.hoursAgo}ש'`
                           : `Market ${convergence.toward ? '→ Signal' : '← away'} · ${convergence.movement > 0 ? '+' : ''}${convergence.movement}% in ${convergence.hoursAgo}h`}
+                      </div>
+                    )}
+                    {/* Intel boost badge */}
+                    {match.intelBoost > 0 && match.intelSummary && (
+                      <div className="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium bg-purple-500/10 border-purple-500/30 text-purple-400">
+                        🧠 +{match.intelBoost} {lang === 'he' ? 'מודיעין' : 'intel'}: {match.intelSummary}
                       </div>
                     )}
                   </div>

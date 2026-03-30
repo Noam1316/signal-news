@@ -4,6 +4,8 @@
  * Uses Polymarket's public CLOB API (no key required)
  */
 
+import { computeIntelEnhancement, type EarlyMover } from './signal-intelligence';
+
 export interface PolymarketEvent {
   id: string;
   title: string;
@@ -43,6 +45,8 @@ export interface SignalVsMarket {
   confidence: number;             // how confident the match is (0-100)
   matchedKeywords: string[];
   sourceCount: number;            // how many RSS sources back our Signal
+  intelBoost: number;             // 0-15 boost from bias-adjusted + early mover signals
+  intelSummary: string;           // one-line summary of intelligence enhancements
 }
 
 // Keywords to match our topics with Polymarket events (English + Hebrew)
@@ -137,8 +141,17 @@ export async function fetchPolymarketEvents(): Promise<PolymarketEvent[]> {
  * Match our brief stories with Polymarket events
  */
 export function matchStoriesWithMarkets(
-  stories: Array<{ slug: string; headline: string; likelihood: number; category?: string; sourceCount?: number }>,
-  markets: PolymarketEvent[]
+  stories: Array<{
+    slug: string;
+    headline: string;
+    likelihood: number;
+    category?: string;
+    sourceCount?: number;
+    sources?: Array<{ name: string }>;
+    sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
+  }>,
+  markets: PolymarketEvent[],
+  earlyMovers?: EarlyMover[],
 ): SignalVsMarket[] {
   const matches: SignalVsMarket[] = [];
 
@@ -195,10 +208,19 @@ export function matchStoriesWithMarkets(
       const absDelta = Math.abs(delta);
       const direction: SignalVsMarket['alphaDirection'] = absDelta <= 10 ? 'aligned' : (delta > 0 ? 'signal-higher' : 'market-higher');
 
-      // --- New Alpha Score formula (4 named components, max 100) ---
+      // --- New Alpha Score formula (4 named components + intel boost, max 100) ---
       const srcCount = story.sourceCount || 3;
       const breakdown = computeAlphaBreakdown(absDelta, bestMatch.volume, srcCount, bestScore);
-      const alphaScore = breakdown.deltaScore + breakdown.volumeScore + breakdown.sourceScore + breakdown.matchScore;
+      const baseAlpha = breakdown.deltaScore + breakdown.volumeScore + breakdown.sourceScore + breakdown.matchScore;
+
+      // Intel enhancement: bias-adjusted signal + early mover boost
+      const intel = computeIntelEnhancement(
+        story.sources || [],
+        bestCategory,
+        story.sentiment || 'neutral',
+        earlyMovers || [],
+      );
+      const alphaScore = Math.min(100, baseAlpha + intel.intelBoost);
 
       // Generate structured explanation for why Signal differs from Market
       const whyDifferent = generateWhyDifferent(direction, absDelta, story.likelihood, marketProb, bestMatch, srcCount);
@@ -229,6 +251,8 @@ export function matchStoriesWithMarkets(
         confidence,
         matchedKeywords: bestKeywords.slice(0, 5),
         sourceCount: srcCount,
+        intelBoost: intel.intelBoost,
+        intelSummary: intel.intelSummary,
       });
     }
   }
