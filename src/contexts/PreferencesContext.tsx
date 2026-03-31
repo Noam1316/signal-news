@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 
 export type AlertProfile = 'all' | 'critical' | 'geo' | 'market';
-export type TopicPreference = 'middle-east' | 'ukraine' | 'us-politics' | 'iran' | 'china' | 'energy' | 'tech' | 'sports' | 'general';
+export type TopicPreference = 'middle-east' | 'ukraine' | 'us-politics' | 'iran' | 'china' | 'energy' | 'tech';
 
 export interface DashboardPreferences {
   topics: TopicPreference[];           // empty = show all

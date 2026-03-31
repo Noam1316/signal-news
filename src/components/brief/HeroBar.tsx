@@ -7,6 +7,41 @@ import IntelScore from '@/components/shared/IntelScore';
 
 const STALE_THRESHOLD = 30; // minutes
 const STALE_DISMISS_KEY = 'signal_stale_dismissed';
+const RISK_HISTORY_KEY = 'signal_risk_history';
+
+// ── Risk Index history helpers ────────────────────────────────────────────────
+
+interface RiskSnapshot { v: number; t: number; }
+
+function loadRiskHistory(): RiskSnapshot[] {
+  try { return JSON.parse(localStorage.getItem(RISK_HISTORY_KEY) || '[]'); } catch { return []; }
+}
+
+function saveRiskSnapshot(value: number) {
+  try {
+    const snaps = loadRiskHistory();
+    const now = Date.now();
+    const last = snaps[snaps.length - 1];
+    // Record at most once per hour
+    if (last && now - last.t < 60 * 60 * 1000) return;
+    snaps.push({ v: value, t: now });
+    // Keep 7 days of hourly snapshots = 168 entries max
+    if (snaps.length > 168) snaps.splice(0, snaps.length - 168);
+    localStorage.setItem(RISK_HISTORY_KEY, JSON.stringify(snaps));
+  } catch { /* silent */ }
+}
+
+/** Returns risk value from ~24h ago, or null if no history */
+function getYesterdayRisk(): number | null {
+  try {
+    const snaps = loadRiskHistory();
+    const target = Date.now() - 24 * 60 * 60 * 1000;
+    // Find snapshot closest to 24h ago
+    const old = snaps.filter(s => s.t <= target + 2 * 60 * 60 * 1000);
+    if (!old.length) return null;
+    return old[old.length - 1].v;
+  } catch { return null; }
+}
 
 interface HeroStats {
   articles: number;
@@ -38,11 +73,15 @@ function computeRiskIndex(analyzeData: any, shocksData: any): number {
 }
 
 function RiskIndexBadge({ value, lang }: { value: number; lang: string }) {
+  const [yesterday, setYesterday] = useState<number | null>(null);
+
+  useEffect(() => { setYesterday(getYesterdayRisk()); }, []);
+
   const isHigh   = value >= 66;
   const isMedium = value >= 34;
 
-  const color  = isHigh ? 'text-red-400'    : isMedium ? 'text-amber-400'   : 'text-emerald-400';
-  const bg     = isHigh ? 'bg-red-500/10'   : isMedium ? 'bg-amber-500/10'  : 'bg-emerald-500/10';
+  const color  = isHigh ? 'text-red-400'      : isMedium ? 'text-amber-400'    : 'text-emerald-400';
+  const bg     = isHigh ? 'bg-red-500/10'     : isMedium ? 'bg-amber-500/10'   : 'bg-emerald-500/10';
   const border = isHigh ? 'border-red-500/25' : isMedium ? 'border-amber-500/25' : 'border-emerald-500/25';
   const label  = isHigh
     ? (lang === 'he' ? 'סיכון גבוה' : 'High Risk')
@@ -50,13 +89,26 @@ function RiskIndexBadge({ value, lang }: { value: number; lang: string }) {
       ? (lang === 'he' ? 'סיכון בינוני' : 'Med Risk')
       : (lang === 'he' ? 'סיכון נמוך' : 'Low Risk');
 
+  const delta = yesterday !== null ? value - yesterday : null;
+  const deltaColor = delta === null ? '' : delta > 0 ? 'text-red-400' : delta < 0 ? 'text-emerald-400' : 'text-gray-500';
+  const deltaSign  = delta !== null && delta > 0 ? '+' : '';
+
+  const tooltip = lang === 'he'
+    ? `מדד סיכון גיאופוליטי: ${value}/100${delta !== null ? ` (${deltaSign}${delta} מאתמול)` : ''}`
+    : `Geopolitical Risk Index: ${value}/100${delta !== null ? ` (${deltaSign}${delta} vs yesterday)` : ''}`;
+
   return (
     <div
       className={`hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${bg} ${border} cursor-default`}
-      title={lang === 'he' ? `מדד סיכון גיאופוליטי: ${value}/100` : `Geopolitical Risk Index: ${value}/100`}
+      title={tooltip}
     >
       <span className={`text-[10px] font-black font-mono ${color}`}>{value}</span>
       <span className={`text-[9px] font-semibold ${color} whitespace-nowrap`}>{label}</span>
+      {delta !== null && delta !== 0 && (
+        <span className={`text-[9px] font-mono font-bold ${deltaColor}`}>
+          {deltaSign}{delta}
+        </span>
+      )}
     </div>
   );
 }
@@ -95,6 +147,7 @@ export default function HeroBar() {
       }
 
       const riskIndex = computeRiskIndex(analyzeData, shocksData);
+      saveRiskSnapshot(riskIndex);
       setStats({ articles, shocks: shockCount, accuracy: liveAccuracy, lastUpdate, riskIndex });
     } catch { /* silent */ }
   }

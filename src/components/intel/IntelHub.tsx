@@ -10,18 +10,18 @@ import GroupedFeed from './GroupedFeed';
 import CredibilityDashboard from '@/components/credibility/CredibilityDashboard';
 
 const TABS = [
-  { id: 'overview', icon: '📊', en: 'Overview', he: 'סקירה' },
   { id: 'polymarket', icon: '📈', en: 'Signal vs Market', he: 'סיגנל vs שוק' },
-  { id: 'bias', icon: '🏛️', en: 'Media Bias', he: 'הטיה תקשורתית' },
-  { id: 'sources', icon: '🛡️', en: 'Sources', he: 'מקורות' },
-  { id: 'feed', icon: '🌐', en: 'Live Feed', he: 'פיד חי' },
+  { id: 'overview',   icon: '📊', en: 'Overview',         he: 'סקירה' },
+  { id: 'bias',       icon: '🏛️', en: 'Media Bias',       he: 'הטיה תקשורתית' },
+  { id: 'sources',    icon: '🛡️', en: 'Sources',          he: 'מקורות' },
+  { id: 'feed',       icon: '🌐', en: 'Live Feed',        he: 'פיד חי' },
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
 
 export default function IntelHub() {
   const { lang, dir } = useLanguage();
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [activeTab, setActiveTab] = useState<TabId>('polymarket');
 
   return (
     <div dir={dir} className="space-y-4">

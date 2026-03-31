@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/i18n/context';
+import LiveAlphaCard from '@/components/landing/LiveAlphaCard';
 
 function useScrollReveal(threshold = 0.12) {
   const ref = useRef<HTMLDivElement>(null);
@@ -186,6 +187,11 @@ export default function LandingPage() {
           <p className="text-xs text-gray-600">
             {lang === 'he' ? 'דמו חי · ממשק בעברית · RTL-first · מעודכן כל 5 דקות' : 'Live demo · Hebrew UI · RTL-first · Updated every 5 minutes'}
           </p>
+
+          {/* Live Alpha preview — real data from the engine */}
+          <div className="w-full max-w-lg mx-auto mt-4">
+            <LiveAlphaCard lang={lang} />
+          </div>
         </div>
 
         {/* Scroll indicator */}
