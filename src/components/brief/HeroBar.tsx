@@ -13,6 +13,52 @@ interface HeroStats {
   shocks: number;
   accuracy: number;
   lastUpdate: string;
+  riskIndex: number; // 0–100 geopolitical risk
+}
+
+function computeRiskIndex(analyzeData: any, shocksData: any): number {
+  // Sentiment pressure (0–40): how much negative sentiment
+  const sent = analyzeData?.stats?.sentimentBreakdown || {};
+  const sentTotal = Object.values(sent).reduce((a: number, b) => a + (b as number), 0) as number;
+  const negRatio = sentTotal > 0 ? ((sent.negative || 0) / sentTotal) : 0.4;
+  const sentScore = Math.round(negRatio * 40);
+
+  // Shock pressure (0–40): active shocks weighted by confidence
+  const shocks: any[] = shocksData?.shocks || [];
+  const shockPressure = shocks.reduce((acc: number, s: any) => {
+    return acc + (s.confidence === 'high' ? 16 : s.confidence === 'medium' ? 8 : 4);
+  }, 0);
+  const shockScore = Math.min(40, shockPressure);
+
+  // Signal density (0–20): proportion of signal vs noise
+  const signalRatio: number = analyzeData?.stats?.signalRatio || 0;
+  const signalScore = Math.round(signalRatio * 20);
+
+  return Math.min(100, sentScore + shockScore + signalScore);
+}
+
+function RiskIndexBadge({ value, lang }: { value: number; lang: string }) {
+  const isHigh   = value >= 66;
+  const isMedium = value >= 34;
+
+  const color  = isHigh ? 'text-red-400'    : isMedium ? 'text-amber-400'   : 'text-emerald-400';
+  const bg     = isHigh ? 'bg-red-500/10'   : isMedium ? 'bg-amber-500/10'  : 'bg-emerald-500/10';
+  const border = isHigh ? 'border-red-500/25' : isMedium ? 'border-amber-500/25' : 'border-emerald-500/25';
+  const label  = isHigh
+    ? (lang === 'he' ? 'סיכון גבוה' : 'High Risk')
+    : isMedium
+      ? (lang === 'he' ? 'סיכון בינוני' : 'Med Risk')
+      : (lang === 'he' ? 'סיכון נמוך' : 'Low Risk');
+
+  return (
+    <div
+      className={`hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${bg} ${border} cursor-default`}
+      title={lang === 'he' ? `מדד סיכון גיאופוליטי: ${value}/100` : `Geopolitical Risk Index: ${value}/100`}
+    >
+      <span className={`text-[10px] font-black font-mono ${color}`}>{value}</span>
+      <span className={`text-[9px] font-semibold ${color} whitespace-nowrap`}>{label}</span>
+    </div>
+  );
 }
 
 export default function HeroBar() {
@@ -32,22 +78,24 @@ export default function HeroBar() {
 
       let articles = 0, lastUpdate = new Date().toISOString();
       let shockCount = 0, liveAccuracy = 78;
+      let analyzeData: any = null, shocksData: any = null;
 
       if (analyzeRes.status === 'fulfilled' && analyzeRes.value.ok) {
-        const data = await analyzeRes.value.json();
-        articles = data.stats?.total || 0;
-        lastUpdate = data.analyzedAt || lastUpdate;
+        analyzeData = await analyzeRes.value.json();
+        articles = analyzeData.stats?.total || 0;
+        lastUpdate = analyzeData.analyzedAt || lastUpdate;
       }
       if (shockRes.status === 'fulfilled' && shockRes.value.ok) {
-        const shockData = await shockRes.value.json();
-        shockCount = Array.isArray(shockData) ? shockData.length : (shockData.shocks?.length || 0);
+        shocksData = await shockRes.value.json();
+        shockCount = Array.isArray(shocksData) ? shocksData.length : (shocksData.shocks?.length || 0);
       }
       if (logRes.status === 'fulfilled' && logRes.value.ok) {
         const logData = await logRes.value.json();
         if (logData.accuracy?.rate != null) liveAccuracy = Math.round(logData.accuracy.rate);
       }
 
-      setStats({ articles, shocks: shockCount, accuracy: liveAccuracy, lastUpdate });
+      const riskIndex = computeRiskIndex(analyzeData, shocksData);
+      setStats({ articles, shocks: shockCount, accuracy: liveAccuracy, lastUpdate, riskIndex });
     } catch { /* silent */ }
   }
 
@@ -147,8 +195,11 @@ export default function HeroBar() {
           )}
         </div>
 
-        {/* Right: Intel Score + Signal badge + Bell */}
+        {/* Right: Risk Index + Intel Score + Signal badge + Bell */}
         <div className="shrink-0 flex items-center gap-2">
+          {stats && (
+            <RiskIndexBadge value={stats.riskIndex} lang={lang} />
+          )}
           <IntelScore />
           <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/20">
             <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-wider">Signal</span>

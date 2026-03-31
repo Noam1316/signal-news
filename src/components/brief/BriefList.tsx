@@ -6,6 +6,7 @@ import { useLanguage } from '@/i18n/context';
 import type { BriefStory, ShockEvent } from '@/lib/types';
 import BriefCard from './BriefCard';
 import DailySummary from './DailySummary';
+import AnalystTable from './AnalystTable';
 import LensSwitcher from '@/components/shared/LensSwitcher';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import { getStoryLean, LEAN_LABEL, type Lean } from '@/utils/political-lean';
@@ -37,6 +38,7 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
   const { recordClick, getInterestWeight, isOutsideLane, totalClicks } = usePersonalization();
   const { recordStoryView } = useIntelScore();
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [analystMode, setAnalystMode] = useState(false);
   const [topicFilter, setTopicFilter] = useState<string[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -338,6 +340,22 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
         )}
       </div>
 
+      {/* Analyst mode toggle */}
+      <div className="flex items-center justify-end">
+        <button
+          onClick={() => setAnalystMode(p => !p)}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors ${
+            analystMode
+              ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-400'
+              : 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300'
+          }`}
+          title={lang === 'he' ? 'מצב מנתח — תצוגת טבלה' : 'Analyst mode — table view'}
+        >
+          <span>📊</span>
+          <span>{lang === 'he' ? 'מצב מנתח' : 'Analyst'}</span>
+        </button>
+      </div>
+
       {/* Daily Intelligence Summary */}
       {!loading && stories.length > 0 && (
         <DailySummary stories={stories} shocks={shocks} />
@@ -356,22 +374,26 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
         </div>
       )}
 
-      {/* Stories */}
-      {sorted.map((story, i) => (
-        <div key={story.slug} className="animate-slide-up"
-             style={{ animationDelay: `${Math.min(i * 30, 300)}ms`, animationFillMode: 'both' }}
-             onClick={() => {
-               recordClick(story.category.en || story.category.he);
-               recordStoryView();
-             }}>
-          <BriefCard
-            story={story}
-            isWatched={isWatched(story.slug)}
-            onWatchToggle={() => toggle(story.slug)}
-            relatedShock={shockBySlug[story.slug]}
-          />
-        </div>
-      ))}
+      {/* Stories — card or analyst table view */}
+      {analystMode ? (
+        <AnalystTable stories={sorted} shockBySlug={shockBySlug} />
+      ) : (
+        sorted.map((story, i) => (
+          <div key={story.slug} className="animate-slide-up"
+               style={{ animationDelay: `${Math.min(i * 30, 300)}ms`, animationFillMode: 'both' }}
+               onClick={() => {
+                 recordClick(story.category.en || story.category.he);
+                 recordStoryView();
+               }}>
+            <BriefCard
+              story={story}
+              isWatched={isWatched(story.slug)}
+              onWatchToggle={() => toggle(story.slug)}
+              relatedShock={shockBySlug[story.slug]}
+            />
+          </div>
+        ))
+      )}
 
       {/* Anti-filter-bubble: "Beyond your interests" */}
       {outsideLaneStories.length > 0 && (
