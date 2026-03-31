@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav';
+import NewsTicker from './NewsTicker';
 import ScrollToTop from '@/components/shared/ScrollToTop';
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
@@ -19,7 +20,10 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
     return (
       <>
         <Navbar />
-        <main className="pt-16">{children}</main>
+        <div className="pt-16">
+          <NewsTicker />
+          <main>{children}</main>
+        </div>
       </>
     );
   }
@@ -27,7 +31,10 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
   return (
     <>
       <Navbar />
-      <main className="pt-16 pb-20 md:pb-4">{children}</main>
+      <div className="pt-16">
+        <NewsTicker />
+        <main className="pb-20 md:pb-4">{children}</main>
+      </div>
       <BottomNav />
       <ScrollToTop />
     </>
