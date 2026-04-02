@@ -4,7 +4,7 @@ import { getCachedArticles } from '@/services/article-cache';
 import type { BriefStory } from '@/lib/types';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://signal-news-noam1316s-projects.vercel.app';
-const FEED_TITLE = 'Signal News — Geopolitical Intelligence Feed';
+const FEED_TITLE = 'Zikuk — Geopolitical Intelligence Feed';
 const FEED_DESC  = 'Real-time geopolitical signals, shock events, and prediction market analysis. Powered by keyword-based AI analysis of 28+ RSS sources.';
 
 function escapeXml(str: string): string {
@@ -69,7 +69,7 @@ export async function GET() {
       <description>${escapeXml(description)}</description>
       <category>${escapeXml(categoryEn)}</category>
       <pubDate>${pubDate}</pubDate>
-      <source url="${escapeXml(SITE_URL + '/api/feed')}">Signal News</source>
+      <source url="${escapeXml(SITE_URL + '/api/feed')}">Zikuk</source>
     </item>`;
     }).join('\n');
 

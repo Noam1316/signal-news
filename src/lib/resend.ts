@@ -20,7 +20,7 @@ export function getResend(): Resend | null {
 // IMPORTANT: RESEND_FROM must be a verified sender in your Resend account.
 // Options:
 //   1. Your own email address verified in Resend (easiest)
-//   2. A domain you own and verified in Resend → e.g. "Signal News <brief@yourdomain.com>"
+//   2. A domain you own and verified in Resend → e.g. "Zikuk <brief@yourdomain.com>"
 //   3. Resend's test address (only works for sending to your own Resend email): onboarding@resend.dev
 export const FROM_EMAIL = process.env.RESEND_FROM ?? 'onboarding@resend.dev';
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://signal-news-noam1316s-projects.vercel.app';

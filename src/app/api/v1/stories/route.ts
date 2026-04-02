@@ -1,6 +1,6 @@
 /**
  * GET /api/v1/stories
- * Signal News Public API v1 — Top geopolitical stories with likelihood scores.
+ * Zikuk Public API v1 — Top geopolitical stories with likelihood scores.
  *
  * Query params:
  *   limit   — max stories to return (default: 10, max: 50)

@@ -40,7 +40,7 @@ function getTransporter(): nodemailer.Transporter | null {
   return _transporter;
 }
 
-export const FROM_NAME = 'Signal News';
+export const FROM_NAME = 'Zikuk';
 
 export function getFromAddress(): string {
   const user = process.env.GMAIL_USER ?? 'noreply@gmail.com';

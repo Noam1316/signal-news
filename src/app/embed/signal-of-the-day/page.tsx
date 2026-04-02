@@ -37,7 +37,7 @@ export default async function EmbedWidget() {
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Signal News — סיגנל היום</title>
+        <title>Zikuk — סיגנל היום</title>
         <style>{`
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body {
@@ -163,7 +163,7 @@ export default async function EmbedWidget() {
       <body>
         <div className="card">
           <div className="brand">
-            <span className="brand-name">⚡ Signal News</span>
+            <span className="brand-name">⚡ Zikuk</span>
             <span className="signal-badge">סיגנל היום</span>
           </div>
 

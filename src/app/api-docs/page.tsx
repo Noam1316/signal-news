@@ -139,7 +139,7 @@ export default function ApiDocsPage() {
             <Link href="/dashboard" className="text-gray-500 hover:text-gray-300 text-sm">← Dashboard</Link>
             <span className="text-gray-700">|</span>
             <h1 className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="text-yellow-400">⚡</span> Signal News API
+              <span className="text-yellow-400">⚡</span> Zikuk API
               <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-yellow-400/15 border border-yellow-400/25 text-yellow-400">v1</span>
             </h1>
           </div>
@@ -153,7 +153,7 @@ export default function ApiDocsPage() {
         <div className="rounded-2xl border border-gray-800 bg-gray-900/50 p-6">
           <h2 className="text-lg font-bold text-white mb-2">Public API — Geopolitical Intelligence</h2>
           <p className="text-sm text-gray-400 leading-relaxed mb-4">
-            Signal News provides a free, no-auth API for geopolitical intelligence data.
+            Zikuk provides a free, no-auth API for geopolitical intelligence data.
             Pipe it into Excel, Notion, Grafana, or your own dashboard.
             All endpoints return JSON with <code className="text-yellow-400 bg-yellow-400/10 px-1 rounded">CORS: *</code> and 10–15 min server-side cache.
           </p>
@@ -308,7 +308,7 @@ export default function ApiDocsPage() {
 
         {/* Footer */}
         <div className="text-center text-[11px] text-gray-600 pb-6">
-          Built by <span className="text-gray-400">Signal News</span> ·{' '}
+          Built by <span className="text-gray-400">Zikuk</span> ·{' '}
           <Link href="/dashboard" className="hover:text-gray-300 transition-colors">Dashboard</Link>
           {' · '}
           <a href="/feed.xml" className="hover:text-gray-300 transition-colors">RSS Feed</a>

@@ -62,8 +62,8 @@ type TranslationKey =
   | 'github';
 
 export const translations: Record<TranslationKey, LocalizedText> = {
-  appName: { en: 'Signal News', he: 'Signal News' },
-  slogan: { en: 'Know what\'s likely next — without the noise.', he: 'דע מה צפוי — בלי הרעש.' },
+  appName: { en: 'Zikuk', he: 'Zikuk' },
+  slogan: { en: 'Distilling noise into signal.', he: 'מזקק רעש לסיגנל.' },
   all: { en: 'All', he: 'הכל' },
   dailyBrief: { en: 'Daily Brief', he: 'תקציר יומי' },
   shockFeed: { en: 'Shock Feed', he: 'פיד זעזועים' },

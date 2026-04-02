@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'Signal News — Real-time geopolitical intelligence';
+export const alt = 'Zikuk — Real-time geopolitical intelligence';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -39,7 +39,7 @@ export default function OgImage() {
               ⚡
             </div>
             <span style={{ color: '#f1f5f9', fontSize: '36px', fontWeight: 700 }}>
-              Signal News
+              Zikuk
             </span>
           </div>
           <span

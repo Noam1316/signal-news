@@ -61,12 +61,12 @@ export function useReferral() {
     ? `${window.location.origin}/?ref=${myCode}`
     : `/?ref=${myCode}`;
 
-  const shareText = `🧠 Signal News — תקציר מודיעיני יומי מ-28 מקורות חדשותיים\nכלי חינמי שמראה לך מה באמת קורה, בלי הטיה\n${shareUrl}`;
+  const shareText = `🧠 Zikuk — תקציר מודיעיני יומי מ-28 מקורות חדשותיים\nכלי חינמי שמראה לך מה באמת קורה, בלי הטיה\n${shareUrl}`;
 
   const copyShareLink = useCallback(async (): Promise<boolean> => {
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'Signal News', text: shareText, url: shareUrl });
+        await navigator.share({ title: 'Zikuk', text: shareText, url: shareUrl });
         return true;
       }
       await navigator.clipboard.writeText(shareUrl);

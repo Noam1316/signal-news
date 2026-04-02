@@ -56,7 +56,7 @@ export default function DailySummary({ stories, shocks }: DailySummaryProps) {
           </a>
           <a
             href={`https://wa.me/?text=${encodeURIComponent(
-              `📡 *Signal News — סיכום מודיעיני*\n\n` +
+              `📡 *Zikuk — סיכום מודיעיני*\n\n` +
               (topTitles[0] ? `🔹 ${topTitles[0]}\n` : '') +
               (topTitles[1] ? `🔹 ${topTitles[1]}\n` : '') +
               (shockTitles[0] ? `\n⚡ זעזוע: ${shockTitles[0]}\n` : '') +
@@ -114,7 +114,7 @@ export default function DailySummary({ stories, shocks }: DailySummaryProps) {
         </a>
         <a
           href={`https://wa.me/?text=${encodeURIComponent(
-            `📡 *Signal News — Daily Intel*\n\n` +
+            `📡 *Zikuk — Daily Intel*\n\n` +
             (topTitles[0] ? `🔹 ${topTitles[0]}\n` : '') +
             (topTitles[1] ? `🔹 ${topTitles[1]}\n` : '') +
             (shockTitles[0] ? `\n⚡ Shock: ${shockTitles[0]}\n` : '') +

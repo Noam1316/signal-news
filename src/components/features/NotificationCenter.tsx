@@ -33,7 +33,7 @@ export default function NotificationCenter() {
     updatePrefs({ enabled: granted });
     if (granted) {
       sendNotification(
-        lang === 'he' ? '🔔 Signal News' : '🔔 Signal News',
+        lang === 'he' ? '🔔 Zikuk' : '🔔 Zikuk',
         lang === 'he' ? 'התראות הופעלו בהצלחה!' : 'Notifications enabled successfully!'
       );
     }

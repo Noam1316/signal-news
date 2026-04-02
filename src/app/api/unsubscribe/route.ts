@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   await removeSubscriber(email);
 
-  return new NextResponse(page('הסרה בוצעה ✓', `הכתובת ${escapeHtml(email)} הוסרה מרשימת התפוצה של Signal News.`), {
+  return new NextResponse(page('הסרה בוצעה ✓', `הכתובת ${escapeHtml(email)} הוסרה מרשימת התפוצה של Zikuk.`), {
     headers: { 'Content-Type': 'text/html; charset=utf-8' },
   });
 }

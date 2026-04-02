@@ -1,6 +1,6 @@
 /**
  * GET /api/v1/signals
- * Signal News Public API v1 — Signal vs Market alpha divergences.
+ * Zikuk Public API v1 — Signal vs Market alpha divergences.
  *
  * Query params:
  *   limit     — max matches (default: 5, max: 20)

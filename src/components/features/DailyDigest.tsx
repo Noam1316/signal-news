@@ -93,7 +93,7 @@ export default function DailyDigest() {
         <div className="p-4 rounded-lg bg-gray-950 border border-gray-800 space-y-3">
           {/* Header */}
           <div className="border-b border-gray-800 pb-3">
-            <h3 className="text-sm font-bold text-yellow-400">⚡ Signal News Daily Brief</h3>
+            <h3 className="text-sm font-bold text-yellow-400">⚡ Zikuk Daily Brief</h3>
             <p className="text-[10px] text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
           </div>
 

@@ -29,17 +29,17 @@ const BASE_URL = 'https://signal-news-noam1316s-projects.vercel.app';
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "Signal News — Know what's likely next",
-    template: "%s | Signal News",
+    default: "Zikuk — מזקק רעש לסיגנל",
+    template: "%s | Zikuk",
   },
-  description: "Real-time geopolitical news intelligence: likelihood scores, shock detection, media bias analysis, and Polymarket comparison — across 28+ sources. No noise, just signal.",
+  description: "Zikuk מזקק 28+ מקורות RSS למודיעין גיאופוליטי: ציוני סבירות, זיהוי זעזועים, ניתוח הטיה תקשורתית. Distilling geopolitical noise into signal.",
   keywords: [
     'news intelligence', 'geopolitical analysis', 'media bias', 'news likelihood',
     'signal vs noise', 'polymarket', 'news analysis', 'real-time news',
     'מודיעין חדשות', 'ניתוח גיאופוליטי', 'הטיה תקשורתית',
   ],
-  authors: [{ name: 'Signal News' }],
-  creator: 'Signal News',
+  authors: [{ name: 'Zikuk' }],
+  creator: 'Zikuk',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.svg',
@@ -48,22 +48,22 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Signal News',
+    title: 'Zikuk',
   },
   openGraph: {
-    title: "Signal News — Know what's likely next",
-    description: "Real-time geopolitical news intelligence with likelihood scores, shock detection, and media bias analysis across 28+ sources.",
-    siteName: "Signal News",
+    title: "Zikuk — מזקק רעש לסיגנל",
+    description: "Zikuk מזקק 28+ מקורות RSS למודיעין גיאופוליטי. Distilling geopolitical noise into signal.",
+    siteName: "Zikuk",
     type: "website",
     url: BASE_URL,
     locale: 'he_IL',
-    images: [{ url: `${BASE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Signal News — Real-time geopolitical intelligence' }],
+    images: [{ url: `${BASE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Zikuk — Real-time geopolitical intelligence' }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Signal News",
+    title: "Zikuk",
     description: "Real-time news intelligence — likelihood scores, shock detection, Polymarket comparison.",
-    creator: "@signalnews",
+    creator: "@zikukai",
     images: [`${BASE_URL}/opengraph-image`],
   },
   robots: {
@@ -89,15 +89,15 @@ export default function RootLayout({
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: 'Signal News',
-    description: 'Real-time geopolitical news intelligence with likelihood scores, shock detection, and media bias analysis.',
+    name: 'Zikuk',
+    description: 'Distilling geopolitical noise into signal — likelihood scores, shock detection, media bias, Polymarket comparison.',
     url: BASE_URL,
     applicationCategory: 'NewsApplication',
     operatingSystem: 'Web',
     inLanguage: ['en', 'he'],
     author: {
       '@type': 'Organization',
-      name: 'Signal News',
+      name: 'Zikuk',
     },
     offers: {
       '@type': 'Offer',

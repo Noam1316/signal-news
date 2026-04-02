@@ -404,7 +404,7 @@ export default function PrintBriefPage() {
         {/* Footer */}
         <div className="border-t border-gray-200 pt-4 mt-6">
           <div className="flex items-center justify-between text-[10px] text-gray-400">
-            <span>⚡ Signal News — signal-news.vercel.app</span>
+            <span>⚡ Zikuk — signal-news.vercel.app</span>
             <span>{isHe ? `נוצר: ${d.generatedAtHe}` : `Generated ${d.generatedAt}`}</span>
           </div>
           <p className="text-[9px] text-gray-300 mt-1">

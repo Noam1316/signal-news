@@ -1,6 +1,6 @@
 /**
  * GET /api/v1/risk
- * Signal News Public API v1 — Geopolitical Risk Index (0–100).
+ * Zikuk Public API v1 — Geopolitical Risk Index (0–100).
  *
  * Response: { data: { riskIndex, level, components }, meta: { version, generatedAt } }
  */

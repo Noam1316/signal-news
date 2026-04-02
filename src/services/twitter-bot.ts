@@ -1,5 +1,5 @@
 /**
- * Twitter Bot Service — Signal News Daily Alpha Tweet
+ * Twitter Bot Service — Zikuk Daily Alpha Tweet
  *
  * Posts once per day with the top Signal vs Market divergence.
  * When a prediction resolves correctly, auto quote-tweets "Called it ✅".

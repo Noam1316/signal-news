@@ -1,6 +1,6 @@
 /**
  * GET /api/v1/shocks
- * Signal News Public API v1 — Active geopolitical shock events.
+ * Zikuk Public API v1 — Active geopolitical shock events.
  *
  * Query params:
  *   limit      — max shocks to return (default: 5, max: 20)

@@ -16,14 +16,14 @@ export default function ShareStoryButton({ story }: Props) {
     e.stopPropagation();
 
     const shareText = lang === 'he'
-      ? `📡 Signal News: "${headline}"\n⚡ סבירות: ${story.likelihood}% | ${story.sources?.length ?? 0} מקורות\n🔗 ${window.location.origin}/dashboard`
-      : `📡 Signal News: "${headline}"\n⚡ Likelihood: ${story.likelihood}% | ${story.sources?.length ?? 0} sources\n🔗 ${window.location.origin}/dashboard`;
+      ? `📡 Zikuk: "${headline}"\n⚡ סבירות: ${story.likelihood}% | ${story.sources?.length ?? 0} מקורות\n🔗 ${window.location.origin}/dashboard`
+      : `📡 Zikuk: "${headline}"\n⚡ Likelihood: ${story.likelihood}% | ${story.sources?.length ?? 0} sources\n🔗 ${window.location.origin}/dashboard`;
 
     // Use Web Share API on mobile
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Signal News — ${headline}`,
+          title: `Zikuk — ${headline}`,
           text: shareText,
           url: `${window.location.origin}/dashboard`,
         });

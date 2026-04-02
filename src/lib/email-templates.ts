@@ -1,5 +1,5 @@
 /**
- * HTML email templates for Signal News.
+ * HTML email templates for Zikuk.
  * Hebrew RTL, professional intelligence brief design.
  * Full-page daily digest with executive summary, stories, shocks, statistics.
  */
@@ -212,7 +212,7 @@ export function buildDailyBriefEmail(opts: {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:11px; color:#6366f1; font-weight:700; letter-spacing:4px; text-transform:uppercase;">SIGNAL NEWS INTELLIGENCE</div>
+                    <div style="font-size:11px; color:#6366f1; font-weight:700; letter-spacing:4px; text-transform:uppercase;">Zikuk INTELLIGENCE</div>
                     <div style="font-size:26px; font-weight:900; color:#f1f5f9; margin-top:6px;">📋 תקציר מודיעיני יומי</div>
                     <div style="font-size:13px; color:#64748b; margin-top:4px;">${dateStr} · ${timeStr}</div>
                   </td>
@@ -320,7 +320,7 @@ export function buildDailyBriefEmail(opts: {
           <!-- ═══════ FOOTER ═══════ -->
           <tr>
             <td style="padding:20px; background:#060a14; border-top:1px solid #1e293b; border-radius:0 0 12px 12px; text-align:center;">
-              <div style="font-size:11px; color:#374151; font-weight:700; letter-spacing:2px; margin-bottom:8px;">SIGNAL NEWS</div>
+              <div style="font-size:11px; color:#374151; font-weight:700; letter-spacing:2px; margin-bottom:8px;">Zikuk</div>
               <div style="font-size:11px; color:#475569; line-height:1.8;">
                 תקציר מודיעיני אוטומטי · נשלח כל בוקר ב-07:00<br/>
                 ניתוח ע"י AI ללא הטיה פוליטית<br/>
@@ -365,7 +365,7 @@ export function buildWatchlistAlertEmail(opts: {
   <table width="100%" max-width="600" cellpadding="0" cellspacing="0" style="max-width:600px; margin:0 auto;">
     <tr>
       <td style="padding-bottom:16px; border-bottom:1px solid #1e293b;">
-        <div style="font-size:13px; color:#6366f1; font-weight:700; letter-spacing:2px;">SIGNAL NEWS · התראה</div>
+        <div style="font-size:13px; color:#6366f1; font-weight:700; letter-spacing:2px;">Zikuk · התראה</div>
         <div style="font-size:12px; color:#64748b; margin-top:2px;">נושא עקוב: <strong style="color:#94a3b8;">${topic}</strong></div>
       </td>
     </tr>
