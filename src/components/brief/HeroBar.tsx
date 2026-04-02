@@ -72,43 +72,63 @@ function computeRiskIndex(analyzeData: any, shocksData: any): number {
   return Math.min(100, sentScore + shockScore + signalScore);
 }
 
-function RiskIndexBadge({ value, lang }: { value: number; lang: string }) {
+function SignalGauge({ value, lang }: { value: number; lang: string }) {
   const [yesterday, setYesterday] = useState<number | null>(null);
-
   useEffect(() => { setYesterday(getYesterdayRisk()); }, []);
+
+  // SVG arc gauge — semicircle
+  const r = 28;
+  const cx = 36;
+  const cy = 34;
+  const circumference = Math.PI * r; // ~87.96
+  const filled = (value / 100) * circumference;
+  const displayVal = Math.round(value / 10); // 0-10
 
   const isHigh   = value >= 66;
   const isMedium = value >= 34;
-
-  const color  = isHigh ? 'text-red-400'      : isMedium ? 'text-amber-400'    : 'text-emerald-400';
-  const bg     = isHigh ? 'bg-red-500/10'     : isMedium ? 'bg-amber-500/10'   : 'bg-emerald-500/10';
-  const border = isHigh ? 'border-red-500/25' : isMedium ? 'border-amber-500/25' : 'border-emerald-500/25';
-  const label  = isHigh
-    ? (lang === 'he' ? 'סיכון גבוה' : 'High Risk')
+  const arcColor  = isHigh ? '#f87171' : isMedium ? '#fb923c' : '#34d399';
+  const textColor = isHigh ? 'text-red-400' : isMedium ? 'text-amber-400' : 'text-emerald-400';
+  const label     = isHigh
+    ? (lang === 'he' ? 'גבוה' : 'High')
     : isMedium
-      ? (lang === 'he' ? 'סיכון בינוני' : 'Med Risk')
-      : (lang === 'he' ? 'סיכון נמוך' : 'Low Risk');
+      ? (lang === 'he' ? 'בינוני' : 'Med')
+      : (lang === 'he' ? 'נמוך' : 'Low');
 
-  const delta = yesterday !== null ? value - yesterday : null;
+  const delta = yesterday !== null ? Math.round((value - yesterday) / 10) : null;
+  const deltaSign = delta !== null && delta > 0 ? '+' : '';
   const deltaColor = delta === null ? '' : delta > 0 ? 'text-red-400' : delta < 0 ? 'text-emerald-400' : 'text-gray-500';
-  const deltaSign  = delta !== null && delta > 0 ? '+' : '';
 
   const tooltip = lang === 'he'
-    ? `מדד סיכון גיאופוליטי: ${value}/100${delta !== null ? ` (${deltaSign}${delta} מאתמול)` : ''}`
-    : `Geopolitical Risk Index: ${value}/100${delta !== null ? ` (${deltaSign}${delta} vs yesterday)` : ''}`;
+    ? `מדד עוצמת סיגנל: ${displayVal}/10${delta !== null ? ` (${deltaSign}${delta} מאתמול)` : ''}`
+    : `Signal Intensity: ${displayVal}/10${delta !== null ? ` (${deltaSign}${delta} vs yesterday)` : ''}`;
 
   return (
-    <div
-      className={`hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${bg} ${border} cursor-default`}
-      title={tooltip}
-    >
-      <span className={`text-[10px] font-black font-mono ${color}`}>{value}</span>
-      <span className={`text-[9px] font-semibold ${color} whitespace-nowrap`}>{label}</span>
-      {delta !== null && delta !== 0 && (
-        <span className={`text-[9px] font-mono font-bold ${deltaColor}`}>
-          {deltaSign}{delta}
-        </span>
-      )}
+    <div className="hidden sm:flex flex-col items-center cursor-default" title={tooltip}>
+      <svg viewBox="0 0 72 42" width="72" height="42">
+        {/* Track */}
+        <path
+          d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
+          fill="none" stroke="#1f2937" strokeWidth="7" strokeLinecap="round"
+        />
+        {/* Fill */}
+        <path
+          d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
+          fill="none" stroke={arcColor} strokeWidth="7" strokeLinecap="round"
+          strokeDasharray={`${filled} ${circumference}`}
+          style={{ transition: 'stroke-dasharray 0.8s ease' }}
+        />
+        {/* Value */}
+        <text x={cx} y={cy - 5} textAnchor="middle" fontSize="14" fontWeight="900"
+              fill={arcColor} fontFamily="monospace">{displayVal}</text>
+        <text x={cx} y={cy + 7} textAnchor="middle" fontSize="6"
+              fill="#6b7280">{lang === 'he' ? '/10 עוצמה' : 'intensity/10'}</text>
+      </svg>
+      <div className={`flex items-center gap-1 text-[9px] font-bold ${textColor} -mt-1`}>
+        <span>{label}</span>
+        {delta !== null && delta !== 0 && (
+          <span className={`${deltaColor} font-mono`}>{deltaSign}{delta}</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -251,7 +271,7 @@ export default function HeroBar() {
         {/* Right: Risk Index + Intel Score + Signal badge + Bell */}
         <div className="shrink-0 flex items-center gap-2">
           {stats && (
-            <RiskIndexBadge value={stats.riskIndex} lang={lang} />
+            <SignalGauge value={stats.riskIndex} lang={lang} />
           )}
           <IntelScore />
           <AlertBell />

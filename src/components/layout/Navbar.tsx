@@ -28,18 +28,31 @@ export default function Navbar() {
         <span>{ui('appName')}</span>
       </Link>
 
-      {/* Center: Dashboard link only */}
-      <Link
-        href="/dashboard"
-        className={`hidden md:flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors
-                    ${isLight
-                      ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                      : 'bg-gray-800/80 text-gray-200 hover:bg-gray-700'
-                    }`}
-      >
-        <span className="text-yellow-400 text-xs">⚡</span>
-        {lang === 'he' ? 'דשבורד' : 'Dashboard'}
-      </Link>
+      {/* Center: Dashboard link + Demo tour */}
+      <div className="hidden md:flex items-center gap-2">
+        <Link
+          href="/dashboard"
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors
+                      ${isLight
+                        ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                        : 'bg-gray-800/80 text-gray-200 hover:bg-gray-700'
+                      }`}
+        >
+          <span className="text-yellow-400 text-xs">⚡</span>
+          {lang === 'he' ? 'דשבורד' : 'Dashboard'}
+        </Link>
+        <button
+          onClick={() => window.dispatchEvent(new Event('signal:start-tour'))}
+          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                      ${isLight
+                        ? 'border-yellow-400/50 text-yellow-600 hover:bg-yellow-50'
+                        : 'border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10'
+                      }`}
+          title={lang === 'he' ? 'סיור הדגמה' : 'Demo tour'}
+        >
+          🎯 {lang === 'he' ? 'הדגמה' : 'Demo'}
+        </button>
+      </div>
 
       {/* Right side: theme toggle + language toggle + debug */}
       <div className="flex items-center gap-2">

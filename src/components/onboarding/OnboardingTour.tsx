@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/i18n/context';
 
-const ONBOARDED_KEY = 'signal_onboarded_v1';
+const ONBOARDED_KEY = 'signal_onboarded_v2';
 
 interface Step {
   icon: string;
@@ -11,55 +11,74 @@ interface Step {
   titleEn: string;
   bodyHe: string;
   bodyEn: string;
+  highlight?: string; // CSS selector to spotlight (optional)
 }
 
 const STEPS: Step[] = [
   {
     icon: '⚡',
-    titleHe: 'ברוך הבא ל-Signal News',
-    titleEn: 'Welcome to Signal News',
-    bodyHe: 'פלטפורמת מודיעין גיאופוליטי בזמן אמת. מנתחת 28+ מקורות RSS ומחלצת סיגנלים, זעזועים, והטיות תקשורתיות — ללא מפתח AI.',
-    bodyEn: 'Real-time geopolitical intelligence. Analyzes 28+ RSS feeds and extracts signals, shocks, and media bias — no AI key needed.',
+    titleHe: 'Signal News — מודיעין גיאופוליטי חי',
+    titleEn: 'Signal News — Live Geopolitical Intel',
+    bodyHe: 'מנתח 28+ ערוצי RSS בזמן אמת, מחלץ סיגנלים, זעזועים, ופערי נרטיב — ללא מפתח AI, הכל keyword-based.',
+    bodyEn: 'Analyzes 28+ RSS feeds in real time, extracting signals, shocks, and narrative gaps — no AI key, all keyword-based.',
+  },
+  {
+    icon: '🌡️',
+    titleHe: 'מד עוצמת הסיגנל (0-10)',
+    titleEn: 'Signal Intensity Gauge (0-10)',
+    bodyHe: 'הגוג׳ בחלק העליון מציג את עוצמת האות הגיאופוליטי של היום. מורכב מ: לחץ סנטימנט (40%) + זעזועים פעילים (40%) + צפיפות סיגנל (20%).',
+    bodyEn: 'The gauge at the top shows today\'s geopolitical signal intensity. Composed of: sentiment pressure (40%) + active shocks (40%) + signal density (20%).',
   },
   {
     icon: '📊',
     titleHe: 'ציון סבירות (Likelihood)',
     titleEn: 'Likelihood Score',
-    bodyHe: 'כל סיפור מקבל ציון 0-100 המייצג כמה סביר שהאירוע יתממש. ▲ delta מראה שינוי מהמדידה הקודמת.',
-    bodyEn: 'Each story gets a 0-100 score for how likely the event is to materialize. The ▲ delta shows change from the previous reading.',
+    bodyHe: 'כל סיפור מקבל ציון 0-100: מספר מקורות (30%) + עוצמת סיגנל (25%) + כיסוי ישראלי+בינלאומי (20%) + רעננות (15%) + קונסנזוס סנטימנט (10%).',
+    bodyEn: 'Each story scores 0-100: source diversity (30%) + signal strength (25%) + Israeli+intl coverage (20%) + recency (15%) + sentiment consensus (10%).',
   },
   {
     icon: '🔴',
-    titleHe: 'זעזועים (Shocks)',
-    titleEn: 'Shocks',
-    bodyHe: 'שינויים סטטיסטיים חריגים: קפיצת סבירות, פיצול נרטיב, או פיצול תקשורתי. מזוהים אוטומטית מ-RSS.',
-    bodyEn: 'Statistical anomalies: likelihood spike, narrative split, or media fragmentation. Auto-detected from RSS in real time.',
-  },
-  {
-    icon: '📈',
-    titleHe: 'Signal מול שוק',
-    titleEn: 'Signal vs Market',
-    bodyHe: 'משווה את הניתוח שלנו לשווקי ההימורים של Polymarket. כשיש פער — זה alpha פוטנציאלי.',
-    bodyEn: 'Compares our analysis to Polymarket prediction markets. When there\'s a gap — that\'s potential alpha.',
+    titleHe: 'זעזועים (Shocks) — 3 סוגים',
+    titleEn: 'Shocks — 3 Types',
+    bodyHe: '📈 קפיצת סבירות — נפח חריג\n🗣️ פיצול נרטיב — ימין/שמאל מתארים מציאות שונה\n💥 פיצוץ כיסוי — פריצה ל-N מקורות בו-זמנית\nכל זעזוע כולל: לב המחלוקת + הסבר סטטיסטי.',
+    bodyEn: '📈 Likelihood spike — unusual volume\n🗣️ Narrative split — right/left describe different reality\n💥 Coverage burst — breaking across N sources simultaneously\nEach shock includes: core of dispute + statistical explanation.',
   },
   {
     icon: '🎯',
-    titleHe: 'הגדר התראות',
-    titleEn: 'Set Up Alerts',
-    bodyHe: 'לחץ על פעמון 🔔 כדי להגדיר מילות מפתח, סוגי זעזועים, ותזכורת בוקר יומית.',
-    bodyEn: 'Click the 🔔 bell to configure keyword alerts, shock types, and a daily morning reminder.',
+    titleHe: 'השלכה אסטרטגית + ניגוד נרטיבים',
+    titleEn: 'Strategic Implication + Narrative Split',
+    bodyHe: 'כל כרטיס בריף מציג:\n🎯 "אם מסלים ←" — ההשלכה הספציפית\n📰 ניגוד נרטיבים — כותרת אמיתית מימין לצד שמאל\n🕳️ נקודות עיוורון — נושאים שנסקרים בצד אחד בלבד',
+    bodyEn: 'Each brief card shows:\n🎯 "If escalates ←" — the specific implication\n📰 Narrative split — real right vs left headline\n🕳️ Blind spots — topics covered by one side only',
+  },
+  {
+    icon: '📈',
+    titleHe: 'Signal מול שוק (Polymarket)',
+    titleEn: 'Signal vs Market (Polymarket)',
+    bodyHe: 'השווה את הניתוח שלנו לשווקי הימורים חיים. כשיש פער בין ה-likelihood שלנו לשוק — זה alpha פוטנציאלי. ב-Intel Hub → Signal vs Market.',
+    bodyEn: 'Compare our analysis to live prediction markets. When there\'s a gap between our likelihood and the market — that\'s potential alpha. In Intel Hub → Signal vs Market.',
+  },
+  {
+    icon: '🏆',
+    titleHe: 'רקורד תחזיות + הגדר התראות',
+    titleEn: 'Track Record + Set Alerts',
+    bodyHe: 'הצד הימני מציג את דיוק התחזיות מול baseline אקראי של 50%. לחץ 🔔 כדי להגדיר התראות זעזועים ותזכורת בוקר יומית.',
+    bodyEn: 'The right column shows prediction accuracy vs a 50% random baseline. Click 🔔 to set up shock alerts and a daily morning reminder.',
   },
 ];
 
 export default function OnboardingTour() {
   const { lang } = useLanguage();
-  const [step, setStep] = useState(0);
+  const [step, setStep]       = useState(0);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem(ONBOARDED_KEY)) {
-      setVisible(true);
-    }
+    // Show on first visit
+    if (!localStorage.getItem(ONBOARDED_KEY)) setVisible(true);
+
+    // Also listen for manual trigger
+    const handler = () => { setStep(0); setVisible(true); };
+    window.addEventListener('signal:start-tour', handler);
+    return () => window.removeEventListener('signal:start-tour', handler);
   }, []);
 
   const dismiss = () => {
@@ -75,56 +94,54 @@ export default function OnboardingTour() {
   if (!visible) return null;
 
   const current = STEPS[step];
+  const title   = lang === 'he' ? current.titleHe : current.titleEn;
+  // Split body on \n for line breaks
+  const bodyLines = (lang === 'he' ? current.bodyHe : current.bodyEn).split('\n');
 
   return (
-    <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-2xl bg-gray-900 border border-gray-700 shadow-2xl overflow-hidden
                       animate-in slide-in-from-bottom-4 duration-300">
         {/* Progress bar */}
         <div className="h-0.5 bg-gray-800">
-          <div
-            className="h-full bg-yellow-400 transition-all duration-300"
-            style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
-          />
+          <div className="h-full bg-yellow-400 transition-all duration-300"
+               style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Icon */}
           <div className="text-4xl text-center">{current.icon}</div>
 
-          {/* Title */}
-          <h2 className="text-lg font-bold text-white text-center">
-            {lang === 'he' ? current.titleHe : current.titleEn}
+          <h2 className="text-base font-bold text-white text-center leading-snug">
+            {title}
           </h2>
 
-          {/* Body */}
-          <p className="text-sm text-gray-300 text-center leading-relaxed" dir={lang === 'he' ? 'rtl' : 'ltr'}>
-            {lang === 'he' ? current.bodyHe : current.bodyEn}
-          </p>
-
-          {/* Step dots */}
-          <div className="flex justify-center gap-1.5">
-            {STEPS.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setStep(i)}
-                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === step ? 'bg-yellow-400' : 'bg-gray-700'}`}
-              />
+          <div className="space-y-1" dir={lang === 'he' ? 'rtl' : 'ltr'}>
+            {bodyLines.map((line, i) => (
+              <p key={i} className="text-sm text-gray-300 leading-relaxed">
+                {line}
+              </p>
             ))}
           </div>
 
-          {/* Buttons */}
+          {/* Step counter */}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-gray-600">{step + 1} / {STEPS.length}</span>
+            <div className="flex gap-1.5">
+              {STEPS.map((_, i) => (
+                <button key={i} onClick={() => setStep(i)}
+                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === step ? 'bg-yellow-400' : 'bg-gray-700'}`}
+                />
+              ))}
+            </div>
+          </div>
+
           <div className="flex gap-3">
-            <button
-              onClick={dismiss}
-              className="flex-1 py-2 rounded-xl border border-gray-700 text-sm text-gray-400 hover:text-gray-200 transition-colors"
-            >
+            <button onClick={dismiss}
+              className="flex-1 py-2 rounded-xl border border-gray-700 text-sm text-gray-400 hover:text-gray-200 transition-colors">
               {lang === 'he' ? 'דלג' : 'Skip'}
             </button>
-            <button
-              onClick={next}
-              className="flex-1 py-2 rounded-xl bg-yellow-400 text-gray-950 text-sm font-bold hover:bg-yellow-300 transition-colors"
-            >
+            <button onClick={next}
+              className="flex-1 py-2 rounded-xl bg-yellow-400 text-gray-950 text-sm font-bold hover:bg-yellow-300 transition-colors">
               {step < STEPS.length - 1
                 ? (lang === 'he' ? 'הבא ←' : 'Next →')
                 : (lang === 'he' ? 'בואו נתחיל! 🚀' : 'Let\'s go! 🚀')}

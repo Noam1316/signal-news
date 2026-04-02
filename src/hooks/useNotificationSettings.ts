@@ -2,12 +2,19 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+export interface TopicAlert {
+  keyword: string;          // e.g. "Iran", "איראן"
+  threshold: number;        // 0-100 likelihood threshold
+  lastFired?: number;       // timestamp of last notification
+}
+
 export interface NotificationSettings {
   topicKeywords: string[];       // e.g. ["Gaza", "Iran", "ביידן"]
   shockTypes: ('likelihood' | 'narrative' | 'fragmentation')[]; // which shock types to alert on
   dailyBriefEnabled: boolean;
   dailyBriefTime: string;        // "HH:MM" format, e.g. "08:00"
   minLikelihood: number;         // 0-100, default 0 (all)
+  topicAlerts: TopicAlert[];     // per-topic likelihood threshold alerts
 }
 
 const KEY = 'signal_notif_settings';
@@ -17,6 +24,7 @@ const DEFAULT: NotificationSettings = {
   dailyBriefEnabled: false,
   dailyBriefTime: '08:00',
   minLikelihood: 0,
+  topicAlerts: [],
 };
 
 function load(): NotificationSettings {
@@ -72,6 +80,39 @@ export function useNotificationSettings() {
     });
   }, []);
 
+  const addTopicAlert = useCallback((keyword: string, threshold: number) => {
+    const kw = keyword.trim();
+    if (!kw) return;
+    setSettings(prev => {
+      const existing = prev.topicAlerts || [];
+      const deduped = existing.filter(a => a.keyword.toLowerCase() !== kw.toLowerCase());
+      const next = { ...prev, topicAlerts: [...deduped, { keyword: kw, threshold }] };
+      save(next);
+      return next;
+    });
+  }, []);
+
+  const removeTopicAlert = useCallback((keyword: string) => {
+    setSettings(prev => {
+      const next = { ...prev, topicAlerts: (prev.topicAlerts || []).filter(a => a.keyword !== keyword) };
+      save(next);
+      return next;
+    });
+  }, []);
+
+  const updateTopicAlert = useCallback((keyword: string, threshold: number) => {
+    setSettings(prev => {
+      const next = {
+        ...prev,
+        topicAlerts: (prev.topicAlerts || []).map(a =>
+          a.keyword === keyword ? { ...a, threshold } : a
+        ),
+      };
+      save(next);
+      return next;
+    });
+  }, []);
+
   // Schedule daily brief notification
   useEffect(() => {
     if (!settings.dailyBriefEnabled) {
@@ -96,7 +137,7 @@ export function useNotificationSettings() {
     return () => { if (dailyTimerRef.current) clearTimeout(dailyTimerRef.current); };
   }, [settings.dailyBriefEnabled, settings.dailyBriefTime]);
 
-  return { settings, update, addKeyword, removeKeyword };
+  return { settings, update, addKeyword, removeKeyword, addTopicAlert, removeTopicAlert, updateTopicAlert };
 }
 
 /** Check if a shock matches user topic keywords */

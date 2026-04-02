@@ -74,6 +74,52 @@ export function useShockAlerts() {
       const keywords: string[] = settings.topicKeywords || [];
       const minLikelihood: number = settings.minLikelihood ?? 0;
 
+      // ── Topic likelihood threshold alerts ─────────────────────────────
+      try {
+        const topicAlerts: { keyword: string; threshold: number; lastFired?: number }[] =
+          settings.topicAlerts || [];
+        if (topicAlerts.length > 0) {
+          const storiesRes = await fetch('/api/stories');
+          if (storiesRes.ok) {
+            const storiesData = await storiesRes.json();
+            const stories: { headline: any; summary: any; likelihood: number; category: any }[] =
+              storiesData.stories || [];
+            const now = Date.now();
+            const COOLDOWN = 4 * 60 * 60 * 1000; // 4h per topic
+
+            for (const alert of topicAlerts) {
+              const lastFired = alert.lastFired || 0;
+              if (now - lastFired < COOLDOWN) continue;
+              const kw = alert.keyword.toLowerCase();
+              const match = stories.find(s => {
+                const text = [
+                  typeof s.headline === 'string' ? s.headline : (s.headline?.he || s.headline?.en || ''),
+                  typeof s.summary === 'string' ? s.summary : (s.summary?.he || s.summary?.en || ''),
+                  typeof s.category === 'string' ? s.category : (s.category?.he || s.category?.en || ''),
+                ].join(' ').toLowerCase();
+                return text.includes(kw) && s.likelihood >= alert.threshold;
+              });
+              if (match && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                const headline = typeof match.headline === 'string'
+                  ? match.headline : (match.headline?.he || match.headline?.en || alert.keyword);
+                new Notification(`🎯 Signal: ${alert.keyword} ≥ ${alert.threshold}%`, {
+                  body: `Likelihood: ${match.likelihood}% — ${headline}`,
+                  icon: '/favicon.ico',
+                  tag: `topic-alert-${alert.keyword}`,
+                });
+                // Update lastFired
+                const raw = localStorage.getItem(SETTINGS_KEY);
+                const s2 = raw ? JSON.parse(raw) : {};
+                const alerts2 = (s2.topicAlerts || []).map((a: any) =>
+                  a.keyword === alert.keyword ? { ...a, lastFired: now } : a
+                );
+                localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...s2, topicAlerts: alerts2 }));
+              }
+            }
+          }
+        }
+      } catch { /* silent */ }
+
       const newShocks = shocks.filter(s => !knownIds.current.has(s.id));
       if (newShocks.length === 0) return;
 

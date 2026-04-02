@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/i18n/context';
-import { useNotificationSettings } from '@/hooks/useNotificationSettings';
+import { useNotificationSettings, type TopicAlert } from '@/hooks/useNotificationSettings';
 
 interface Props {
   onClose: () => void;
@@ -12,9 +12,12 @@ interface Props {
 
 export default function AlertSettings({ onClose, onRequestPermission, notifPermission }: Props) {
   const { lang, dir } = useLanguage();
-  const { settings, update, addKeyword, removeKeyword } = useNotificationSettings();
+  const { settings, update, addKeyword, removeKeyword, addTopicAlert, removeTopicAlert, updateTopicAlert } = useNotificationSettings();
   const [kwInput, setKwInput] = useState('');
+  const [alertKwInput, setAlertKwInput] = useState('');
+  const [alertThreshold, setAlertThreshold] = useState(70);
   const inputRef = useRef<HTMLInputElement>(null);
+  const alertInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -31,6 +34,13 @@ export default function AlertSettings({ onClose, onRequestPermission, notifPermi
     addKeyword(kwInput.trim());
     setKwInput('');
     inputRef.current?.focus();
+  };
+
+  const handleAddAlert = () => {
+    if (!alertKwInput.trim()) return;
+    addTopicAlert(alertKwInput.trim(), alertThreshold);
+    setAlertKwInput('');
+    alertInputRef.current?.focus();
   };
 
   const SHOCK_TYPES = [
@@ -189,6 +199,83 @@ export default function AlertSettings({ onClose, onRequestPermission, notifPermi
             <span>45%</span>
             <span>70%</span>
             <span>90%+</span>
+          </div>
+        </section>
+
+        {/* ── Topic Likelihood Alerts ── */}
+        <section className="space-y-2">
+          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+            {lang === 'he' ? '🎯 התראות נושא + סף' : '🎯 Topic + Threshold Alerts'}
+            {(settings.topicAlerts || []).length > 0 && (
+              <span className="bg-yellow-400 text-gray-950 text-[10px] font-bold px-1.5 rounded-full">
+                {(settings.topicAlerts || []).length}
+              </span>
+            )}
+          </h4>
+          <p className="text-[10px] text-gray-600">
+            {lang === 'he'
+              ? 'קבל התראה כאשר נושא ספציפי חוצה סף סבירות'
+              : 'Alert when a specific topic crosses a likelihood threshold'}
+          </p>
+
+          {/* Existing topic alerts */}
+          <div className="space-y-1.5">
+            {(settings.topicAlerts || []).map((alert: TopicAlert) => (
+              <div key={alert.keyword} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-gray-800/60 border border-gray-700/50">
+                <span className="text-xs text-yellow-300 font-medium flex-1 truncate">{alert.keyword}</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-gray-500">{lang === 'he' ? 'סף:' : 'at'}</span>
+                  <select
+                    value={alert.threshold}
+                    onChange={e => updateTopicAlert(alert.keyword, Number(e.target.value))}
+                    className="text-[10px] bg-gray-900 border border-gray-700 text-yellow-400 rounded px-1 py-0.5 focus:outline-none cursor-pointer"
+                  >
+                    {[30, 40, 50, 60, 70, 80, 90].map(v => (
+                      <option key={v} value={v}>{v}%</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={() => removeTopicAlert(alert.keyword)}
+                  className="text-gray-600 hover:text-red-400 text-xs"
+                >✕</button>
+              </div>
+            ))}
+            {(settings.topicAlerts || []).length === 0 && (
+              <p className="text-[10px] text-gray-600 italic px-1">
+                {lang === 'he' ? 'אין התראות נושא — הוסף למטה' : 'No topic alerts yet — add below'}
+              </p>
+            )}
+          </div>
+
+          {/* Add new topic alert */}
+          <div className="flex gap-2 items-center">
+            <input
+              ref={alertInputRef}
+              type="text"
+              value={alertKwInput}
+              onChange={e => setAlertKwInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAddAlert()}
+              placeholder={lang === 'he' ? 'נושא (כגון: איראן)' : 'Topic (e.g. Iran)'}
+              dir={dir}
+              className="flex-1 text-xs px-2.5 py-1.5 rounded-lg bg-gray-800 border border-gray-700
+                         text-gray-200 placeholder-gray-600 focus:outline-none focus:border-yellow-400/50"
+            />
+            <select
+              value={alertThreshold}
+              onChange={e => setAlertThreshold(Number(e.target.value))}
+              className="text-[10px] bg-gray-800 border border-gray-700 text-gray-300 rounded-lg px-2 py-1.5 focus:outline-none cursor-pointer"
+            >
+              {[30, 40, 50, 60, 70, 80, 90].map(v => (
+                <option key={v} value={v}>{v}%</option>
+              ))}
+            </select>
+            <button
+              onClick={handleAddAlert}
+              className="px-3 py-1.5 rounded-lg bg-yellow-400/15 border border-yellow-400/30 text-yellow-400 text-xs font-bold hover:bg-yellow-400/25 transition-colors"
+            >
+              +
+            </button>
           </div>
         </section>
 

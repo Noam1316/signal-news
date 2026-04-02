@@ -188,7 +188,7 @@ export default function StoryOfTheDay() {
           </div>
           <button
             onClick={() => setSummaryExpanded(e => !e)}
-            className="text-[11px] text-yellow-400/70 hover:text-yellow-400 transition-colors"
+            className="text-[11px] text-yellow-400/70 hover:text-yellow-400 transition-colors cursor-pointer"
           >
             {summaryExpanded
               ? (lang === 'he' ? '▲ פחות' : '▲ less')
@@ -293,7 +293,7 @@ export default function StoryOfTheDay() {
       <div className="border-t border-gray-800 pt-3 space-y-2">
         <button
           onClick={() => setExpanded(e => !e)}
-          className="flex items-center gap-2 text-[11px] font-semibold text-gray-500 hover:text-gray-300 transition-colors w-full text-start"
+          className="flex items-center gap-2 text-[11px] font-semibold text-gray-500 hover:text-gray-300 transition-colors w-full text-start cursor-pointer"
         >
           <span className="text-yellow-400/70">📡</span>
           <span>{lang === 'he' ? 'הערכת מודיעין' : 'Intelligence Assessment'}</span>
