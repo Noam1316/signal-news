@@ -115,9 +115,9 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
               {sourceCount} {lang === 'he' ? 'מקורות' : 'src'}
               {sourceCount >= 3 && breakdownTitle && (
                 <span className="ms-1 opacity-60">
-                  {leanBreakdown.left > 0 && <span className="text-blue-400">{leanBreakdown.left}←</span>}
-                  {leanBreakdown.center > 0 && <span className="text-gray-400">{leanBreakdown.center}·</span>}
-                  {leanBreakdown.right > 0 && <span className="text-red-400">{leanBreakdown.right}→</span>}
+                  {leanBreakdown.left > 0 && <span className="text-blue-400">{leanBreakdown.left}ש</span>}
+                  {leanBreakdown.center > 0 && <span className="text-gray-400">{leanBreakdown.center}מ</span>}
+                  {leanBreakdown.right > 0 && <span className="text-red-400">{leanBreakdown.right}י</span>}
                 </span>
               )}
             </span>
@@ -189,6 +189,40 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
 
       {/* Why */}
       <p className="text-sm italic text-gray-400">{t(story.why)}</p>
+
+      {/* Strategic implication */}
+      {story.strategicImplication && (
+        <div className="flex items-start gap-1.5 text-xs text-amber-300/80 leading-snug">
+          <span className="shrink-0 mt-0.5">🎯</span>
+          <span>{lang === 'he' ? story.strategicImplication.he : story.strategicImplication.en}</span>
+        </div>
+      )}
+
+      {/* Narrative split: right vs left headline */}
+      {story.narrativeSplit && (
+        <div className="rounded-lg border border-gray-700/50 bg-gray-800/30 px-3 py-2 space-y-1.5">
+          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-gray-500">
+            <span>📰</span>
+            <span>{lang === 'he' ? `ניגוד נרטיבים — פער ${story.narrativeSplit.gapPct}%` : `Narrative split — ${story.narrativeSplit.gapPct}% gap`}</span>
+          </div>
+          <div className="grid grid-cols-1 gap-1">
+            <div className="flex items-start gap-1.5">
+              <span className="shrink-0 mt-0.5 w-2 h-2 rounded-full bg-violet-500" />
+              <div className="min-w-0">
+                <span className="text-[9px] text-violet-400 font-semibold">{story.narrativeSplit.rightSource} </span>
+                <span className="text-[10px] text-gray-300 line-clamp-1">{story.narrativeSplit.rightHeadline}</span>
+              </div>
+            </div>
+            <div className="flex items-start gap-1.5">
+              <span className="shrink-0 mt-0.5 w-2 h-2 rounded-full bg-red-500" />
+              <div className="min-w-0">
+                <span className="text-[9px] text-red-400 font-semibold">{story.narrativeSplit.leftSource} </span>
+                <span className="text-[10px] text-gray-300 line-clamp-1">{story.narrativeSplit.leftHeadline}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Always-visible compact impact badges (top 3) */}
       {story.impacts && story.impacts.length > 0 && (

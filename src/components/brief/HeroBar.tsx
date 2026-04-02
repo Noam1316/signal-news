@@ -236,7 +236,7 @@ export default function HeroBar() {
               <span className="text-gray-700 hidden sm:inline">|</span>
               <span className="text-gray-400 whitespace-nowrap hidden sm:inline">
                 <span className="text-emerald-400 font-bold">{stats.accuracy}%</span>
-                {' '}{lang === 'he' ? 'דיוק 7י' : '7d accuracy'}
+                {' '}{lang === 'he' ? 'דיוק 7 ימים' : '7d accuracy'}
               </span>
               <span className="text-gray-700 hidden md:inline">|</span>
               <span className={`whitespace-nowrap hidden md:inline ${isStale ? 'text-amber-400' : 'text-gray-500'}`}>
@@ -254,9 +254,6 @@ export default function HeroBar() {
             <RiskIndexBadge value={stats.riskIndex} lang={lang} />
           )}
           <IntelScore />
-          <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/20">
-            <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-wider">Signal</span>
-          </div>
           <AlertBell />
         </div>
       </div>

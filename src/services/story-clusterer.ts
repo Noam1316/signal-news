@@ -5,7 +5,7 @@
  */
 
 import type { FetchedArticle } from './rss-fetcher';
-import type { BriefStory, Confidence, ImpactItem } from '@/lib/types';
+import type { BriefStory, Confidence, ImpactItem, NarrativeSplit } from '@/lib/types';
 import { analyzeArticle, type ArticleAnalysis } from './ai-analyzer';
 
 interface ArticleWithAnalysis {
@@ -34,6 +34,8 @@ const TOPIC_CATEGORIES: Record<string, { he: string; en: string }> = {
   'Judicial Reform':     { he: 'פוליטיקה',         en: 'Politics' },
   'Security':            { he: 'ביטחון',           en: 'Security' },
   'Diplomacy':           { he: 'דיפלומטיה',       en: 'Diplomacy' },
+  'China':               { he: 'גיאופוליטיקה',    en: 'Geopolitics' },
+  'Turkey/Egypt':        { he: 'מזרח תיכון',      en: 'Middle East' },
   'Sports':              { he: 'ספורט',            en: 'Sports' },
   'General':             { he: 'כללי',             en: 'General' },
 };
@@ -47,7 +49,9 @@ const TOPIC_HEADLINES: Record<string, { he: string; en: string }> = {
   'US Politics':         { he: 'השפעת הפוליטיקה האמריקאית על האזור',     en: 'US Politics Impact on the Region' },
   'West Bank':           { he: 'התפתחויות ביהודה ושומרון',              en: 'West Bank Developments' },
   'Syria':               { he: 'המצב בסוריה',                          en: 'Situation in Syria' },
-  'Economy':             { he: 'מגמות כלכליות',                         en: 'Economic Trends' },
+  'China':               { he: 'יחסי ישראל-סין וגיאופוליטיקה',          en: 'China & Geopolitics' },
+  'Turkey/Egypt':        { he: 'טורקיה ומצרים — השפעה אזורית',          en: 'Turkey & Egypt Regional Influence' },
+  'Economy':             { he: 'מגמות כלכליות ומכסים',                   en: 'Economic Trends & Tariffs' },
   'Technology':          { he: 'חדשות טכנולוגיה',                       en: 'Technology News' },
   'Climate':             { he: 'שינויי אקלים ואנרגיה',                  en: 'Climate & Energy' },
   'Ukraine/Russia':      { he: 'המלחמה באוקראינה',                      en: 'Ukraine War Updates' },
@@ -145,6 +149,101 @@ const TOPIC_IMPACTS: Record<string, ImpactItem[]> = {
 
 function detectImpacts(topic: string): ImpactItem[] {
   return TOPIC_IMPACTS[topic] ?? [];
+}
+
+// ── Strategic Implication Templates ──
+const STRATEGIC_IMPLICATIONS: Record<string, { he: string; en: string }> = {
+  'Gaza Conflict': {
+    he: '← הסדר בעזה מותנה בעסקת חטופים; כישלון יחמיר לחץ אמריקאי ויאיים על נורמליזציה עם סעודיה.',
+    en: '← A Gaza deal hinges on hostage agreement; failure will intensify US pressure and threaten Saudi normalization.',
+  },
+  'Iran Nuclear': {
+    he: '← פריצת סף גרעיני איראנית תכריח ישראל להחליט — מתקפה מונעת או הכלה; מחירי הנפט יקפצו.',
+    en: '← Iranian nuclear breakout forces Israel to decide — preemptive strike or containment; oil prices will spike.',
+  },
+  'Lebanon/Hezbollah': {
+    he: '← הסלמה בצפון תרחיב חזית וסטת משאבי צה"ל מעזה; שאלת ה"יום שאחרי" תתחדד.',
+    en: '← Northern escalation expands a second front and diverts IDF resources from Gaza; post-war governance questions sharpen.',
+  },
+  'Saudi Normalization': {
+    he: '← הצלחה תשנה את המפה הגאופוליטית של המזרח התיכון; כישלון ייקח ניצחון דיפלומטי מהרשות הפלסטינית.',
+    en: '← Success rewrites Middle East geopolitics; failure hands a diplomatic victory to the Palestinian Authority.',
+  },
+  'US Politics': {
+    he: '← שינוי מדיניות וושינגטון ישפיע ישירות על היקף הסיוע הצבאי לישראל ועל לחץ לעסקת חטופים.',
+    en: '← Washington policy shifts directly impact military aid scope to Israel and pressure on a hostage deal.',
+  },
+  'West Bank': {
+    he: '← הסלמה ביהודה ושומרון מאיימת על שיתוף הפעולה הביטחוני עם הרשות הפלסטינית ועל שאיפות נורמליזציה.',
+    en: '← West Bank escalation threatens PA security cooperation and normalization aspirations.',
+  },
+  'Ukraine/Russia': {
+    he: '← ניצחון רוסי ידרבן מעורבות אירנית גדולה יותר ויחליש את האמינות הדטרנסיבית של הנאט"ו.',
+    en: '← Russian gains embolden Iranian involvement and erode NATO deterrence credibility.',
+  },
+  'Judicial Reform': {
+    he: '← חוסר יציבות פוליטית מאיים על תקציב הביטחון ועל אמינות ישראל בעיני בני ברית.',
+    en: '← Political instability threatens the defense budget and Israel\'s credibility with allies.',
+  },
+  'Economy': {
+    he: '← גרעון תקציבי גדל ישפיע על תקציב הביטחון ועל מיצוב ישראל בשוקי ההון הבינלאומיים.',
+    en: '← Growing fiscal deficit will pressure the defense budget and Israel\'s standing in international capital markets.',
+  },
+  'Syria': {
+    he: '← חלל שלטוני בסוריה מאפשר לאיראן לבסס נוכחות — ישראל תצטרך להחליט על עומק התגובה.',
+    en: '← Governance vacuum in Syria enables Iranian entrenchment — Israel will need to decide on the depth of its response.',
+  },
+  'China': {
+    he: '← מתיחות ארה"ב-סין משפיעה על שוקי ההייטק הישראלי ועל לחץ אמריקאי על ישראל בנושאי סחר עם סין.',
+    en: '← US-China tension affects Israeli tech markets and US pressure on Israel regarding China trade.',
+  },
+  'Turkey/Egypt': {
+    he: '← שינויים בעמדת טורקיה או מצרים ישפיעו על מסדרונות ההסדר ועל לגיטימציה אזורית לעסקת חטופים.',
+    en: '← Shifts in Turkish or Egyptian stance affect deal corridors and regional legitimacy for a hostage agreement.',
+  },
+};
+
+// ── Narrative Split Extraction ──
+function extractNarrativeSplit(cluster: Cluster): NarrativeSplit | undefined {
+  const rightArticles = cluster.articles.filter(
+    a => a.analysis.politicalLeaning === 'right' || a.analysis.politicalLeaning === 'center-right'
+  );
+  const leftArticles = cluster.articles.filter(
+    a => a.analysis.politicalLeaning === 'left' || a.analysis.politicalLeaning === 'center-left'
+  );
+
+  if (rightArticles.length < 1 || leftArticles.length < 1) return undefined;
+
+  const isJunk = (t: string) =>
+    !t || t.length < 15 ||
+    /\|\s*(רשת|ערוץ|חדשות|ynet|walla|mako|n12|kan|globes)/i.test(t);
+
+  // Pick most negative right article
+  const rightNeg = rightArticles
+    .filter(a => a.analysis.sentiment === 'negative' && !isJunk(a.article.title))
+    .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)[0]
+    || rightArticles.filter(a => !isJunk(a.article.title))[0];
+
+  // Pick most negative left article (or most contrasting)
+  const leftNeg = leftArticles
+    .filter(a => !isJunk(a.article.title))
+    .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)[0];
+
+  if (!rightNeg || !leftNeg) return undefined;
+
+  const rightNegRatio = rightArticles.filter(a => a.analysis.sentiment === 'negative').length / rightArticles.length;
+  const leftNegRatio  = leftArticles.filter(a => a.analysis.sentiment === 'negative').length  / leftArticles.length;
+  const gapPct = Math.round(Math.abs(rightNegRatio - leftNegRatio) * 100);
+
+  if (gapPct < 25) return undefined; // not interesting enough
+
+  return {
+    rightHeadline: rightNeg.article.title.slice(0, 100),
+    leftHeadline:  leftNeg.article.title.slice(0, 100),
+    rightSource:   rightNeg.article.sourceName,
+    leftSource:    leftNeg.article.sourceName,
+    gapPct,
+  };
 }
 
 function slugify(text: string): string {
@@ -335,6 +434,8 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
     const category = TOPIC_CATEGORIES[cluster.topic] || { he: 'כללי', en: 'General' };
 
     const impacts = detectImpacts(cluster.topic);
+    const narrativeSplit = extractNarrativeSplit(cluster);
+    const strategicImplication = STRATEGIC_IMPLICATIONS[cluster.topic];
 
     // Collect unique sources
     const sourcesMap = new Map<string, string>();
@@ -376,6 +477,8 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       sources,
       updatedAt: latestArticle?.article.pubDate || new Date().toISOString(),
       impacts: impacts.length > 0 ? impacts : undefined,
+      narrativeSplit,
+      strategicImplication,
     };
   });
 }

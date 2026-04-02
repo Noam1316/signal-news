@@ -567,7 +567,7 @@ export default function PolymarketComparison() {
             <div className="text-[9px] text-yellow-400/70 uppercase tracking-wider">
               {lang === 'he' ? 'הזדמנות Alpha הגבוהה ביותר' : 'Top Alpha Opportunity'}
             </div>
-            <div className="text-xs text-yellow-100 font-medium truncate">{topAlpha.topic}</div>
+            <div className="text-xs text-white font-medium truncate">{topAlpha.topic}</div>
             <div className="text-[10px] text-gray-400 mt-0.5">
               {lang === 'he' ? `פער: ${Math.abs(topAlpha.delta)}% · Alpha Score: ${topAlpha.alphaScore}` : `Gap: ${Math.abs(topAlpha.delta)}% · Alpha Score: ${topAlpha.alphaScore}`}
             </div>

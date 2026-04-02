@@ -16,12 +16,17 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Language>('en');
+  const [lang, setLangState] = useState<Language>('he');
   const dir = lang === 'he' ? 'rtl' : 'ltr';
 
   useEffect(() => {
     const saved = localStorage.getItem('signal-news-lang') as Language;
-    if (saved === 'he' || saved === 'en') setLangState(saved);
+    if (saved === 'he' || saved === 'en') {
+      setLangState(saved);
+    } else {
+      // Default to Hebrew — primary market is Israel
+      setLangState('he');
+    }
   }, []);
 
   const setLang = useCallback((l: Language) => {

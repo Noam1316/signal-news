@@ -19,6 +19,14 @@ export interface ImpactItem {
   direction: 'positive' | 'negative' | 'uncertain';
 }
 
+export interface NarrativeSplit {
+  rightHeadline: string;    // most negative right-leaning headline
+  leftHeadline: string;     // most negative/contrasting left-leaning headline
+  rightSource: string;
+  leftSource: string;
+  gapPct: number;           // sentiment gap %
+}
+
 export interface BriefStory {
   slug: string;
   headline: LocalizedText;
@@ -33,7 +41,11 @@ export interface BriefStory {
   sources: Source[];
   updatedAt: string;
   impacts?: ImpactItem[];
+  narrativeSplit?: NarrativeSplit;
+  strategicImplication?: LocalizedText;
 }
+
+export type ShockStatus = 'fresh' | 'active' | 'fading';
 
 export interface ShockEvent {
   id: string;
@@ -48,6 +60,7 @@ export interface ShockEvent {
   sources: Source[];
   timestamp: string;
   relatedStorySlug?: string;
+  status?: ShockStatus;
 }
 
 export interface Narrative {

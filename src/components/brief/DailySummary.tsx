@@ -24,11 +24,11 @@ export default function DailySummary({ stories, shocks }: DailySummaryProps) {
 
     return (
       <div className="rounded-xl bg-gray-900/60 border border-gray-800 px-4 py-3.5 space-y-2 mb-4">
-        <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider">
+        <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider flex-wrap">
           <span>🧠</span>
           <span>סיכום מודיעיני יומי</span>
           {linkedCount > 0 && (
-            <span className="ms-auto text-orange-400 font-medium normal-case">
+            <span className="text-orange-400 font-medium normal-case">
               ⚡ {linkedCount} סיפורים עם זעזועים פעילים
             </span>
           )}
@@ -45,6 +45,14 @@ export default function DailySummary({ stories, shocks }: DailySummaryProps) {
             </>
           )}
         </p>
+        <a
+          href="/brief/print"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-yellow-400/30 text-yellow-400 hover:text-yellow-300 hover:border-yellow-400/50 transition-colors"
+        >
+          📄 {lang === 'he' ? 'פתח תקציר מלא' : 'Open Full Brief'}
+        </a>
       </div>
     );
   }
@@ -55,11 +63,11 @@ export default function DailySummary({ stories, shocks }: DailySummaryProps) {
 
   return (
     <div className="rounded-xl bg-gray-900/60 border border-gray-800 px-4 py-3.5 space-y-2 mb-4">
-      <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider">
+      <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider flex-wrap">
         <span>🧠</span>
         <span>Daily Intelligence Summary</span>
         {linkedCount > 0 && (
-          <span className="ms-auto text-orange-400 font-medium normal-case">
+          <span className="text-orange-400 font-medium normal-case">
             ⚡ {linkedCount} {linkedCount === 1 ? 'story' : 'stories'} with active shocks
           </span>
         )}
@@ -76,6 +84,14 @@ export default function DailySummary({ stories, shocks }: DailySummaryProps) {
           </>
         )}
       </p>
+      <a
+        href="/brief/print"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-yellow-400/30 text-yellow-400 hover:text-yellow-300 hover:border-yellow-400/50 transition-colors"
+      >
+        📄 Open Full Brief
+      </a>
     </div>
   );
 }

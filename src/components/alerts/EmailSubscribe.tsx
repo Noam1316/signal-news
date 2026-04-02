@@ -79,7 +79,7 @@ export default function EmailSubscribe() {
     return (
       <button
         onClick={() => setStep('open')}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-sm font-medium transition-all"
+        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-400/10 hover:bg-yellow-400/20 border border-yellow-400/25 text-yellow-400 text-sm font-medium transition-all"
         dir={dir}
       >
         <span>📧</span>
@@ -108,7 +108,7 @@ export default function EmailSubscribe() {
             <p className="text-gray-400 text-sm mb-6">{t.successMsg}</p>
             <button
               onClick={() => setStep('idle')}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-500 transition"
+              className="px-6 py-2 bg-yellow-500 text-gray-900 rounded-lg font-medium text-sm hover:bg-yellow-400 transition"
             >
               {t.close}
             </button>
@@ -123,7 +123,7 @@ export default function EmailSubscribe() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder={t.emailPlaceholder}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-indigo-500 mb-4"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-yellow-500/50 mb-4"
               dir="ltr"
               required
             />
@@ -135,7 +135,7 @@ export default function EmailSubscribe() {
                   type="checkbox"
                   checked={dailyBrief}
                   onChange={e => setDailyBrief(e.target.checked)}
-                  className="w-4 h-4 accent-indigo-500"
+                  className="w-4 h-4 accent-yellow-500"
                 />
                 <div>
                   <div className="text-sm text-white font-medium">{t.dailyBriefLabel}</div>
@@ -148,7 +148,7 @@ export default function EmailSubscribe() {
                   type="checkbox"
                   checked={watchlistAlerts}
                   onChange={e => setWatchlistAlerts(e.target.checked)}
-                  className="w-4 h-4 accent-indigo-500"
+                  className="w-4 h-4 accent-yellow-500"
                 />
                 <div>
                   <div className="text-sm text-white font-medium">{t.watchlistLabel}</div>
@@ -168,8 +168,8 @@ export default function EmailSubscribe() {
                     onClick={() => toggleTopic(topic.key)}
                     className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
                       selectedTopics.includes(topic.key)
-                        ? 'bg-indigo-600 border-indigo-500 text-white'
-                        : 'bg-white/5 border-white/10 text-gray-400 hover:border-indigo-500/50'
+                        ? 'bg-yellow-500/20 border-yellow-500/60 text-yellow-300'
+                        : 'bg-white/5 border-white/10 text-gray-400 hover:border-yellow-500/40'
                     }`}
                   >
                     {lang === 'he' ? topic.he : topic.en}
@@ -188,7 +188,7 @@ export default function EmailSubscribe() {
               <button
                 type="submit"
                 disabled={step === 'loading'}
-                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg font-medium text-sm transition"
+                className="flex-1 py-2.5 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-gray-900 rounded-lg font-medium text-sm transition"
               >
                 {step === 'loading' ? '...' : t.submitBtn}
               </button>

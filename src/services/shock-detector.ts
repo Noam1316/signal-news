@@ -9,7 +9,7 @@
  */
 
 import type { FetchedArticle } from './rss-fetcher';
-import type { ShockEvent, Confidence, ShockType, LocalizedText } from '@/lib/types';
+import type { ShockEvent, Confidence, ShockType, LocalizedText, ShockStatus } from '@/lib/types';
 import { analyzeArticle, type ArticleAnalysis, type PoliticalLeaning } from './ai-analyzer';
 
 // ── Entity dictionary for richer shock descriptions ──
@@ -223,8 +223,8 @@ function detectLikelihoodShocks(topicStats: Map<string, TopicStats>): ShockEvent
           en: `Coverage Spike: ${articleCount} articles on ${entityStr} from ${sourceCount} sources`,
         },
         whatMoved: {
-          he: `${articleCount} כתבות מ-${sourceCount} מקורות שונים מכסות את נושא ${TOPIC_DISPLAY[topic]?.he || topic}. ${Math.round(signalRatio * 100)}% מהכתבות זוהו כסיגנל חדשותי משמעותי. הסנטימנט הדומיננטי: ${dominantSentiment === 'negative' ? 'שלילי' : dominantSentiment === 'positive' ? 'חיובי' : 'מעורב'}.`,
-          en: `${articleCount} articles from ${sourceCount} different sources cover ${topic}. ${Math.round(signalRatio * 100)}% identified as significant news signals. Dominant sentiment: ${dominantSentiment}.`,
+          he: `נושא ${TOPIC_DISPLAY[topic]?.he || topic} צובר מומנטום — ${sourceCount} מקורות עצמאיים מדווחים בו-זמנית, עם טון ${dominantSentiment === 'negative' ? 'שלילי' : dominantSentiment === 'positive' ? 'חיובי' : 'מעורב'} דומיננטי.`,
+          en: `${TOPIC_DISPLAY[topic]?.en || topic} gaining momentum — ${sourceCount} independent sources reporting simultaneously, with predominantly ${dominantSentiment} tone.`,
         },
         delta: dominantSentiment === 'negative' ? delta : -delta,
         timeWindow: { he: 'שעות אחרונות', en: 'Last few hours' },
@@ -250,16 +250,183 @@ function detectLikelihoodShocks(topicStats: Map<string, TopicStats>): ShockEvent
   return shocks;
 }
 
+// ── Topic-specific disagreement templates ──
+// rightNeg* = text when RIGHT side is more negative (right criticizes / left defends)
+// leftNeg*  = text when LEFT side is more negative  (left criticizes / right defends)
+const DISAGREEMENT_TEMPLATES: Record<string, {
+  rightNegHe: string; rightNegEn: string;
+  leftNegHe:  string; leftNegEn:  string;
+}> = {
+  'Gaza Conflict': {
+    rightNegHe: 'הימין מדגיש כישלון דיפלומטי ואיום ביטחוני; השמאל רואה הזדמנות לעסקה והכרח הומניטרי.',
+    rightNegEn: 'Right emphasizes diplomatic failure and security threat; Left sees deal opportunity and humanitarian necessity.',
+    leftNegHe:  'השמאל מדגיש נפגעים אזרחיים ואסון הומניטרי; הימין מציג התקדמות צבאית ולחץ על חמאס.',
+    leftNegEn:  'Left highlights civilian casualties and humanitarian crisis; Right frames military progress and Hamas pressure.',
+  },
+  'Iran Nuclear': {
+    rightNegHe: 'הימין קורא לפעולה צבאית מיידית וסנקציות; השמאל דוחף לדיפלומטיה ושיב לשולחן המשא ומתן.',
+    rightNegEn: 'Right calls for immediate military action and sanctions; Left pushes for diplomacy and return to negotiations.',
+    leftNegHe:  'השמאל חושש מהסלמה צבאית ומדגיש פיקוח בינלאומי; הימין מציג את הכורח של גבול "red line".',
+    leftNegEn:  'Left warns against military escalation and stresses international oversight; Right frames the necessity of a red line.',
+  },
+  'Lebanon/Hezbollah': {
+    rightNegHe: 'הימין דורש פעולה צבאית נרחבת נגד חיזבאללה; השמאל חושש מהסלמה אזורית ומדגיש פתרון דיפלומטי.',
+    rightNegEn: 'Right demands broad military action against Hezbollah; Left warns of regional escalation and favors a diplomatic solution.',
+    leftNegHe:  'השמאל מדגיש את עלויות המלחמה לאוכלוסייה האזרחית; הימין מציג את האיום המיליטנטי כמצדיק את הפעולה.',
+    leftNegEn:  'Left highlights the war\'s cost to civilians; Right frames the militant threat as justifying the operation.',
+  },
+  'West Bank': {
+    rightNegHe: 'הימין תומך בהרחבת ההתנחלויות כזכות היסטורית; השמאל רואה בכך מכשול לפתרון שתי המדינות.',
+    rightNegEn: 'Right supports settlement expansion as a historical right; Left sees it as an obstacle to a two-state solution.',
+    leftNegHe:  'השמאל מתמקד בפגיעה בזכויות הפלסטינים; הימין מציג את הצורך בסדר ביטחוני ביהודה ושומרון.',
+    leftNegEn:  'Left focuses on Palestinian rights violations; Right frames the need for security order in the West Bank.',
+  },
+  'Saudi Normalization': {
+    rightNegHe: 'הימין חושש ממחיר פוליטי גבוה (ויתורים לפלסטינים); השמאל רואה בנורמליזציה הישג אסטרטגי ועידוד שלום.',
+    rightNegEn: 'Right fears high political price (concessions to Palestinians); Left views normalization as a strategic achievement and peace incentive.',
+    leftNegHe:  'השמאל ביקורתי על תנאי ממשל טראמפ לנורמליזציה; הימין מדגיש את הרווח הביטחוני והכלכלי.',
+    leftNegEn:  'Left is critical of Trump administration\'s normalization terms; Right highlights security and economic gains.',
+  },
+  'US Politics': {
+    rightNegHe: 'תקשורת שמאל מבקרת את מדיניות טראמפ/הרפובליקנים; תקשורת ימין מציגה ניצחון ועצמה.',
+    rightNegEn: 'Left-leaning media criticizes Trump/Republican policy; Right-leaning media frames strength and victory.',
+    leftNegHe:  'תקשורת ימין מתקיפה את מדיניות הדמוקרטים; תקשורת שמאל מציגה מגמה מדינית חיובית.',
+    leftNegEn:  'Right-leaning media attacks Democratic policy; Left-leaning media frames a positive political trend.',
+  },
+  'Judicial Reform': {
+    rightNegHe: 'הימין רואה בהתנגדות לרפורמה ניסיון ה-elite לשמר כוח; השמאל מציג את הרפורמה כסכנה לדמוקרטיה.',
+    rightNegEn: 'Right sees opposition to the reform as the elite preserving power; Left frames the reform as a threat to democracy.',
+    leftNegHe:  'השמאל מדגיש פגיעה בעצמאות הפסיקה; הימין מציג את הרפורמה כהחזרת איזון בין הרשויות.',
+    leftNegEn:  'Left emphasizes harm to judicial independence; Right frames the reform as restoring balance between branches.',
+  },
+  'Ukraine/Russia': {
+    rightNegHe: 'הימין הלאומני קורא להפסקת אש ומגביל סיוע; השמאל הליברלי דוחף להמשך תמיכה בנשק ובסנקציות.',
+    rightNegEn: 'Nationalist right calls for ceasefire and limits aid; Liberal left pushes to continue weapons support and sanctions.',
+    leftNegHe:  'השמאל מדגיש את הסבל האנושי וקורא לדיאלוג; הימין מאשים את הדמוקרטים בהנצחת המלחמה.',
+    leftNegEn:  'Left highlights human suffering and calls for dialogue; Right accuses Democrats of perpetuating the war.',
+  },
+  'Economy': {
+    rightNegHe: 'הימין מאשים את מדיניות השמאל באינפלציה וגירעון; השמאל מצביע על פגיעה בשכבות החלשות מהקפאלת תקציבים.',
+    rightNegEn: 'Right blames left-wing policy for inflation and deficit; Left points to harm to vulnerable groups from budget cuts.',
+    leftNegHe:  'השמאל מבקר מס הכנסה רגרסיבי ותגמולי תאגידים; הימין מציג צמיחה ויצירת מקומות עבודה.',
+    leftNegEn:  'Left criticizes regressive tax and corporate rewards; Right frames growth and job creation.',
+  },
+  'Syria': {
+    rightNegHe: 'הימין חושש מהישג ג\'יהאדי באזורים שנכבשו; השמאל מדגיש הזדמנות לשינוי מסדר בסוריה.',
+    rightNegEn: 'Right fears jihadist gains in captured territories; Left emphasizes opportunity for systemic change in Syria.',
+    leftNegHe:  'השמאל מדגיש מחנות פליטים ואסון הומניטרי; הימין מתמקד בהשלכות הביטחוניות לישראל.',
+    leftNegEn:  'Left highlights refugee camps and humanitarian crisis; Right focuses on security implications for Israel.',
+  },
+  'China': {
+    rightNegHe: 'הימין קורא לקו נוקשה כלפי סין בסחר וביטחון; השמאל מעדיף דיאלוג ושיתוף פעולה מדעי.',
+    rightNegEn: 'Right calls for a tough line against China on trade and security; Left prefers dialogue and scientific cooperation.',
+    leftNegHe:  'השמאל מדגיש עלויות מכסי הגומל לצרכן; הימין מציג את הלחץ הכלכלי כנחוץ למאבק בהגמוניה סינית.',
+    leftNegEn:  'Left highlights consumer costs of tariffs; Right frames economic pressure as necessary to counter Chinese hegemony.',
+  },
+  'Security': {
+    rightNegHe: 'הימין דורש תגובה צבאית חזקה; השמאל קורא לבחינת גורמי שורש ודיפלומטיה.',
+    rightNegEn: 'Right demands strong military response; Left calls for examining root causes and diplomacy.',
+    leftNegHe:  'השמאל מבקר פגיעה בזכויות אזרח בשם הביטחון; הימין מציג את הצורך בהרתעה ואכיפה.',
+    leftNegEn:  'Left criticizes civil rights violations in the name of security; Right frames the need for deterrence and enforcement.',
+  },
+  'Diplomacy': {
+    rightNegHe: 'הימין מספקן לגבי הסכמים שנמצאים רק על הנייר; השמאל רואה בדיפלומטיה ניצחון ואות לשינוי.',
+    rightNegEn: 'Right is skeptical about agreements that exist only on paper; Left sees diplomacy as a victory and signal for change.',
+    leftNegHe:  'השמאל מבקר את תנאי ההסכמה כלא-מספקים; הימין מדגיש את ההישג האסטרטגי.',
+    leftNegEn:  'Left criticizes the agreement terms as insufficient; Right emphasizes the strategic achievement.',
+  },
+};
+
+/**
+ * Build topic-specific disagreement summary for narrative shocks
+ * Returns what the two sides actually disagree about
+ */
+function buildDisagreementText(
+  topic: string,
+  rightNegRatio: number,
+  leftNegRatio: number,
+): LocalizedText {
+  const template = DISAGREEMENT_TEMPLATES[topic];
+  if (!template) {
+    // Fallback for unknown topics
+    const rightMoreNeg = rightNegRatio > leftNegRatio;
+    return {
+      he: rightMoreNeg
+        ? 'הימין מציג את המצב כבעייתי; השמאל נוטה לנרטיב אופטימי יותר.'
+        : 'השמאל מציג את המצב כבעייתי; הימין נוטה לנרטיב אופטימי יותר.',
+      en: rightMoreNeg
+        ? 'Right-leaning sources frame the situation negatively; Left-leaning sources take a more optimistic view.'
+        : 'Left-leaning sources frame the situation negatively; Right-leaning sources take a more optimistic view.',
+    };
+  }
+
+  const rightMoreNeg = rightNegRatio > leftNegRatio;
+  return {
+    he: rightMoreNeg ? template.rightNegHe : template.leftNegHe,
+    en: rightMoreNeg ? template.rightNegEn : template.leftNegEn,
+  };
+}
+
+/**
+ * Build topic-specific context for fragmentation shocks (IL vs International)
+ */
+function buildFragmentationContext(
+  topic: string,
+  ilMoreNeg: boolean,
+  gapPercent: number,
+): LocalizedText {
+  const FRAG_TEMPLATES: Record<string, { ilNegHe: string; ilNegEn: string; intNegHe: string; intNegEn: string }> = {
+    'Gaza Conflict': {
+      ilNegHe: `התקשורת הישראלית מדגישה את האיום הביטחוני ואת הכישלון הדיפלומטי; התקשורת הבינלאומית מתמקדת בנפגעים הפלסטינים והמשבר ההומניטרי.`,
+      ilNegEn: `Israeli media emphasizes the security threat and diplomatic failure; International media focuses on Palestinian casualties and humanitarian crisis.`,
+      intNegHe: `התקשורת הבינלאומית ביקורתית כלפי ישראל; התקשורת הישראלית מציגה הצלחות צבאיות ולחץ על חמאס.`,
+      intNegEn: `International media is critical of Israel; Israeli media presents military successes and Hamas pressure.`,
+    },
+    'Iran Nuclear': {
+      ilNegHe: `תקשורת ישראל מדגישה את הסכנה הקיומית; תקשורת בינלאומית מדגישה צינורות דיפלומטיים ואפשרות הסכם.`,
+      ilNegEn: `Israeli media emphasizes the existential danger; International media highlights diplomatic channels and deal prospects.`,
+      intNegHe: `תקשורת בינלאומית חוששת מהסלמה אזורית; תקשורת ישראלית מדגישה "red line" ושלמות ביטחונית.`,
+      intNegEn: `International media fears regional escalation; Israeli media emphasizes red lines and security integrity.`,
+    },
+    'US Politics': {
+      ilNegHe: `תקשורת ישראלית מדגישה השלכות על יחסי ארה"ב-ישראל; תקשורת בינלאומית רואה בזה ויכוח פנים-אמריקאי.`,
+      ilNegEn: `Israeli media highlights implications for US-Israel relations; International media sees this as an internal American debate.`,
+      intNegHe: `תקשורת בינלאומית מבקרת את ההתפתחות; תקשורת ישראלית מתמקדת בהזדמנות האסטרטגית לישראל.`,
+      intNegEn: `International media criticizes the development; Israeli media focuses on the strategic opportunity for Israel.`,
+    },
+  };
+
+  const tmpl = FRAG_TEMPLATES[topic];
+  if (tmpl) {
+    return ilMoreNeg
+      ? { he: tmpl.ilNegHe, en: tmpl.ilNegEn }
+      : { he: tmpl.intNegHe, en: tmpl.intNegEn };
+  }
+
+  // Generic fallback with gap size
+  return {
+    he: ilMoreNeg
+      ? `הפרשפקטיבה הישראלית שלילית ב-${gapPercent}% מהבינלאומית — שתי הזירות רואות אירוע שונה.`
+      : `הפרשפקטיבה הבינלאומית שלילית ב-${gapPercent}% מהישראלית — פער תפיסתי משמעותי.`,
+    en: ilMoreNeg
+      ? `Israeli perspective is ${gapPercent}% more negative than international — the two ecosystems see a different event.`
+      : `International perspective is ${gapPercent}% more negative than Israeli — a significant perceptual gap.`,
+  };
+}
+
 /**
  * Detect NARRATIVE SHOCKS
  * A topic where one political side is overwhelmingly negative while the other is positive/neutral
  * Indicates a narrative framing war
  */
+// Topics where left/right sentiment split is not meaningful
+const NARRATIVE_BLOCKLIST = new Set(['General', 'Sports', 'Climate', 'Technology']);
+
 function detectNarrativeShocks(topicStats: Map<string, TopicStats>): ShockEvent[] {
   const shocks: ShockEvent[] = [];
 
   for (const [topic, stats] of topicStats) {
-    if (topic === 'General' || stats.articles.length < 4) continue;
+    if (NARRATIVE_BLOCKLIST.has(topic) || stats.articles.length < 4) continue;
 
     // Split articles by political leaning
     const rightArticles = stats.articles.filter((a) =>
@@ -307,18 +474,13 @@ function detectNarrativeShocks(topicStats: Map<string, TopicStats>): ShockEvent[
           en: `Narrative Gap: Right and Left describe different realities on ${topicDisplay.en}`,
         },
         whatMoved: {
-          he: `ניתוח אוטומטי של ${stats.articles.length} כתבות מזהה פער סנטימנט של ${Math.round(sentimentGap * 100)}% בין תקשורת ימין (${Math.round(rightNegRatio * 100)}% שלילי) לתקשורת שמאל (${Math.round(leftNegRatio * 100)}% שלילי). ` +
-              `ימין: ${rightPos} חיובי, ${rightNeg} שלילי. שמאל: ${leftPos} חיובי, ${leftNeg} שלילי.`,
-          en: `Automated analysis of ${stats.articles.length} articles identifies a ${Math.round(sentimentGap * 100)}% sentiment gap between right-wing media (${Math.round(rightNegRatio * 100)}% negative) and left-wing media (${Math.round(leftNegRatio * 100)}% negative). ` +
-              `Right: ${rightPos} positive, ${rightNeg} negative. Left: ${leftPos} positive, ${leftNeg} negative.`,
+          he: `תקשורת ${rightNegRatio > leftNegRatio ? 'ימין מדווחת בטון שלילי בעוד שמאל נוטה לחיובי' : 'שמאל מדווחת בטון שלילי בעוד ימין נוטה לחיובי'} על ${topicDisplay.he} — פער של ${Math.round(sentimentGap * 100)}% בסנטימנט.`,
+          en: `${rightNegRatio > leftNegRatio ? 'Right-leaning sources frame this negatively while left-leaning are more positive' : 'Left-leaning sources frame this negatively while right-leaning are more positive'} on ${topicDisplay.en} — a ${Math.round(sentimentGap * 100)}% sentiment gap.`,
         },
         delta: 0,
         timeWindow: { he: 'שעות אחרונות', en: 'Last few hours' },
         confidence,
-        whyNow: {
-          he: `פיצול נרטיבי חד בין צדדי הספקטרום הפוליטי מעיד על נושא שנוי במחלוקת עמוקה.`,
-          en: `Sharp narrative split between political spectrum sides indicates a deeply contested issue.`,
-        },
+        whyNow: buildDisagreementText(topic, rightNegRatio, leftNegRatio),
         whoDriving: {
           he: entities.length > 0
             ? `מעורבים: ${entities.map((e) => e.he).join(', ')}`
@@ -378,6 +540,7 @@ function detectFragmentationShocks(topicStats: Map<string, TopicStats>): ShockEv
 
       const confidence: Confidence = coverageGap >= 0.5 ? 'high' : 'medium';
       const gapPercent = Math.round(coverageGap * 100);
+      const ilMoreNeg = ilNegRatio > intNegRatio;
 
       shocks.push({
         id: `auto-frag-${topic.toLowerCase().replace(/\W+/g, '-')}`,
@@ -387,16 +550,13 @@ function detectFragmentationShocks(topicStats: Map<string, TopicStats>): ShockEv
           en: `${gapPercent}% Gap Between Israeli and International Coverage of ${topicDisplay.en}`,
         },
         whatMoved: {
-          he: `ניתוח ${stats.articles.length} כתבות מזהה פער של ${gapPercent}% בסנטימנט בין תקשורת ישראלית (${israeliArticles.length} כתבות, ${Math.round(ilNegRatio * 100)}% שלילי) לתקשורת בינלאומית (${internationalArticles.length} כתבות, ${Math.round(intNegRatio * 100)}% שלילי).`,
-          en: `Analysis of ${stats.articles.length} articles identifies a ${gapPercent}% sentiment gap between Israeli media (${israeliArticles.length} articles, ${Math.round(ilNegRatio * 100)}% negative) and international media (${internationalArticles.length} articles, ${Math.round(intNegRatio * 100)}% negative).`,
+          he: `תקשורת ${ilMoreNeg ? 'ישראלית שלילית יותר מהבינלאומית' : 'בינלאומית שלילית יותר מהישראלית'} בסיקור ${topicDisplay.he} — פער של ${gapPercent}% בין שתי הזירות.`,
+          en: `${ilMoreNeg ? 'Israeli media more negative than international' : 'International media more negative than Israeli'} in covering ${topicDisplay.en} — a ${gapPercent}% gap between the two ecosystems.`,
         },
         delta: 0,
         timeWindow: { he: 'שעות אחרונות', en: 'Last few hours' },
         confidence,
-        whyNow: {
-          he: `הפער בין הסיקור הישראלי לבינלאומי מצביע על תפיסות שונות של אותו אירוע — מידע חשוב לניתוח אסטרטגי.`,
-          en: `The gap between Israeli and international coverage points to different perceptions of the same event — critical for strategic analysis.`,
-        },
+        whyNow: buildFragmentationContext(topic, ilMoreNeg, gapPercent),
         whoDriving: {
           he: `פערי תפיסה מבניים בין תקשורות שונות`,
           en: `Structural perception gaps between different media ecosystems`,
@@ -408,6 +568,16 @@ function detectFragmentationShocks(topicStats: Map<string, TopicStats>): ShockEv
   }
 
   return shocks;
+}
+
+/**
+ * Compute shock status based on the age of its triggering articles
+ */
+function computeShockStatus(timestamp: string): ShockStatus {
+  const ageMin = (Date.now() - new Date(timestamp).getTime()) / 60000;
+  if (ageMin < 45) return 'fresh';
+  if (ageMin < 210) return 'active'; // up to 3.5h
+  return 'fading';
 }
 
 /**
@@ -426,11 +596,19 @@ export function detectShocks(articles: FetchedArticle[]): ShockEvent[] {
 
   const allShocks = [...likelihoodShocks, ...narrativeShocks, ...fragmentationShocks];
 
-  // Sort: high confidence first, then by timestamp
+  // Attach status to each shock
+  for (const shock of allShocks) {
+    shock.status = computeShockStatus(shock.timestamp);
+  }
+
+  // Sort: high confidence first, then fresh > active > fading, then by timestamp
   const confidenceOrder: Record<Confidence, number> = { high: 3, medium: 2, low: 1 };
+  const statusOrder: Record<ShockStatus, number> = { fresh: 3, active: 2, fading: 1 };
   allShocks.sort((a, b) => {
     const confDiff = confidenceOrder[b.confidence] - confidenceOrder[a.confidence];
     if (confDiff !== 0) return confDiff;
+    const statusDiff = statusOrder[b.status ?? 'active'] - statusOrder[a.status ?? 'active'];
+    if (statusDiff !== 0) return statusDiff;
     return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
   });
 

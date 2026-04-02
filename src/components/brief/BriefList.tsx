@@ -6,6 +6,7 @@ import { useLanguage } from '@/i18n/context';
 import type { BriefStory, ShockEvent } from '@/lib/types';
 import BriefCard from './BriefCard';
 import DailySummary from './DailySummary';
+import BlindspotSummary from './BlindspotSummary';
 import AnalystTable from './AnalystTable';
 import LensSwitcher from '@/components/shared/LensSwitcher';
 import { useWatchlist } from '@/hooks/useWatchlist';
@@ -340,8 +341,18 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
         )}
       </div>
 
-      {/* Analyst mode toggle */}
-      <div className="flex items-center justify-end">
+      {/* Analyst mode toggle + Export */}
+      <div className="flex items-center justify-end gap-2">
+        <a
+          href="/brief/print"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors bg-transparent border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300"
+          title={lang === 'he' ? 'ייצוא PDF — תדריך להדפסה' : 'Export PDF brief'}
+        >
+          <span>📄</span>
+          <span>{lang === 'he' ? 'ייצוא PDF' : 'Export PDF'}</span>
+        </a>
         <button
           onClick={() => setAnalystMode(p => !p)}
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors ${
@@ -360,6 +371,9 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
       {!loading && stories.length > 0 && (
         <DailySummary stories={stories} shocks={shocks} />
       )}
+
+      {/* Blindspot summary */}
+      {!loading && <BlindspotSummary />}
 
       {/* Skeleton */}
       {loading && stories.length === 0 && (

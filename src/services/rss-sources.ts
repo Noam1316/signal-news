@@ -48,13 +48,19 @@ export const rssSources: RssSource[] = [
   { id: 'thenational', name: 'The National (UAE)', url: 'https://www.thenationalnews.com/arc/outboundfeeds/rss/?outputType=xml', language: 'en', lensCategory: 'international', country: 'AE' },
   { id: 'arabnews', name: 'Arab News', url: 'https://news.google.com/rss/search?q=site:arabnews.com&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'international', country: 'SA' },
 
+  // ── International – Wire Services (high reliability) ──
+  { id: 'reuters-world', name: 'Reuters World', url: 'https://feeds.reuters.com/reuters/worldNews', language: 'en', lensCategory: 'international', country: 'UK' },
+  { id: 'reuters-mideast', name: 'Reuters Middle East', url: 'https://feeds.reuters.com/reuters/MENTopNews', language: 'en', lensCategory: 'international', country: 'UK' },
+  { id: 'ap-world', name: 'AP News World', url: 'https://rsshub.app/apnews/topics/world-news', language: 'en', lensCategory: 'international', country: 'US' },
+  { id: 'axios-world', name: 'Axios World', url: 'https://api.axios.com/feed/rss/world.xml', language: 'en', lensCategory: 'international', country: 'US' },
+
   // ── International – Analysis / Think Tanks ──
   { id: 'foreignpolicy', name: 'Foreign Policy', url: 'https://foreignpolicy.com/feed/', language: 'en', lensCategory: 'international', country: 'US' },
   { id: 'economist', name: 'The Economist', url: 'https://www.economist.com/middle-east-and-africa/rss.xml', language: 'en', lensCategory: 'international', country: 'UK' },
-
+  { id: 'cfr', name: 'Council on Foreign Relations', url: 'https://www.cfr.org/rss/region/middle-east-and-north-africa', language: 'en', lensCategory: 'international', country: 'US' },
 
   // ── Left-leaning / Progressive ──
-  { id: '972mag', name: '+972 Magazine', url: 'https://www.972mag.com/feed/', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
+  { id: '972mag', name: '+972 Magazine', url: 'https://news.google.com/rss/search?q=site:972mag.com&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
   { id: 'intercept', name: 'The Intercept', url: 'https://theintercept.com/feed/?rss', language: 'en', lensCategory: 'international', country: 'US' },
   { id: 'thenation', name: 'The Nation', url: 'https://www.thenation.com/feed/?post_type=article', language: 'en', lensCategory: 'international', country: 'US' },
   { id: 'huffpost', name: 'HuffPost World', url: 'https://www.huffpost.com/section/world-news/feed', language: 'en', lensCategory: 'international', country: 'US' },

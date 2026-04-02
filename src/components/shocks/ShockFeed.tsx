@@ -93,6 +93,75 @@ export default function ShockFeed() {
         </p>
       </header>
 
+      {/* ── Dispute summary banner ── */}
+      {shocks.length > 0 && (() => {
+        const narrativeSplits = shocks.filter(s => s.type === 'narrative');
+        const likelihoodShocks = shocks.filter(s => s.type === 'likelihood');
+        const fragShocks = shocks.filter(s => s.type === 'fragmentation');
+        if (narrativeSplits.length === 0 && likelihoodShocks.length === 0) return null;
+
+        const topDisputes = narrativeSplits.slice(0, 3).map(s =>
+          lang === 'he' ? (s.whatMoved?.he || s.headline?.he || '') : (s.whatMoved?.en || s.headline?.en || '')
+        ).filter(Boolean);
+
+        const topLikelihood = likelihoodShocks.filter(s => s.confidence === 'high').slice(0, 2).map(s =>
+          lang === 'he' ? (s.headline?.he || '') : (s.headline?.en || '')
+        ).filter(Boolean);
+
+        return (
+          <div className="rounded-xl border border-gray-800 bg-gray-900/40 px-4 py-3 space-y-2.5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 flex items-center gap-2">
+              <span>⚡</span>
+              {lang === 'he' ? 'נושאי מחלוקת פעילים' : 'Active Dispute Topics'}
+            </div>
+
+            {/* Narrative splits */}
+            {topDisputes.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[9px] font-semibold uppercase tracking-wider text-purple-400">
+                  🗣️ {lang === 'he' ? `${narrativeSplits.length} פיצולי נרטיב` : `${narrativeSplits.length} narrative split${narrativeSplits.length > 1 ? 's' : ''}`}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {topDisputes.map((d, i) => (
+                    <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-300 max-w-[200px] truncate">
+                      {d}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Likelihood spikes */}
+            {topLikelihood.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[9px] font-semibold uppercase tracking-wider text-orange-400">
+                  📈 {lang === 'he' ? `${likelihoodShocks.length} זינוקי סבירות` : `${likelihoodShocks.length} likelihood spike${likelihoodShocks.length > 1 ? 's' : ''}`}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {topLikelihood.map((h, i) => (
+                    <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-orange-300 max-w-[220px] truncate">
+                      {h}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Coverage bursts */}
+            {fragShocks.length > 0 && (
+              <div className="text-[9px] text-teal-400 flex items-center gap-1.5">
+                <span>💥</span>
+                <span>
+                  {lang === 'he'
+                    ? `${fragShocks.length} נושאים עם פיצוץ כיסוי פתאומי`
+                    : `${fragShocks.length} topic${fragShocks.length > 1 ? 's' : ''} with sudden coverage burst`}
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Shock history timeline */}
       <ShockHistory />
 
