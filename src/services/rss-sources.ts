@@ -24,10 +24,10 @@ export const rssSources: RssSource[] = [
   { id: 'haaretz', name: 'Haaretz', url: 'https://news.google.com/rss/search?q=site:haaretz.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-partisan', country: 'IL' },
   { id: 'haaretz-en', name: 'Haaretz (EN)', url: 'https://news.google.com/rss/search?q=site:haaretz.com&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
   { id: 'inn', name: 'Arutz Sheva', url: 'https://www.israelnationalnews.com/Rss.aspx', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
-  { id: 'timesofisrael', name: 'Times of Israel', url: 'https://www.timesofisrael.com/feed/', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
+  { id: 'timesofisrael', name: 'Times of Israel', url: 'https://news.google.com/rss/search?q=site:timesofisrael.com&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
   { id: 'jpost', name: 'Jerusalem Post', url: 'https://www.jpost.com/rss/rssfeedsfrontpage.aspx', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
   { id: 'i24news', name: 'i24NEWS', url: 'https://news.google.com/rss/search?q=site:i24news.tv&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
-  { id: 'channel14', name: 'Now 14 (EN)', url: 'https://www.now14.co.il/feed/', language: 'he', lensCategory: 'il-partisan', country: 'IL' },
+  { id: 'channel14', name: 'ערוץ 14', url: 'https://news.google.com/rss/search?q=site:now14.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-partisan', country: 'IL' },
 
   // ── International – Major Wire Services ──
   { id: 'bbc-mideast', name: 'BBC Middle East', url: 'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml', language: 'en', lensCategory: 'international', country: 'UK' },
@@ -49,15 +49,15 @@ export const rssSources: RssSource[] = [
   { id: 'arabnews', name: 'Arab News', url: 'https://news.google.com/rss/search?q=site:arabnews.com&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'international', country: 'SA' },
 
   // ── International – Wire Services (high reliability) ──
-  { id: 'reuters-world', name: 'Reuters World', url: 'https://feeds.reuters.com/reuters/worldNews', language: 'en', lensCategory: 'international', country: 'UK' },
-  { id: 'reuters-mideast', name: 'Reuters Middle East', url: 'https://feeds.reuters.com/reuters/MENTopNews', language: 'en', lensCategory: 'international', country: 'UK' },
-  { id: 'ap-world', name: 'AP News World', url: 'https://rsshub.app/apnews/topics/world-news', language: 'en', lensCategory: 'international', country: 'US' },
-  { id: 'axios-world', name: 'Axios World', url: 'https://api.axios.com/feed/rss/world.xml', language: 'en', lensCategory: 'international', country: 'US' },
+  { id: 'reuters-world', name: 'Reuters World', url: 'https://news.google.com/rss/search?q=site:reuters.com+world&hl=en&gl=US&ceid=US:en', language: 'en', lensCategory: 'international', country: 'UK' },
+  { id: 'reuters-mideast', name: 'Reuters Middle East', url: 'https://news.google.com/rss/search?q=site:reuters.com+middle+east&hl=en&gl=US&ceid=US:en', language: 'en', lensCategory: 'international', country: 'UK' },
+  { id: 'ap-world', name: 'AP News World', url: 'https://news.google.com/rss/search?q=site:apnews.com+world&hl=en&gl=US&ceid=US:en', language: 'en', lensCategory: 'international', country: 'US' },
+  { id: 'axios-world', name: 'Axios World', url: 'https://news.google.com/rss/search?q=site:axios.com+world&hl=en&gl=US&ceid=US:en', language: 'en', lensCategory: 'international', country: 'US' },
 
   // ── International – Analysis / Think Tanks ──
   { id: 'foreignpolicy', name: 'Foreign Policy', url: 'https://foreignpolicy.com/feed/', language: 'en', lensCategory: 'international', country: 'US' },
   { id: 'economist', name: 'The Economist', url: 'https://www.economist.com/middle-east-and-africa/rss.xml', language: 'en', lensCategory: 'international', country: 'UK' },
-  { id: 'cfr', name: 'Council on Foreign Relations', url: 'https://www.cfr.org/rss/region/middle-east-and-north-africa', language: 'en', lensCategory: 'international', country: 'US' },
+  { id: 'cfr', name: 'Council on Foreign Relations', url: 'https://www.cfr.org/rss/feeds/all', language: 'en', lensCategory: 'international', country: 'US' },
 
   // ── Left-leaning / Progressive ──
   { id: '972mag', name: '+972 Magazine', url: 'https://news.google.com/rss/search?q=site:972mag.com&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
