@@ -3,166 +3,234 @@
 import { useEffect, useState } from 'react';
 import type { BriefStory, ShockEvent } from '@/lib/types';
 
-/** Draw brief to Canvas and share as PNG — no DOM capture, works on all mobile browsers */
+/** Wrap text on canvas, returns array of lines */
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+/** Draw brief to Canvas (white, print-like) and share as PNG */
 function shareAsImage(d: PrintData, isHe: boolean): Promise<void> {
   return new Promise((resolve) => {
-    const W = 900, MARGIN = 48;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
+    const W = 800;
+    const MARGIN = 52;
+    const CONTENT = W - MARGIN * 2;
+    const dir = isHe ? 'rtl' : 'ltr';
+    const x = isHe ? W - MARGIN : MARGIN;
 
-    // ── measure height first ──
-    canvas.width = W;
-    canvas.height = 100;
-    ctx.font = '16px Arial';
-    const lineH = 22;
+    // ── pre-measure to compute total height ──
+    const measure = document.createElement('canvas');
+    measure.width = W; measure.height = 10;
+    const mc = measure.getContext('2d')!;
+    mc.font = '15px Arial';
+
+    const lang1 = isHe ? 'he' : 'en';
+    const lang2 = isHe ? 'en' : 'he';
 
     const stories = d.stories.slice(0, 7);
     const shocks  = d.shocks.slice(0, 3);
-    const storyLines = stories.reduce((acc, s) => {
-      const headline = getText(s.headline, isHe ? 'he' : 'en') || getText(s.headline, isHe ? 'en' : 'he');
-      const words = headline.split(' ');
-      let line = '';
-      let lines = 0;
-      for (const w of words) {
-        const test = line ? line + ' ' + w : w;
-        if (ctx.measureText(test).width > W - MARGIN * 2 - 40) { lines++; line = w; }
-        else line = test;
-      }
-      return acc + lines + 2 + 2; // headline lines + summary + gap
-    }, 0);
 
-    const H = 120 + storyLines * lineH + shocks.length * (lineH * 3) + 100;
-    canvas.height = Math.max(H, 600);
+    let H = 140; // header
+    stories.forEach(s => {
+      const hl  = getText(s.headline, lang1) || getText(s.headline, lang2);
+      const sum = getText(s.summary,  lang1) || getText(s.summary,  lang2);
+      mc.font = 'bold 15px Arial';
+      H += wrapText(mc, hl, CONTENT - 30).length * 21 + 4;
+      mc.font = '13px Arial';
+      H += wrapText(mc, sum, CONTENT - 30).slice(0, 3).length * 18 + 8;
+      H += 38; // likelihood bar + gap
+    });
+    if (shocks.length) H += 20 + shocks.length * 52;
+    if (d.topAlpha) H += 90;
+    H += 50; // footer
 
-    // ── background ──
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, W, canvas.height);
+    // ── draw ──
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d')!;
+    ctx.direction = dir;
+
+    // white background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
 
     let y = 0;
 
-    // ── header bar ──
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(0, 0, W, 70);
-    ctx.fillStyle = '#f59e0b';
-    ctx.font = 'bold 22px Arial';
-    ctx.textAlign = isHe ? 'right' : 'left';
-    ctx.direction = isHe ? 'rtl' : 'ltr';
-    ctx.fillText('⚡ Zikuk', isHe ? W - MARGIN : MARGIN, 32);
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '13px Arial';
-    ctx.fillText(isHe ? 'תקציר מודיעין גיאופוליטי' : 'Geopolitical Intelligence Brief', isHe ? W - MARGIN : MARGIN, 52);
+    // ── header strip ──
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(0, 0, W, 90);
 
-    // risk index
+    ctx.textAlign = isHe ? 'right' : 'left';
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('⚡ Signal', x, 36);
+
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '13px Arial';
+    ctx.fillText(isHe ? 'תקציר מודיעין גיאופוליטי' : 'Geopolitical Intelligence Brief', x, 58);
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '11px Arial';
+    ctx.fillText(isHe ? d.generatedAtHe : d.generatedAt, x, 76);
+
+    // risk badge (opposite side)
     if (d.riskIndex !== null) {
-      const rColor = d.riskIndex >= 66 ? '#ef4444' : d.riskIndex >= 34 ? '#f59e0b' : '#10b981';
-      ctx.fillStyle = rColor;
-      ctx.font = 'bold 28px Arial';
-      ctx.textAlign = isHe ? 'left' : 'right';
-      ctx.fillText(`${d.riskIndex}`, isHe ? MARGIN + 30 : W - MARGIN - 30, 38);
-      ctx.font = '10px Arial';
-      ctx.fillStyle = '#64748b';
-      ctx.fillText(isHe ? 'מדד סיכון' : 'Risk', isHe ? MARGIN : W - MARGIN, 54);
+      const rc = d.riskIndex >= 66 ? '#ef4444' : d.riskIndex >= 34 ? '#f59e0b' : '#10b981';
+      const bx = isHe ? MARGIN + 36 : W - MARGIN - 36;
+      ctx.fillStyle = rc + '22';
+      ctx.beginPath();
+      ctx.roundRect(bx - 30, 18, 60, 52, 8);
+      ctx.fill();
+      ctx.fillStyle = rc;
+      ctx.font = 'bold 26px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${d.riskIndex}`, bx, 52);
+      ctx.font = '9px Arial';
+      ctx.fillText(isHe ? 'סיכון' : 'RISK', bx, 66);
     }
 
-    y = 90;
+    y = 106;
 
-    // date
-    ctx.textAlign = isHe ? 'right' : 'left';
-    ctx.direction = isHe ? 'rtl' : 'ltr';
-    ctx.fillStyle = '#64748b';
-    ctx.font = '12px Arial';
-    ctx.fillText(isHe ? d.generatedAtHe : d.generatedAt, isHe ? W - MARGIN : MARGIN, y);
-    y += 28;
-
-    // ── stories ──
-    ctx.fillStyle = '#6366f1';
-    ctx.font = 'bold 11px Arial';
-    ctx.fillText(isHe ? '◆ סיפורים מובילים' : '◆ TOP STORIES', isHe ? W - MARGIN : MARGIN, y);
-    y += 20;
-
-    stories.forEach((s, i) => {
-      const headline = getText(s.headline, isHe ? 'he' : 'en') || getText(s.headline, isHe ? 'en' : 'he');
-      const summary  = getText(s.summary,  isHe ? 'he' : 'en') || getText(s.summary,  isHe ? 'en' : 'he');
-      const likColor = s.likelihood >= 70 ? '#10b981' : s.likelihood >= 45 ? '#f59e0b' : '#6b7280';
-
-      // number badge
-      ctx.fillStyle = '#1e293b';
-      ctx.beginPath();
-      ctx.arc(isHe ? W - MARGIN - 10 : MARGIN + 10, y + 2, 10, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = 'bold 11px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(`${i + 1}`, isHe ? W - MARGIN - 10 : MARGIN + 10, y + 6);
-
-      // headline
+    // section label helper
+    const sectionLabel = (label: string) => {
       ctx.textAlign = isHe ? 'right' : 'left';
-      ctx.direction = isHe ? 'rtl' : 'ltr';
-      ctx.fillStyle = '#f1f5f9';
-      ctx.font = 'bold 14px Arial';
-      const xOff = isHe ? W - MARGIN - 26 : MARGIN + 26;
-      const maxW = W - MARGIN * 2 - 30;
-
-      // word-wrap headline
-      const words = headline.split(' ');
-      let line = '';
-      const wrapped: string[] = [];
-      for (const w of words) {
-        const test = line ? line + ' ' + w : w;
-        if (ctx.measureText(test).width > maxW && line) { wrapped.push(line); line = w; }
-        else line = test;
-      }
-      if (line) wrapped.push(line);
-      wrapped.slice(0, 2).forEach(l => { ctx.fillText(l, xOff, y); y += lineH; });
-
-      // likelihood
-      ctx.fillStyle = likColor;
-      ctx.font = 'bold 11px Arial';
-      ctx.fillText(`${s.likelihood}%${s.delta ? `  Δ${s.delta > 0 ? '+' : ''}${s.delta}%` : ''}`, xOff, y);
-      y += lineH;
-
-      // summary (1 line max)
-      if (summary) {
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '11px Arial';
-        const sumTrim = summary.length > 100 ? summary.slice(0, 100) + '…' : summary;
-        ctx.fillText(sumTrim, xOff, y);
-        y += lineH;
-      }
-
-      // divider
-      ctx.strokeStyle = '#1e293b';
+      ctx.fillStyle = '#6366f1';
+      ctx.font = 'bold 10px Arial';
+      ctx.fillText(label, x, y);
+      // underline
+      ctx.strokeStyle = '#e0e7ff';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(MARGIN, y + 4); ctx.lineTo(W - MARGIN, y + 4);
       ctx.stroke();
-      y += 16;
+      y += 18;
+    };
+
+    sectionLabel(isHe ? '▸ סיפורים מובילים' : '▸ TOP STORIES');
+
+    // ── stories ──
+    stories.forEach((s, i) => {
+      const hl  = getText(s.headline, lang1) || getText(s.headline, lang2);
+      const sum = getText(s.summary,  lang1) || getText(s.summary,  lang2);
+      const likColor = s.likelihood >= 70 ? '#10b981' : s.likelihood >= 45 ? '#f59e0b' : '#9ca3af';
+
+      // number
+      ctx.textAlign = isHe ? 'right' : 'left';
+      ctx.fillStyle = '#d1d5db';
+      ctx.font = 'bold 11px Arial';
+      ctx.fillText(`${i + 1}.`, isHe ? W - MARGIN : MARGIN, y + 14);
+
+      const xOff = isHe ? W - MARGIN - 20 : MARGIN + 20;
+      const mxW  = CONTENT - 22;
+
+      // headline
+      ctx.font = 'bold 15px Arial';
+      ctx.fillStyle = '#111827';
+      const hlLines = wrapText(ctx, hl, mxW);
+      ctx.textAlign = isHe ? 'right' : 'left';
+      hlLines.forEach(l => { ctx.fillText(l, xOff, y); y += 21; });
+      y += 2;
+
+      // summary
+      ctx.font = '13px Arial';
+      ctx.fillStyle = '#4b5563';
+      const sumLines = wrapText(ctx, sum, mxW).slice(0, 3);
+      sumLines.forEach(l => { ctx.fillText(l, xOff, y); y += 18; });
+      y += 6;
+
+      // likelihood bar
+      const barW = Math.min(200, CONTENT - 22);
+      const barX = isHe ? xOff - barW : xOff;
+      ctx.fillStyle = '#f3f4f6';
+      ctx.beginPath(); ctx.roundRect(barX, y, barW, 6, 3); ctx.fill();
+      ctx.fillStyle = likColor;
+      ctx.beginPath(); ctx.roundRect(barX, y, barW * (s.likelihood / 100), 6, 3); ctx.fill();
+
+      ctx.fillStyle = likColor;
+      ctx.font = 'bold 11px Arial';
+      ctx.textAlign = isHe ? 'right' : 'left';
+      const deltaStr = s.delta ? `  ${s.delta > 0 ? '+' : ''}${s.delta}%` : '';
+      ctx.fillText(`${s.likelihood}%${deltaStr}  ·  ${s.sources?.length || 0} ${isHe ? 'מקורות' : 'sources'}`, xOff, y + 18);
+      y += 28;
+
+      // divider
+      ctx.strokeStyle = '#f3f4f6';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(MARGIN, y); ctx.lineTo(W - MARGIN, y);
+      ctx.stroke();
+      y += 10;
     });
 
     // ── shocks ──
-    if (shocks.length > 0) {
+    if (shocks.length) {
       y += 8;
-      ctx.fillStyle = '#6366f1';
-      ctx.font = 'bold 11px Arial';
-      ctx.textAlign = isHe ? 'right' : 'left';
-      ctx.fillText(isHe ? '◆ זעזועים' : '◆ SHOCKS', isHe ? W - MARGIN : MARGIN, y);
-      y += 20;
+      sectionLabel(isHe ? '▸ זעזועים פעילים' : '▸ ACTIVE SHOCKS');
       shocks.forEach(sh => {
-        const hl = getText(sh.headline, isHe ? 'he' : 'en') || getText(sh.headline, isHe ? 'en' : 'he');
-        ctx.fillStyle = sh.confidence === 'high' ? '#ef4444' : '#f59e0b';
+        const hl = getText(sh.headline, lang1) || getText(sh.headline, lang2);
+        const wm = getText(sh.whatMoved, lang1) || getText(sh.whatMoved, lang2);
+        const sc = sh.confidence === 'high' ? '#ef4444' : sh.confidence === 'medium' ? '#f59e0b' : '#9ca3af';
+        ctx.fillStyle = sc + '18';
+        ctx.beginPath(); ctx.roundRect(MARGIN, y - 4, CONTENT, 42, 6); ctx.fill();
+        ctx.fillStyle = sc;
         ctx.font = 'bold 13px Arial';
-        ctx.fillText('⚡ ' + hl.slice(0, 70), isHe ? W - MARGIN : MARGIN, y);
-        y += lineH * 2;
+        ctx.textAlign = isHe ? 'right' : 'left';
+        ctx.fillText('⚡ ' + hl.slice(0, 80), x, y + 12);
+        if (wm) {
+          ctx.fillStyle = '#6b7280';
+          ctx.font = '11px Arial';
+          ctx.fillText(wm.slice(0, 90), x, y + 28);
+        }
+        y += 52;
       });
     }
 
+    // ── alpha ──
+    if (d.topAlpha) {
+      y += 8;
+      sectionLabel(isHe ? '▸ Signal מול שוק' : '▸ SIGNAL VS MARKET');
+      const alphaColor = d.topAlpha.delta > 0 ? '#10b981' : '#ef4444';
+      ctx.fillStyle = '#fefce8';
+      ctx.beginPath(); ctx.roundRect(MARGIN, y - 4, CONTENT, 68, 6); ctx.fill();
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(MARGIN, y - 4, CONTENT, 68, 6); ctx.stroke();
+      ctx.fillStyle = '#111827';
+      ctx.font = 'bold 13px Arial';
+      ctx.textAlign = isHe ? 'right' : 'left';
+      ctx.fillText(d.topAlpha.topic.slice(0, 70), x, y + 12);
+      ctx.fillStyle = alphaColor;
+      ctx.font = 'bold 20px Arial';
+      ctx.textAlign = isHe ? 'left' : 'right';
+      ctx.fillText(`${d.topAlpha.delta > 0 ? '+' : ''}${d.topAlpha.delta}%`, isHe ? MARGIN + 50 : W - MARGIN - 50, y + 30);
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '11px Arial';
+      ctx.textAlign = isHe ? 'right' : 'left';
+      ctx.fillText(`Signal ${d.topAlpha.signalLikelihood}%  ·  ${isHe ? 'שוק' : 'Market'} ${d.topAlpha.marketProbability}%  ·  Alpha ${d.topAlpha.alphaScore}/100`, x, y + 46);
+      if (d.topAlpha.whyDifferent) {
+        ctx.font = 'italic 11px Arial';
+        ctx.fillStyle = '#9ca3af';
+        ctx.fillText(d.topAlpha.whyDifferent.slice(0, 90), x, y + 62);
+      }
+      y += 80;
+    }
+
     // ── footer ──
-    y = canvas.height - 30;
-    ctx.fillStyle = '#334155';
-    ctx.font = '11px Arial';
+    ctx.fillStyle = '#f9fafb';
+    ctx.fillRect(0, H - 36, W, 36);
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '10px Arial';
     ctx.textAlign = 'center';
     ctx.direction = 'ltr';
-    ctx.fillText('⚡ Zikuk — signal-news.vercel.app', W / 2, y);
+    ctx.fillText('⚡ Zikuk — signal-news.vercel.app', W / 2, H - 14);
 
     // ── export ──
     canvas.toBlob(async (blob) => {
