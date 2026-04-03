@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/i18n/context';
 import type { BriefStory, ShockEvent } from '@/lib/types';
@@ -33,15 +33,7 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [readerOpen, setReaderOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const { open: openSidebar } = useSidebar();
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
 
   // All stories are expandable — static slugs also get a detail page
   const hasDetailPage = false; // all stories expand inline now
@@ -74,8 +66,10 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
       return;
     }
     // On mobile: always expand inline (sidebar is desktop-only)
-    if (isMobile) {
-      setExpanded(!expanded);
+    // Check window.innerWidth directly to avoid SSR/state timing issues
+    const onMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+    if (onMobile) {
+      setExpanded(prev => !prev);
       return;
     }
     // Desktop: open sidebar with article details
@@ -195,6 +189,17 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
 
       {/* Summary */}
       <p className={`text-sm text-gray-300 ${expanded ? '' : 'line-clamp-2'}`}>{t(story.summary)}</p>
+
+      {/* Mobile expand toggle — visible only on mobile */}
+      <button
+        type="button"
+        onClick={e => { e.stopPropagation(); setExpanded(prev => !prev); }}
+        className="sm:hidden text-[11px] text-yellow-400/70 hover:text-yellow-400 transition-colors flex items-center gap-1"
+      >
+        {expanded
+          ? (lang === 'he' ? '▲ הצג פחות' : '▲ Show less')
+          : (lang === 'he' ? '▼ הצג עוד' : '▼ Show more')}
+      </button>
 
       {/* Likelihood + Delta + Sparkline */}
       <div className="flex items-center gap-3">
