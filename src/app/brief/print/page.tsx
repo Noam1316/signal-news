@@ -11,45 +11,58 @@ async function generateAndSharePDFFromDOM(isHe: boolean): Promise<void> {
   const { jsPDF } = await import('jspdf');
   const html2canvas = (await import('html2canvas')).default;
 
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: '#ffffff',
-    scrollX: 0,
-    scrollY: 0,
-    windowWidth: element.scrollWidth,
-    windowHeight: element.scrollHeight,
-  });
+  // Clone into a clean fixed container — avoids toolbar overlap & margin issues
+  const clone = element.cloneNode(true) as HTMLElement;
+  clone.style.cssText = [
+    'position:fixed', 'top:0', 'left:0',
+    'width:794px', 'margin:0', 'padding:32px',
+    'background:white', 'z-index:-9999', 'pointer-events:none',
+    'font-family:Arial,sans-serif',
+  ].join(';');
+  document.body.appendChild(clone);
 
-  const imgData = canvas.toDataURL('image/jpeg', 0.92);
-  const pageW = 210;
-  const pageH = 297;
-  const imgW = pageW;
-  const imgH = (canvas.height * pageW) / canvas.width;
+  try {
+    const canvas = await html2canvas(clone, {
+      scale: 1.5,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width: 794,
+      windowWidth: 794,
+    });
 
-  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
-  let pos = 0;
-  pdf.addImage(imgData, 'JPEG', 0, pos, imgW, imgH);
-  let remaining = imgH - pageH;
-  while (remaining > 0) {
-    pos -= pageH;
-    pdf.addPage();
+    const imgData = canvas.toDataURL('image/jpeg', 0.90);
+    const pageW = 210;
+    const pageH = 297;
+    const imgW = pageW;
+    const imgH = (canvas.height * pageW) / canvas.width;
+
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+    let pos = 0;
     pdf.addImage(imgData, 'JPEG', 0, pos, imgW, imgH);
-    remaining -= pageH;
-  }
+    let remaining = imgH - pageH;
+    while (remaining > 0) {
+      pos -= pageH;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, pos, imgW, imgH);
+      remaining -= pageH;
+    }
 
-  const fileName = `zikuk-brief-${isHe ? 'he' : 'en'}-${new Date().toISOString().slice(0, 10)}.pdf`;
-  const blob = pdf.output('blob');
-  const file = new File([blob], fileName, { type: 'application/pdf' });
+    const fileName = `zikuk-brief-${isHe ? 'he' : 'en'}-${new Date().toISOString().slice(0, 10)}.pdf`;
+    const blob = pdf.output('blob');
+    const file = new File([blob], fileName, { type: 'application/pdf' });
 
-  if (navigator.share && navigator.canShare?.({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: 'Zikuk Intel Brief' }); return; }
-    catch { /* cancelled */ }
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'Zikuk Intel Brief' }); return; }
+      catch { /* cancelled */ }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fileName; a.click();
+    URL.revokeObjectURL(url);
+  } finally {
+    document.body.removeChild(clone);
   }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = fileName; a.click();
-  URL.revokeObjectURL(url);
 }
 
 /** Generate and share/download a real PDF file using jsPDF */
