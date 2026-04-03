@@ -327,6 +327,8 @@ export function buildDailyBriefEmail(opts: {
                 <a href="${unsubUrl}" style="color:#6366f1; text-decoration:none; font-weight:600;">הסר אותי מהרשימה</a>
                 <span style="color:#1e293b;"> | </span>
                 <a href="${SITE_URL}/dashboard" style="color:#6366f1; text-decoration:none;">פתח דשבורד</a>
+                <span style="color:#1e293b;"> | </span>
+                <a href="${SITE_URL}/brief/print" style="color:#6366f1; text-decoration:none;">📄 תקציר להדפסה / PDF</a>
               </div>
             </td>
           </tr>
