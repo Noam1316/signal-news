@@ -57,7 +57,7 @@ export const rssSources: RssSource[] = [
   // ── International – Analysis / Think Tanks ──
   { id: 'foreignpolicy', name: 'Foreign Policy', url: 'https://foreignpolicy.com/feed/', language: 'en', lensCategory: 'international', country: 'US' },
   { id: 'economist', name: 'The Economist', url: 'https://www.economist.com/middle-east-and-africa/rss.xml', language: 'en', lensCategory: 'international', country: 'UK' },
-  { id: 'cfr', name: 'Council on Foreign Relations', url: 'https://www.cfr.org/rss/feeds/all', language: 'en', lensCategory: 'international', country: 'US' },
+  { id: 'cfr', name: 'Council on Foreign Relations', url: 'https://news.google.com/rss/search?q=site:cfr.org+middle+east&hl=en&gl=US&ceid=US:en', language: 'en', lensCategory: 'international', country: 'US' },
 
   // ── Left-leaning / Progressive ──
   { id: '972mag', name: '+972 Magazine', url: 'https://news.google.com/rss/search?q=site:972mag.com&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
