@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@vercel/kv": "^3.0.0",
+    "jspdf": "^4.2.1",
     "next": "16.1.7",
     "nodemailer": "^8.0.4",
     "react": "19.2.3",

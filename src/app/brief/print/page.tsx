@@ -3,6 +3,107 @@
 import { useEffect, useState } from 'react';
 import type { BriefStory, ShockEvent } from '@/lib/types';
 
+/** Generate and share/download a real PDF file using jsPDF */
+async function generateAndSharePDF(d: PrintData, isHe: boolean): Promise<void> {
+  const { jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  const margin = 18;
+  const pageW = 210;
+  const contentW = pageW - margin * 2;
+  let y = 20;
+
+  const addLine = (text: string, opts: { size?: number; bold?: boolean; color?: [number,number,number]; gap?: number } = {}) => {
+    const { size = 10, bold = false, color = [30,30,30], gap = 6 } = opts;
+    doc.setFontSize(size);
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(text, contentW);
+    if (y + lines.length * (size * 0.4) > 280) { doc.addPage(); y = 20; }
+    doc.text(lines, margin, y);
+    y += lines.length * (size * 0.4) + gap;
+  };
+
+  const addRule = (color: [number,number,number] = [220,220,220]) => {
+    doc.setDrawColor(...color);
+    doc.line(margin, y, pageW - margin, y);
+    y += 5;
+  };
+
+  // ── Header ──
+  addLine('Zikuk — Geopolitical Intelligence Brief', { size: 18, bold: true, color: [30,30,30], gap: 3 });
+  addLine(d.generatedAt, { size: 9, color: [120,120,120], gap: 2 });
+  if (d.riskIndex !== null) {
+    const riskColor: [number,number,number] = d.riskIndex >= 66 ? [220,38,38] : d.riskIndex >= 34 ? [217,119,6] : [16,185,129];
+    addLine(`Geopolitical Risk Index: ${d.riskIndex}/100`, { size: 9, bold: true, color: riskColor, gap: 4 });
+  }
+  addRule([99,102,241]);
+  y += 2;
+
+  // ── Top Stories ──
+  addLine('TOP STORIES', { size: 9, bold: true, color: [99,102,241], gap: 4 });
+  d.stories.forEach((s, i) => {
+    const headline = getText(s.headline, 'en') || getText(s.headline, 'he');
+    const summary  = getText(s.summary,  'en') || getText(s.summary,  'he');
+    const likColor: [number,number,number] = s.likelihood >= 70 ? [16,185,129] : s.likelihood >= 45 ? [217,119,6] : [107,114,128];
+    addLine(`${i + 1}. ${headline}`, { size: 11, bold: true, gap: 2 });
+    addLine(`Likelihood: ${s.likelihood}%${s.delta ? `  Δ${s.delta > 0 ? '+' : ''}${s.delta}%` : ''}  |  ${s.sources?.length || 0} sources`, { size: 8, color: likColor, gap: 2 });
+    if (summary) addLine(summary.slice(0, 220), { size: 9, color: [80,80,80], gap: 5 });
+    if (i < d.stories.length - 1) addRule();
+  });
+
+  // ── Shocks ──
+  if (d.shocks.length > 0) {
+    y += 4;
+    addRule([99,102,241]);
+    addLine('ACTIVE SHOCKS', { size: 9, bold: true, color: [99,102,241], gap: 4 });
+    d.shocks.forEach(sh => {
+      const hl = getText(sh.headline, 'en') || getText(sh.headline, 'he');
+      const wm = getText(sh.whatMoved, 'en') || getText(sh.whatMoved, 'he');
+      addLine(`⚡ ${hl}`, { size: 10, bold: true, gap: 2 });
+      if (wm) addLine(wm, { size: 9, color: [100,100,100], gap: 4 });
+    });
+  }
+
+  // ── Alpha ──
+  if (d.topAlpha) {
+    y += 2;
+    addRule([99,102,241]);
+    addLine('SIGNAL VS MARKET ALPHA', { size: 9, bold: true, color: [99,102,241], gap: 4 });
+    addLine(d.topAlpha.topic, { size: 10, bold: true, gap: 2 });
+    addLine(`Signal: ${d.topAlpha.signalLikelihood}%  |  Market: ${d.topAlpha.marketProbability}%  |  Delta: ${d.topAlpha.delta > 0 ? '+' : ''}${d.topAlpha.delta}%  |  Alpha: ${d.topAlpha.alphaScore}`, { size: 9, color: [80,80,80], gap: 2 });
+    if (d.topAlpha.whyDifferent) addLine(d.topAlpha.whyDifferent, { size: 9, color: [120,120,120], gap: 4 });
+  }
+
+  // ── Footer ──
+  const pageCount = doc.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFontSize(7);
+    doc.setTextColor(160,160,160);
+    doc.text(`Zikuk Intelligence  |  zikuk.vercel.app  |  ${d.generatedAt}  |  Page ${p}/${pageCount}`, margin, 290);
+  }
+
+  const fileName = `zikuk-brief-${new Date().toISOString().slice(0,10)}.pdf`;
+  const blob = doc.output('blob');
+  const file = new File([blob], fileName, { type: 'application/pdf' });
+
+  // Try native share with file (iOS 15+ / Android with Chrome)
+  if (navigator.share && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Zikuk Intel Brief' });
+      return;
+    } catch { /* user cancelled or not supported */ }
+  }
+  // Fallback: trigger download
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 interface AlphaItem {
   topic: string;
   signalLikelihood: number;
@@ -144,6 +245,7 @@ export default function PrintBriefPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showMobileHint, setShowMobileHint] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 640 || /iPhone|iPad|Android/i.test(navigator.userAgent));
@@ -267,21 +369,19 @@ export default function PrintBriefPage() {
                 </svg>
                 WA
               </a>
-              {/* Native share — shares this page URL so recipient can open & print to PDF */}
+              {/* Generate real PDF file and share/download */}
               <button
                 onClick={async () => {
-                  const url = window.location.href;
-                  const title = isHe ? 'Zikuk — תקציר מודיעין' : 'Zikuk — Intel Brief';
-                  if (navigator.share) {
-                    try { await navigator.share({ title, url }); return; } catch { /* cancelled */ }
-                  }
-                  await navigator.clipboard.writeText(url).catch(() => {});
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
+                  if (!data || generatingPDF) return;
+                  setGeneratingPDF(true);
+                  try { await generateAndSharePDF(data, isHe); }
+                  catch { /* silent */ }
+                  finally { setGeneratingPDF(false); }
                 }}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-yellow-400 text-gray-900 text-sm font-bold hover:bg-yellow-300 transition-colors"
+                disabled={generatingPDF || !data}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-yellow-400 text-gray-900 text-sm font-bold hover:bg-yellow-300 transition-colors disabled:opacity-60"
               >
-                {copied ? '✓' : '📤'} {isHe ? 'שתף לPDF' : 'Share→PDF'}
+                {generatingPDF ? '⏳' : '📄'} {isHe ? (generatingPDF ? 'מייצר…' : 'PDF') : (generatingPDF ? 'Building…' : 'PDF')}
               </button>
             </>
           ) : (
