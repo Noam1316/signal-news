@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/i18n/context';
 import type { BriefStory, ShockEvent } from '@/lib/types';
@@ -33,7 +33,15 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [readerOpen, setReaderOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { open: openSidebar } = useSidebar();
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   // All stories are expandable — static slugs also get a detail page
   const hasDetailPage = false; // all stories expand inline now
@@ -65,7 +73,12 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
       router.push(`/story/${story.slug}`);
       return;
     }
-    // Open sidebar with AI analysis of the primary source article
+    // On mobile: always expand inline (sidebar is desktop-only)
+    if (isMobile) {
+      setExpanded(!expanded);
+      return;
+    }
+    // Desktop: open sidebar with article details
     const primarySource = story.sources?.[0];
     if (primarySource) {
       const headline = typeof story.headline === 'string' ? story.headline : (lang === 'he' ? story.headline.he : story.headline.en);
