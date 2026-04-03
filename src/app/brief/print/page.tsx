@@ -3,6 +3,55 @@
 import { useEffect, useState } from 'react';
 import type { BriefStory, ShockEvent } from '@/lib/types';
 
+/** Generate Hebrew PDF by screenshotting the DOM (preserves RTL + Hebrew fonts) */
+async function generateAndSharePDFFromDOM(isHe: boolean): Promise<void> {
+  const element = document.getElementById('print-content');
+  if (!element) return;
+
+  const { jsPDF } = await import('jspdf');
+  const html2canvas = (await import('html2canvas')).default;
+
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: '#ffffff',
+    scrollX: 0,
+    scrollY: 0,
+    windowWidth: element.scrollWidth,
+    windowHeight: element.scrollHeight,
+  });
+
+  const imgData = canvas.toDataURL('image/jpeg', 0.92);
+  const pageW = 210;
+  const pageH = 297;
+  const imgW = pageW;
+  const imgH = (canvas.height * pageW) / canvas.width;
+
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+  let pos = 0;
+  pdf.addImage(imgData, 'JPEG', 0, pos, imgW, imgH);
+  let remaining = imgH - pageH;
+  while (remaining > 0) {
+    pos -= pageH;
+    pdf.addPage();
+    pdf.addImage(imgData, 'JPEG', 0, pos, imgW, imgH);
+    remaining -= pageH;
+  }
+
+  const fileName = `zikuk-brief-${isHe ? 'he' : 'en'}-${new Date().toISOString().slice(0, 10)}.pdf`;
+  const blob = pdf.output('blob');
+  const file = new File([blob], fileName, { type: 'application/pdf' });
+
+  if (navigator.share && navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: 'Zikuk Intel Brief' }); return; }
+    catch { /* cancelled */ }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName; a.click();
+  URL.revokeObjectURL(url);
+}
+
 /** Generate and share/download a real PDF file using jsPDF */
 async function generateAndSharePDF(d: PrintData, isHe: boolean): Promise<void> {
   const { jsPDF } = await import('jspdf');
@@ -246,6 +295,7 @@ export default function PrintBriefPage() {
   const [copied, setCopied] = useState(false);
   const [showMobileHint, setShowMobileHint] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [generatingHePDF, setGeneratingHePDF] = useState(false);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 640 || /iPhone|iPad|Android/i.test(navigator.userAgent));
@@ -369,7 +419,22 @@ export default function PrintBriefPage() {
                 </svg>
                 WA
               </a>
-              {/* Generate real PDF file and share/download */}
+              {/* PDF עברי — צילום DOM */}
+              <button
+                onClick={async () => {
+                  if (generatingHePDF) return;
+                  setGeneratingHePDF(true);
+                  try { await generateAndSharePDFFromDOM(isHe); }
+                  catch { /* silent */ }
+                  finally { setGeneratingHePDF(false); }
+                }}
+                disabled={generatingHePDF || generatingPDF}
+                title={isHe ? 'PDF בעברית — צילום עמוד' : 'PDF in Hebrew — page screenshot'}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-500 text-white text-sm font-bold hover:bg-blue-400 transition-colors disabled:opacity-60"
+              >
+                {generatingHePDF ? '⏳' : '📄'} {generatingHePDF ? (isHe ? 'מייצר…' : 'Building…') : (isHe ? 'PDF עב׳' : 'PDF HE')}
+              </button>
+              {/* PDF אנגלית — טקסט */}
               <button
                 onClick={async () => {
                   if (!data || generatingPDF) return;
@@ -378,11 +443,11 @@ export default function PrintBriefPage() {
                   catch { /* silent */ }
                   finally { setGeneratingPDF(false); }
                 }}
-                disabled={generatingPDF || !data}
-                title={isHe ? 'PDF מופק באנגלית בלבד (מגבלת פונט)' : 'PDF in English (font limitation)'}
+                disabled={generatingPDF || generatingHePDF || !data}
+                title={isHe ? 'PDF באנגלית — טקסט מובנה' : 'PDF in English — structured text'}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-yellow-400 text-gray-900 text-sm font-bold hover:bg-yellow-300 transition-colors disabled:opacity-60"
               >
-                {generatingPDF ? '⏳' : '📄'} {isHe ? (generatingPDF ? 'מייצר…' : 'PDF (EN)') : (generatingPDF ? 'Building…' : 'PDF')}
+                {generatingPDF ? '⏳' : '📄'} {generatingPDF ? (isHe ? 'מייצר…' : 'Building…') : 'PDF EN'}
               </button>
             </>
           ) : (
@@ -411,7 +476,7 @@ export default function PrintBriefPage() {
       )}
 
       {/* Main content */}
-      <div dir={dir} className={`max-w-3xl mx-auto px-6 py-8 bg-white min-h-screen shadow-sm ${isMobile ? 'mt-4' : 'mt-16'} print:mt-0`}>
+      <div id="print-content" dir={dir} className={`max-w-3xl mx-auto px-6 py-8 bg-white min-h-screen shadow-sm ${isMobile ? 'mt-4' : 'mt-16'} print:mt-0`}>
 
         {/* Header */}
         <div className="border-b-2 border-gray-900 pb-4 mb-6">
