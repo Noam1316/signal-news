@@ -43,6 +43,7 @@ export interface BriefStory {
   impacts?: ImpactItem[];
   narrativeSplit?: NarrativeSplit;
   strategicImplication?: LocalizedText;
+  resolved?: boolean;           // true if the event has already occurred/completed
 }
 
 export type ShockStatus = 'fresh' | 'active' | 'fading';

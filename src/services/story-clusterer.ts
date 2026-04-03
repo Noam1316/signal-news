@@ -42,7 +42,7 @@ const TOPIC_CATEGORIES: Record<string, { he: string; en: string }> = {
 
 // Topic → headline templates (when building story headline from cluster)
 const TOPIC_HEADLINES: Record<string, { he: string; en: string }> = {
-  'Iran Nuclear':        { he: 'התפתחויות בתיק הגרעין האיראני',         en: 'Developments in the Iran Nuclear File' },
+  'Iran Nuclear':        { he: 'ההשלכות לאחר התקיפה הישראלית באיראן',    en: 'Fallout from the Israeli Strike on Iran' },
   'Gaza Conflict':       { he: 'עדכונים מהעימות בעזה',                  en: 'Updates from the Gaza Conflict' },
   'Lebanon/Hezbollah':   { he: 'מתיחות בגבול הצפוני',                   en: 'Northern Border Tensions' },
   'Saudi Normalization':  { he: 'התקדמות בתהליך הנורמליזציה',            en: 'Normalization Process Advances' },
@@ -154,12 +154,12 @@ function detectImpacts(topic: string): ImpactItem[] {
 // ── Strategic Implication Templates ──
 const STRATEGIC_IMPLICATIONS: Record<string, { he: string; en: string }> = {
   'Gaza Conflict': {
-    he: '← הסדר בעזה מותנה בעסקת חטופים; כישלון יחמיר לחץ אמריקאי ויאיים על נורמליזציה עם סעודיה.',
-    en: '← A Gaza deal hinges on hostage agreement; failure will intensify US pressure and threaten Saudi normalization.',
+    he: '← עסקת החטופים הושלמה; השאלה הפתוחה היא היום שאחרי — שליטה אזרחית בעזה ולחץ אמריקאי על נורמליזציה עם סעודיה.',
+    en: '← The hostage deal is complete; the open question is the day after — civilian governance in Gaza and US pressure on Saudi normalization.',
   },
   'Iran Nuclear': {
-    he: '← פריצת סף גרעיני איראנית תכריח ישראל להחליט — מתקפה מונעת או הכלה; מחירי הנפט יקפצו.',
-    en: '← Iranian nuclear breakout forces Israel to decide — preemptive strike or containment; oil prices will spike.',
+    he: '← ישראל תקפה את מתקני הגרעין האיראניים; השאלה הפתוחה היא מידת הנזק ותגובת איראן — הסלמה נוספת או הקפאה.',
+    en: '← Israel has struck Iranian nuclear facilities; the open question is damage extent and Iran\'s response — further escalation or freeze.',
   },
   'Lebanon/Hezbollah': {
     he: '← הסלמה בצפון תרחיב חזית וסטת משאבי צה"ל מעזה; שאלת ה"יום שאחרי" תתחדד.',
@@ -170,8 +170,8 @@ const STRATEGIC_IMPLICATIONS: Record<string, { he: string; en: string }> = {
     en: '← Success rewrites Middle East geopolitics; failure hands a diplomatic victory to the Palestinian Authority.',
   },
   'US Politics': {
-    he: '← שינוי מדיניות וושינגטון ישפיע ישירות על היקף הסיוע הצבאי לישראל ועל לחץ לעסקת חטופים.',
-    en: '← Washington policy shifts directly impact military aid scope to Israel and pressure on a hostage deal.',
+    he: '← שינוי מדיניות וושינגטון ישפיע ישירות על היקף הסיוע הצבאי לישראל ועל לחץ ליישום "היום שאחרי" בעזה.',
+    en: '← Washington policy shifts directly impact military aid scope to Israel and pressure on the post-war Gaza governance plan.',
   },
   'West Bank': {
     he: '← הסלמה ביהודה ושומרון מאיימת על שיתוף הפעולה הביטחוני עם הרשות הפלסטינית ועל שאיפות נורמליזציה.',
@@ -198,10 +198,74 @@ const STRATEGIC_IMPLICATIONS: Record<string, { he: string; en: string }> = {
     en: '← US-China tension affects Israeli tech markets and US pressure on Israel regarding China trade.',
   },
   'Turkey/Egypt': {
-    he: '← שינויים בעמדת טורקיה או מצרים ישפיעו על מסדרונות ההסדר ועל לגיטימציה אזורית לעסקת חטופים.',
-    en: '← Shifts in Turkish or Egyptian stance affect deal corridors and regional legitimacy for a hostage agreement.',
+    he: '← שינויים בעמדת טורקיה או מצרים ישפיעו על ממשל עזה שלאחר המלחמה ועל לגיטימציה אזורית לנורמליזציה.',
+    en: '← Shifts in Turkish or Egyptian stance affect post-war Gaza governance and regional legitimacy for normalization.',
   },
 };
+
+// ── Resolution Detection ──
+// Keywords that indicate the event has already occurred / completed
+const RESOLUTION_KEYWORDS_EN = [
+  'signed', 'reached', 'completed', 'agreed', 'concluded', 'finalized',
+  'released', 'freed', 'returned home', 'came home', 'implemented',
+  'entered into force', 'took effect', 'phase one', 'phase 1',
+  'deal done', 'agreement in place', 'hostages return', 'hostages home',
+  'ceasefire holds', 'successful exchange',
+  // aftermath / post-deal patterns
+  'captivity survivor', 'after captivity', 'leaving gaza', 'left gaza',
+  'freed from captivity', 'released from captivity', 'ex-hostage',
+  'former hostage', 'back from gaza', 'returned from captivity',
+  'since being freed', 'since their release', 'post-deal',
+];
+const RESOLUTION_KEYWORDS_HE = [
+  'נחתם', 'הושלם', 'הסתיים', 'הושג הסכם', 'הסכם הושג', 'הסכם נחתם',
+  'שוחרר', 'שוחררו', 'הוחזרו', 'חזרו הביתה', 'שבו הביתה',
+  'יישום ההסכם', 'נכנס לתוקף', 'שלב א', 'שלב ראשון', 'שלב 1',
+  'עסקה הושלמה', 'עסקה נסגרה', 'ביצוע ההסכם', 'שחרור הצליח',
+  'הפסקת האש מוחזקת',
+  // aftermath / post-deal patterns
+  'שורד השבי', 'שורדי השבי', 'יציאה מעזה', 'יצאו מעזה', 'בצאתם מעזה',
+  'חזרו מהשבי', 'שוחרר מהשבי', 'שחרור החטופים', 'החטוף חזר',
+  'החטופים חזרו', 'החטופה חזרה', 'שב מהשבי', 'אחרי השבי',
+  'לאחר השבי', 'מחבלי שבי', 'בשבי ל', 'עם שחרורו', 'עם שחרורה',
+  'הגיע הביתה', 'הגיעה הביתה', 'מסע החזרה', 'קיבלנו אותם',
+  'הסכם עבר', 'הסכם אושר', 'אושר ההסכם', 'כניסת ההסכם',
+];
+// Keywords that indicate the event is still active/ongoing (veto resolution detection)
+const ONGOING_KEYWORDS_EN = [
+  'talks continue', 'negotiations ongoing', 'still no deal', 'no agreement yet',
+  'deadlock', 'stalled', 'collapsed', 'failed', 'breakdown',
+];
+const ONGOING_KEYWORDS_HE = [
+  'מגעים נמשכים', 'טרם הושג', 'אין הסכם', 'קריסה', 'כשל', 'פרוץ',
+  'עדיין לא', 'טרם הסתיים',
+];
+
+/**
+ * Returns true if a majority of articles in the cluster indicate the event
+ * has already occurred/completed, and no strong "ongoing" signals contradict it.
+ */
+function detectResolution(cluster: Cluster): boolean {
+  const texts = cluster.articles.map(a =>
+    `${a.article.title} ${a.article.description || ''}`.toLowerCase()
+  );
+
+  const resolutionHits = texts.filter(t =>
+    RESOLUTION_KEYWORDS_EN.some(kw => t.includes(kw)) ||
+    RESOLUTION_KEYWORDS_HE.some(kw => t.includes(kw))
+  ).length;
+
+  const ongoingHits = texts.filter(t =>
+    ONGOING_KEYWORDS_EN.some(kw => t.includes(kw)) ||
+    ONGOING_KEYWORDS_HE.some(kw => t.includes(kw))
+  ).length;
+
+  const resolutionRatio = resolutionHits / texts.length;
+
+  // Resolved if ≥15% of articles (min 2) contain resolution language
+  // AND ongoing signals don't dominate
+  return resolutionHits >= 2 && resolutionRatio >= 0.15 && ongoingHits < resolutionHits;
+}
 
 // ── Narrative Split Extraction ──
 function extractNarrativeSplit(cluster: Cluster): NarrativeSplit | undefined {
@@ -436,6 +500,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
     const impacts = detectImpacts(cluster.topic);
     const narrativeSplit = extractNarrativeSplit(cluster);
     const strategicImplication = STRATEGIC_IMPLICATIONS[cluster.topic];
+    const resolved = detectResolution(cluster);
 
     // Collect unique sources
     const sourcesMap = new Map<string, string>();
@@ -471,7 +536,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       likelihoodLabel,
       delta,
       why,
-      isSignal,
+      isSignal: isSignal && !resolved, // resolved events are not active signals
       category,
       lens,
       sources,
@@ -479,6 +544,12 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       impacts: impacts.length > 0 ? impacts : undefined,
       narrativeSplit,
       strategicImplication,
+      resolved: resolved || undefined,
     };
+  }).sort((a, b) => {
+    // Push resolved stories to the end
+    if (a.resolved && !b.resolved) return 1;
+    if (!a.resolved && b.resolved) return -1;
+    return 0;
   });
 }

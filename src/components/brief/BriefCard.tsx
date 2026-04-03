@@ -97,7 +97,11 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
     <article
       dir={dir}
       onClick={handleClick}
-      className="rounded-xl border border-gray-800 bg-gray-900/80 hover:bg-gray-800/80 transition-all cursor-pointer p-5 space-y-3 card-glow"
+      className={`rounded-xl border transition-all cursor-pointer p-5 space-y-3 ${
+        story.resolved
+          ? 'border-gray-700/50 bg-gray-900/40 opacity-60 hover:opacity-80'
+          : 'border-gray-800 bg-gray-900/80 hover:bg-gray-800/80 card-glow'
+      }`}
     >
       {/* Top row: category + badges + signal + watch */}
       <div className="flex items-center justify-between gap-2">
@@ -143,7 +147,11 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          {!hasDetailPage && (
+          {story.resolved ? (
+            <span className="text-[11px] px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400 border border-gray-600/30 font-medium">
+              {lang === 'he' ? '✓ הושלם' : '✓ Resolved'}
+            </span>
+          ) : !hasDetailPage && (
             <span className="text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
               LIVE
             </span>

@@ -30,6 +30,28 @@ const CONFIDENCE_COLOR: Record<string, string> = {
   low:    '#6b7280',
 };
 
+function buildShareText(d: PrintData, lang: 'he' | 'en'): string {
+  const isHe = lang === 'he';
+  const lines: string[] = [
+    `⚡ ${isHe ? 'Zikuk — תקציר מודיעין גיאופוליטי' : 'Zikuk — Geopolitical Intel Brief'}`,
+    `📅 ${isHe ? d.generatedAtHe : d.generatedAt}`,
+    '',
+  ];
+  d.stories.slice(0, 5).forEach((s, i) => {
+    const h = getText(s.headline, lang);
+    if (h) lines.push(`${i + 1}. ${h} — ${s.likelihood}%`);
+  });
+  if (d.shocks.length > 0) {
+    lines.push('', `⚡ ${isHe ? 'זעזועים' : 'Shocks'}:`);
+    d.shocks.slice(0, 2).forEach(s => {
+      const h = getText(s.headline, lang);
+      if (h) lines.push(`• ${h}`);
+    });
+  }
+  lines.push('', `🔗 ${typeof window !== 'undefined' ? window.location.origin : ''}/dashboard`);
+  return lines.join('\n');
+}
+
 function getText(h: any, lang: 'he' | 'en'): string {
   if (!h) return '';
   if (typeof h === 'string') return h;
@@ -119,9 +141,30 @@ export default function PrintBriefPage() {
     load();
   }, []);
 
+  const [isMobile, setIsMobile] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showMobileHint, setShowMobileHint] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 640 || /iPhone|iPad|Android/i.test(navigator.userAgent));
+  }, []);
+
   const handlePrint = () => {
+    if (isMobile) { setShowMobileHint(true); return; }
     setPrinting(true);
     setTimeout(() => { window.print(); setPrinting(false); }, 100);
+  };
+
+  const handleShare = async () => {
+    if (!data) return;
+    const text = buildShareText(data, lang);
+    if (navigator.share) {
+      try { await navigator.share({ title: `Zikuk — ${isHe ? 'תקציר מודיעין' : 'Intel Brief'}`, text, url: window.location.origin + '/dashboard' }); return; }
+      catch { /* cancelled */ }
+    }
+    await navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   };
 
   const isHe = lang === 'he';
@@ -189,17 +232,17 @@ export default function PrintBriefPage() {
 
       {/* Toolbar */}
       <div className="no-print fixed top-0 left-0 right-0 z-50 bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => window.history.back()}
-            className="text-gray-400 hover:text-white text-sm"
+            className="text-gray-400 hover:text-white text-sm shrink-0"
           >
             {isHe ? '→ חזרה' : '← Back'}
           </button>
-          <span className="text-gray-600">|</span>
-          <span className="text-white text-sm font-semibold">📋 {isHe ? 'תקציר מודיעין — Signal' : 'Signal Intelligence Brief'}</span>
+          <span className="text-gray-600 hidden sm:inline">|</span>
+          <span className="text-white text-sm font-semibold hidden sm:inline truncate">📋 {isHe ? 'תקציר מודיעין' : 'Intel Brief'}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Language toggle */}
           <button
             onClick={() => setLang(l => l === 'he' ? 'en' : 'he')}
@@ -207,15 +250,122 @@ export default function PrintBriefPage() {
           >
             {isHe ? 'EN' : 'עב'}
           </button>
-          <button
-            onClick={handlePrint}
-            disabled={printing}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-400 text-gray-900 text-sm font-bold hover:bg-yellow-300 transition-colors disabled:opacity-60"
-          >
-            {printing ? '…' : (isHe ? '⬇️ ייצוא PDF' : '⬇️ Export PDF')}
-          </button>
+
+          {isMobile ? (
+            /* Mobile: Share buttons */
+            <>
+              <a
+                href={data ? `https://wa.me/?text=${encodeURIComponent(buildShareText(data, lang))}` : '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-500 text-white text-sm font-bold hover:bg-green-400 transition-colors"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.526 5.849L.057 23.286a.75.75 0 00.921.921l5.437-1.47A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.716 9.716 0 01-4.952-1.354l-.355-.211-3.678.994.993-3.556-.232-.368A9.716 9.716 0 012.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
+                </svg>
+                WA
+              </a>
+              <button
+                onClick={handleShare}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-yellow-400 text-gray-900 text-sm font-bold hover:bg-yellow-300 transition-colors"
+              >
+                {copied ? '✓' : (isHe ? '📋 שתף' : '📋 Share')}
+              </button>
+              <button
+                onClick={() => setShowMobileHint(true)}
+                className="text-xs px-2 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-gray-200"
+                title={isHe ? 'שמור PDF' : 'Save PDF'}
+              >
+                PDF?
+              </button>
+            </>
+          ) : (
+            /* Desktop: PDF export */
+            <button
+              onClick={handlePrint}
+              disabled={printing}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-400 text-gray-900 text-sm font-bold hover:bg-yellow-300 transition-colors disabled:opacity-60"
+            >
+              {printing ? '…' : (isHe ? '⬇️ ייצוא PDF' : '⬇️ Export PDF')}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Mobile PDF hint modal */}
+      {showMobileHint && (
+        <div className="no-print fixed inset-0 z-[60] bg-black/70 flex items-end sm:items-center justify-center p-4" onClick={() => setShowMobileHint(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl" dir={dir} onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-base font-black text-gray-900">
+                {isHe ? '📄 שמירה כ-PDF' : '📄 Save as PDF'}
+              </h3>
+              <button onClick={() => setShowMobileHint(false)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-xs font-bold text-gray-500 uppercase mb-2">
+                {isHe ? 'ב-iPhone / iPad:' : 'On iPhone / iPad:'}
+              </p>
+              <ol className="space-y-2 text-sm text-gray-700">
+                {[
+                  isHe ? 'לחץ על כפתור השיתוף ⎙ בתחתית המסך' : 'Tap the Share ⎙ button at the bottom',
+                  isHe ? 'גלול מטה ← בחר "הדפס"' : 'Scroll down → choose "Print"',
+                  isHe ? 'הגדל בתנועת pinch → שמור כ-PDF' : 'Pinch to zoom out → Save as PDF',
+                ].map((step, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="mb-5">
+              <p className="text-xs font-bold text-gray-500 uppercase mb-2">
+                {isHe ? 'ב-Android:' : 'On Android:'}
+              </p>
+              <ol className="space-y-2 text-sm text-gray-700">
+                {[
+                  isHe ? 'פתח תפריט (⋮) ← "שתף" או "הדפס"' : 'Open menu (⋮) → "Share" or "Print"',
+                  isHe ? 'בחר "שמור כ-PDF"' : 'Choose "Save as PDF"',
+                ].map((step, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-700 text-[11px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <p className="text-xs text-gray-400 mb-4 text-center">
+              {isHe ? '— או שתף ישירות —' : '— or share directly —'}
+            </p>
+
+            <div className="flex flex-col gap-2">
+              <a
+                href={data ? `https://wa.me/?text=${encodeURIComponent(buildShareText(data, lang))}` : '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-400 transition-colors"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.526 5.849L.057 23.286a.75.75 0 00.921.921l5.437-1.47A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.716 9.716 0 01-4.952-1.354l-.355-.211-3.678.994.993-3.556-.232-.368A9.716 9.716 0 012.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
+                </svg>
+                {isHe ? 'שתף ב-WhatsApp' : 'Share on WhatsApp'}
+              </a>
+              <button
+                onClick={async () => { await handleShare(); }}
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gray-100 text-gray-800 text-sm font-bold hover:bg-gray-200 transition-colors"
+              >
+                {copied ? (isHe ? '✓ הועתק!' : '✓ Copied!') : (isHe ? '📋 העתק טקסט' : '📋 Copy text')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main content */}
       <div dir={dir} className="max-w-3xl mx-auto px-6 py-8 mt-16 print:mt-0 bg-white min-h-screen shadow-sm">

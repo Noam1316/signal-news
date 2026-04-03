@@ -48,7 +48,9 @@ export default function DashboardPage() {
               {/* 2-column on large screens: news feed left, track record right */}
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
                 <BriefList compactMode={prefs.compactMode} />
-                <TrackRecord />
+                <div className="order-first lg:order-last">
+                  <TrackRecord />
+                </div>
               </div>
             </div>
           </section>
