@@ -3,66 +3,42 @@
 import { useEffect, useState } from 'react';
 import type { BriefStory, ShockEvent } from '@/lib/types';
 
-/** Generate Hebrew PDF by screenshotting the DOM (preserves RTL + Hebrew fonts) */
-async function generateAndSharePDFFromDOM(isHe: boolean): Promise<void> {
+/** Share brief as PNG image — reliable on mobile, preserves Hebrew/RTL as rendered */
+async function shareAsImage(isHe: boolean): Promise<void> {
   const element = document.getElementById('print-content');
   if (!element) return;
 
-  const { jsPDF } = await import('jspdf');
   const html2canvas = (await import('html2canvas')).default;
 
-  // Clone into a clean fixed container — avoids toolbar overlap & margin issues
-  const clone = element.cloneNode(true) as HTMLElement;
-  clone.style.cssText = [
-    'position:fixed', 'top:0', 'left:0',
-    'width:794px', 'margin:0', 'padding:32px',
-    'background:white', 'z-index:-9999', 'pointer-events:none',
-    'font-family:Arial,sans-serif',
-  ].join(';');
-  document.body.appendChild(clone);
+  // Capture at scale 1 — low memory, works on all mobile browsers
+  const canvas = await html2canvas(element, {
+    scale: 1,
+    useCORS: true,
+    backgroundColor: '#ffffff',
+    logging: false,
+    scrollX: 0,
+    scrollY: -window.scrollY,
+  });
 
-  try {
-    const canvas = await html2canvas(clone, {
-      scale: 1.5,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      width: 794,
-      windowWidth: 794,
-    });
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const fileName = `zikuk-brief-${dateStr}.png`;
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.90);
-    const pageW = 210;
-    const pageH = 297;
-    const imgW = pageW;
-    const imgH = (canvas.height * pageW) / canvas.width;
-
-    const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
-    let pos = 0;
-    pdf.addImage(imgData, 'JPEG', 0, pos, imgW, imgH);
-    let remaining = imgH - pageH;
-    while (remaining > 0) {
-      pos -= pageH;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, pos, imgW, imgH);
-      remaining -= pageH;
-    }
-
-    const fileName = `zikuk-brief-${isHe ? 'he' : 'en'}-${new Date().toISOString().slice(0, 10)}.pdf`;
-    const blob = pdf.output('blob');
-    const file = new File([blob], fileName, { type: 'application/pdf' });
-
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: 'Zikuk Intel Brief' }); return; }
-      catch { /* cancelled */ }
-    }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = fileName; a.click();
-    URL.revokeObjectURL(url);
-  } finally {
-    document.body.removeChild(clone);
-  }
+  await new Promise<void>((resolve) => {
+    canvas.toBlob(async (blob) => {
+      if (!blob) { resolve(); return; }
+      const file = new File([blob], fileName, { type: 'image/png' });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: isHe ? 'זיקוק — תקציר מודיעין' : 'Zikuk Intel Brief' }); }
+        catch { /* cancelled */ }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName; a.click();
+        URL.revokeObjectURL(url);
+      }
+      resolve();
+    }, 'image/png');
+  });
 }
 
 /** Generate and share/download a real PDF file using jsPDF */
@@ -308,7 +284,7 @@ export default function PrintBriefPage() {
   const [copied, setCopied] = useState(false);
   const [showMobileHint, setShowMobileHint] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
-  const [generatingHePDF, setGeneratingHePDF] = useState(false);
+  const [generatingImg, setGeneratingImg] = useState(false);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 640 || /iPhone|iPad|Android/i.test(navigator.userAgent));
@@ -432,22 +408,22 @@ export default function PrintBriefPage() {
                 </svg>
                 WA
               </a>
-              {/* PDF עברי — צילום DOM */}
+              {/* שמור כתמונה — עברית מלאה, אמין במובייל */}
               <button
                 onClick={async () => {
-                  if (generatingHePDF) return;
-                  setGeneratingHePDF(true);
-                  try { await generateAndSharePDFFromDOM(isHe); }
+                  if (generatingImg) return;
+                  setGeneratingImg(true);
+                  try { await shareAsImage(isHe); }
                   catch { /* silent */ }
-                  finally { setGeneratingHePDF(false); }
+                  finally { setGeneratingImg(false); }
                 }}
-                disabled={generatingHePDF || generatingPDF}
-                title={isHe ? 'PDF בעברית — צילום עמוד' : 'PDF in Hebrew — page screenshot'}
+                disabled={generatingImg || generatingPDF}
+                title={isHe ? 'שמור/שתף כתמונה — עברית מלאה' : 'Save/share as image'}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-500 text-white text-sm font-bold hover:bg-blue-400 transition-colors disabled:opacity-60"
               >
-                {generatingHePDF ? '⏳' : '📄'} {generatingHePDF ? (isHe ? 'מייצר…' : 'Building…') : (isHe ? 'PDF עב׳' : 'PDF HE')}
+                {generatingImg ? '⏳' : '🖼️'} {generatingImg ? (isHe ? 'מייצר…' : 'Building…') : (isHe ? 'תמונה' : 'Image')}
               </button>
-              {/* PDF אנגלית — טקסט */}
+              {/* PDF אנגלית — טקסט מובנה */}
               <button
                 onClick={async () => {
                   if (!data || generatingPDF) return;
@@ -456,7 +432,7 @@ export default function PrintBriefPage() {
                   catch { /* silent */ }
                   finally { setGeneratingPDF(false); }
                 }}
-                disabled={generatingPDF || generatingHePDF || !data}
+                disabled={generatingPDF || generatingImg || !data}
                 title={isHe ? 'PDF באנגלית — טקסט מובנה' : 'PDF in English — structured text'}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-yellow-400 text-gray-900 text-sm font-bold hover:bg-yellow-300 transition-colors disabled:opacity-60"
               >
