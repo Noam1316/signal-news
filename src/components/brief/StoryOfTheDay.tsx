@@ -175,25 +175,20 @@ export default function StoryOfTheDay() {
       {/* ── Summary ── */}
       {summary && (
         <div className="space-y-1">
-          <div
-            style={{
-              maxHeight: summaryExpanded ? '600px' : '92px',
-              overflow: 'hidden',
-              transition: 'max-height 0.3s ease',
-            }}
-          >
-            <p className="text-sm text-gray-300 leading-relaxed">
-              {summary}
-            </p>
-          </div>
-          <button
-            onClick={() => setSummaryExpanded(e => !e)}
-            className="text-[11px] text-yellow-400/70 hover:text-yellow-400 transition-colors cursor-pointer"
-          >
-            {summaryExpanded
-              ? (lang === 'he' ? '▲ פחות' : '▲ less')
-              : (lang === 'he' ? '▼ קרא עוד' : '▼ read more')}
-          </button>
+          <p className={`text-sm text-gray-300 leading-relaxed ${!summaryExpanded ? 'line-clamp-2' : ''}`}>
+            {summary}
+          </p>
+          {summary.length > 120 && (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); setSummaryExpanded(v => !v); }}
+              className="text-[11px] text-yellow-400/70 hover:text-yellow-400 transition-colors cursor-pointer"
+            >
+              {summaryExpanded
+                ? (lang === 'he' ? '▲ פחות' : '▲ less')
+                : (lang === 'he' ? '▼ קרא עוד' : '▼ read more')}
+            </button>
+          )}
         </div>
       )}
 
