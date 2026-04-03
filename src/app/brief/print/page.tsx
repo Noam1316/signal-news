@@ -379,9 +379,10 @@ export default function PrintBriefPage() {
                   finally { setGeneratingPDF(false); }
                 }}
                 disabled={generatingPDF || !data}
+                title={isHe ? 'PDF מופק באנגלית בלבד (מגבלת פונט)' : 'PDF in English (font limitation)'}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-yellow-400 text-gray-900 text-sm font-bold hover:bg-yellow-300 transition-colors disabled:opacity-60"
               >
-                {generatingPDF ? '⏳' : '📄'} {isHe ? (generatingPDF ? 'מייצר…' : 'PDF') : (generatingPDF ? 'Building…' : 'PDF')}
+                {generatingPDF ? '⏳' : '📄'} {isHe ? (generatingPDF ? 'מייצר…' : 'PDF (EN)') : (generatingPDF ? 'Building…' : 'PDF')}
               </button>
             </>
           ) : (

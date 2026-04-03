@@ -301,12 +301,12 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
 
       {/* Expanded: cross-sector impacts + source links */}
       {expanded && !hasDetailPage && (
-        <div className="pt-2 border-t border-gray-800/50 space-y-3">
+        <div className="pt-3 border-t border-gray-700 space-y-4">
 
           {/* Smart Connections */}
           {story.impacts && story.impacts.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[11px] text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+              <p className="text-xs font-semibold text-gray-300 flex items-center gap-1.5">
                 <span>🔗</span>
                 {lang === 'he' ? 'השפעות צפויות' : 'Expected Impacts'}
               </p>
@@ -335,8 +335,8 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
 
           {/* Sources */}
           <div className="space-y-2">
-            <p className="text-[11px] text-gray-400 uppercase tracking-wider">
-              {lang === 'he' ? 'מקורות' : 'Sources'}
+            <p className="text-xs font-semibold text-gray-300">
+              {lang === 'he' ? '🔗 מקורות' : '🔗 Sources'}
             </p>
             <div className="flex flex-wrap gap-2">
               {story.sources.map((src) => (
