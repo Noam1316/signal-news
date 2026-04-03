@@ -3,37 +3,178 @@
 import { useEffect, useState } from 'react';
 import type { BriefStory, ShockEvent } from '@/lib/types';
 
-/** Share brief as PNG image — reliable on mobile, preserves Hebrew/RTL as rendered */
-async function shareAsImage(isHe: boolean): Promise<void> {
-  const element = document.getElementById('print-content');
-  if (!element) return;
+/** Draw brief to Canvas and share as PNG — no DOM capture, works on all mobile browsers */
+function shareAsImage(d: PrintData, isHe: boolean): Promise<void> {
+  return new Promise((resolve) => {
+    const W = 900, MARGIN = 48;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
 
-  const html2canvas = (await import('html2canvas')).default;
+    // ── measure height first ──
+    canvas.width = W;
+    canvas.height = 100;
+    ctx.font = '16px Arial';
+    const lineH = 22;
 
-  // Capture at scale 1 — low memory, works on all mobile browsers
-  const canvas = await html2canvas(element, {
-    scale: 1,
-    useCORS: true,
-    backgroundColor: '#ffffff',
-    logging: false,
-    scrollX: 0,
-    scrollY: -window.scrollY,
-  });
+    const stories = d.stories.slice(0, 7);
+    const shocks  = d.shocks.slice(0, 3);
+    const storyLines = stories.reduce((acc, s) => {
+      const headline = getText(s.headline, isHe ? 'he' : 'en') || getText(s.headline, isHe ? 'en' : 'he');
+      const words = headline.split(' ');
+      let line = '';
+      let lines = 0;
+      for (const w of words) {
+        const test = line ? line + ' ' + w : w;
+        if (ctx.measureText(test).width > W - MARGIN * 2 - 40) { lines++; line = w; }
+        else line = test;
+      }
+      return acc + lines + 2 + 2; // headline lines + summary + gap
+    }, 0);
 
-  const dateStr = new Date().toISOString().slice(0, 10);
-  const fileName = `zikuk-brief-${dateStr}.png`;
+    const H = 120 + storyLines * lineH + shocks.length * (lineH * 3) + 100;
+    canvas.height = Math.max(H, 600);
 
-  await new Promise<void>((resolve) => {
+    // ── background ──
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, W, canvas.height);
+
+    let y = 0;
+
+    // ── header bar ──
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, 0, W, 70);
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = 'bold 22px Arial';
+    ctx.textAlign = isHe ? 'right' : 'left';
+    ctx.direction = isHe ? 'rtl' : 'ltr';
+    ctx.fillText('⚡ Zikuk', isHe ? W - MARGIN : MARGIN, 32);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '13px Arial';
+    ctx.fillText(isHe ? 'תקציר מודיעין גיאופוליטי' : 'Geopolitical Intelligence Brief', isHe ? W - MARGIN : MARGIN, 52);
+
+    // risk index
+    if (d.riskIndex !== null) {
+      const rColor = d.riskIndex >= 66 ? '#ef4444' : d.riskIndex >= 34 ? '#f59e0b' : '#10b981';
+      ctx.fillStyle = rColor;
+      ctx.font = 'bold 28px Arial';
+      ctx.textAlign = isHe ? 'left' : 'right';
+      ctx.fillText(`${d.riskIndex}`, isHe ? MARGIN + 30 : W - MARGIN - 30, 38);
+      ctx.font = '10px Arial';
+      ctx.fillStyle = '#64748b';
+      ctx.fillText(isHe ? 'מדד סיכון' : 'Risk', isHe ? MARGIN : W - MARGIN, 54);
+    }
+
+    y = 90;
+
+    // date
+    ctx.textAlign = isHe ? 'right' : 'left';
+    ctx.direction = isHe ? 'rtl' : 'ltr';
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px Arial';
+    ctx.fillText(isHe ? d.generatedAtHe : d.generatedAt, isHe ? W - MARGIN : MARGIN, y);
+    y += 28;
+
+    // ── stories ──
+    ctx.fillStyle = '#6366f1';
+    ctx.font = 'bold 11px Arial';
+    ctx.fillText(isHe ? '◆ סיפורים מובילים' : '◆ TOP STORIES', isHe ? W - MARGIN : MARGIN, y);
+    y += 20;
+
+    stories.forEach((s, i) => {
+      const headline = getText(s.headline, isHe ? 'he' : 'en') || getText(s.headline, isHe ? 'en' : 'he');
+      const summary  = getText(s.summary,  isHe ? 'he' : 'en') || getText(s.summary,  isHe ? 'en' : 'he');
+      const likColor = s.likelihood >= 70 ? '#10b981' : s.likelihood >= 45 ? '#f59e0b' : '#6b7280';
+
+      // number badge
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(isHe ? W - MARGIN - 10 : MARGIN + 10, y + 2, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = 'bold 11px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${i + 1}`, isHe ? W - MARGIN - 10 : MARGIN + 10, y + 6);
+
+      // headline
+      ctx.textAlign = isHe ? 'right' : 'left';
+      ctx.direction = isHe ? 'rtl' : 'ltr';
+      ctx.fillStyle = '#f1f5f9';
+      ctx.font = 'bold 14px Arial';
+      const xOff = isHe ? W - MARGIN - 26 : MARGIN + 26;
+      const maxW = W - MARGIN * 2 - 30;
+
+      // word-wrap headline
+      const words = headline.split(' ');
+      let line = '';
+      const wrapped: string[] = [];
+      for (const w of words) {
+        const test = line ? line + ' ' + w : w;
+        if (ctx.measureText(test).width > maxW && line) { wrapped.push(line); line = w; }
+        else line = test;
+      }
+      if (line) wrapped.push(line);
+      wrapped.slice(0, 2).forEach(l => { ctx.fillText(l, xOff, y); y += lineH; });
+
+      // likelihood
+      ctx.fillStyle = likColor;
+      ctx.font = 'bold 11px Arial';
+      ctx.fillText(`${s.likelihood}%${s.delta ? `  Δ${s.delta > 0 ? '+' : ''}${s.delta}%` : ''}`, xOff, y);
+      y += lineH;
+
+      // summary (1 line max)
+      if (summary) {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '11px Arial';
+        const sumTrim = summary.length > 100 ? summary.slice(0, 100) + '…' : summary;
+        ctx.fillText(sumTrim, xOff, y);
+        y += lineH;
+      }
+
+      // divider
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(MARGIN, y + 4); ctx.lineTo(W - MARGIN, y + 4);
+      ctx.stroke();
+      y += 16;
+    });
+
+    // ── shocks ──
+    if (shocks.length > 0) {
+      y += 8;
+      ctx.fillStyle = '#6366f1';
+      ctx.font = 'bold 11px Arial';
+      ctx.textAlign = isHe ? 'right' : 'left';
+      ctx.fillText(isHe ? '◆ זעזועים' : '◆ SHOCKS', isHe ? W - MARGIN : MARGIN, y);
+      y += 20;
+      shocks.forEach(sh => {
+        const hl = getText(sh.headline, isHe ? 'he' : 'en') || getText(sh.headline, isHe ? 'en' : 'he');
+        ctx.fillStyle = sh.confidence === 'high' ? '#ef4444' : '#f59e0b';
+        ctx.font = 'bold 13px Arial';
+        ctx.fillText('⚡ ' + hl.slice(0, 70), isHe ? W - MARGIN : MARGIN, y);
+        y += lineH * 2;
+      });
+    }
+
+    // ── footer ──
+    y = canvas.height - 30;
+    ctx.fillStyle = '#334155';
+    ctx.font = '11px Arial';
+    ctx.textAlign = 'center';
+    ctx.direction = 'ltr';
+    ctx.fillText('⚡ Zikuk — signal-news.vercel.app', W / 2, y);
+
+    // ── export ──
     canvas.toBlob(async (blob) => {
       if (!blob) { resolve(); return; }
+      const fileName = `zikuk-brief-${new Date().toISOString().slice(0, 10)}.png`;
       const file = new File([blob], fileName, { type: 'image/png' });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         try { await navigator.share({ files: [file], title: isHe ? 'זיקוק — תקציר מודיעין' : 'Zikuk Intel Brief' }); }
         catch { /* cancelled */ }
       } else {
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = fileName; a.click();
+        const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
         URL.revokeObjectURL(url);
       }
       resolve();
@@ -411,13 +552,13 @@ export default function PrintBriefPage() {
               {/* שמור כתמונה — עברית מלאה, אמין במובייל */}
               <button
                 onClick={async () => {
-                  if (generatingImg) return;
+                  if (!data || generatingImg) return;
                   setGeneratingImg(true);
-                  try { await shareAsImage(isHe); }
+                  try { await shareAsImage(data, isHe); }
                   catch { /* silent */ }
                   finally { setGeneratingImg(false); }
                 }}
-                disabled={generatingImg || generatingPDF}
+                disabled={generatingImg || generatingPDF || !data}
                 title={isHe ? 'שמור/שתף כתמונה — עברית מלאה' : 'Save/share as image'}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-500 text-white text-sm font-bold hover:bg-blue-400 transition-colors disabled:opacity-60"
               >
