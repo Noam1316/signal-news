@@ -55,22 +55,22 @@ export default function SectionNav() {
       dir={dir}
       className="sticky top-14 z-40 bg-gray-950/95 backdrop-blur-md border-b border-gray-800/50"
     >
-      <div className="max-w-5xl mx-auto flex items-center gap-1 px-4 overflow-x-auto scrollbar-hide">
+      <div className="max-w-5xl mx-auto flex items-center gap-0 sm:gap-1 px-2 sm:px-4 overflow-x-auto scrollbar-hide">
         {SECTIONS.map((section) => {
           const isActive = active === section.id;
           return (
             <button
               key={section.id}
               onClick={() => scrollTo(section.id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap
-                         border-b-2 transition-all duration-200
+              className={`shrink-0 flex items-center gap-1.5 px-3 sm:px-4 py-3 text-sm font-medium whitespace-nowrap
+                         border-b-2 transition-all duration-200 touch-manipulation
                 ${isActive
                   ? 'border-yellow-400 text-white'
-                  : 'border-transparent text-gray-500 hover:text-gray-300'
+                  : 'border-transparent text-gray-500 hover:text-gray-300 active:text-gray-200'
                 }`}
             >
-              <span className="text-xs">{section.icon}</span>
-              {lang === 'he' ? section.he : section.en}
+              <span className="text-base sm:text-xs">{section.icon}</span>
+              <span className="hidden sm:inline">{lang === 'he' ? section.he : section.en}</span>
             </button>
           );
         })}

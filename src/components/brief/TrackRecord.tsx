@@ -91,12 +91,13 @@ export default function TrackRecord() {
       .catch(() => {});
   }, []);
 
-  const predictions = stories.length > 0 ? buildFromStories(stories) : generateTrackRecord();
+  const predictions = stories.length > 0 ? buildFromStories(stories) : [];
   const resolved    = predictions.filter(p => p.outcome !== 'pending');
   const correct     = resolved.filter(p => p.outcome === 'correct').length;
   const wrong       = resolved.filter(p => p.outcome === 'wrong').length;
   const pending     = predictions.filter(p => p.outcome === 'pending').length;
   const accuracy    = resolved.length > 0 ? Math.round((correct / resolved.length) * 100) : 0;
+  const hasRealData = resolved.length > 0;
 
   // Win streak
   const streak = (() => {
@@ -123,63 +124,105 @@ export default function TrackRecord() {
         )}
       </div>
 
-      {/* Accuracy ring + breakdown */}
-      <div className="flex items-center gap-4">
-        <AccuracyRing accuracy={accuracy} correct={correct} total={resolved.length} />
-
-        <div className="flex-1 space-y-2">
-          {[
-            { label: lang === 'he' ? 'נכון' : 'Correct', count: correct, color: 'text-emerald-400', bar: 'bg-emerald-500' },
-            { label: lang === 'he' ? 'שגוי' : 'Wrong',   count: wrong,   color: 'text-red-400',     bar: 'bg-red-500'     },
-            { label: lang === 'he' ? 'ממתין' : 'Pending', count: pending, color: 'text-gray-500',    bar: 'bg-gray-600'    },
-          ].map(({ label, count, color, bar }) => {
-            const total = predictions.length;
-            const pct   = total > 0 ? Math.round((count / total) * 100) : 0;
-            return (
-              <div key={label} className="space-y-0.5">
-                <div className="flex items-center justify-between text-[10px]">
-                  <span className={`font-medium ${color}`}>{label}</span>
-                  <span className="text-gray-500 font-mono">{count}</span>
-                </div>
-                <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                  <div className={`h-full ${bar} rounded-full transition-all duration-700`}
-                       style={{ width: `${pct}%` }} />
-                </div>
-              </div>
-            );
-          })}
-
-          {/* vs baseline */}
-          <div className="text-[9px] text-gray-600 pt-0.5">
-            {lang === 'he'
-              ? `Signal מדויק ב-${Math.max(0, accuracy - 50)}% מעל בסיס אקראי`
-              : `${Math.max(0, accuracy - 50)}% above random baseline`}
+      {/* Accumulating state — no resolved predictions yet */}
+      {!hasRealData ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-800/40 border border-gray-700/40">
+            <div className="text-2xl">📊</div>
+            <div>
+              <p className="text-xs font-semibold text-gray-300">
+                {lang === 'he' ? 'מצבר נתונים ראשוניים' : 'Accumulating data'}
+              </p>
+              <p className="text-[10px] text-gray-500 mt-0.5">
+                {lang === 'he'
+                  ? 'רקורד אמיתי יצבר ככל שתחזיות ייסגרו על Polymarket'
+                  : 'Real accuracy will build as Polymarket markets resolve'}
+              </p>
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Prediction tiles */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-        {predictions.map((p, i) => {
-          const icon    = p.outcome === 'correct' ? '✅' : p.outcome === 'wrong' ? '❌' : '⏳';
-          const border  = p.outcome === 'correct' ? 'border-emerald-500/30 bg-emerald-500/5'
-                        : p.outcome === 'wrong'   ? 'border-red-500/30 bg-red-500/5'
-                        :                          'border-gray-700 bg-gray-900/50';
-          const daysAgo = Math.round((Date.now() - new Date(p.predictedAt).getTime()) / 86400000);
-          return (
-            <div key={i} className={`shrink-0 px-2.5 py-2 rounded-lg border ${border} min-w-[130px] max-w-[160px] space-y-0.5`}>
-              <div className="flex items-center gap-1">
-                <span className="text-[10px]">{icon}</span>
-                <span className="text-[10px] font-medium text-white truncate">{p.topic}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-yellow-400 font-mono font-bold">{p.likelihood}%</span>
-                <span className="text-[9px] text-gray-600">{daysAgo}d</span>
+          {pending > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] text-gray-500 font-medium">
+                {lang === 'he' ? `${pending} תחזיות פתוחות:` : `${pending} open predictions:`}
+              </p>
+              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                {predictions.map((p, i) => {
+                  const daysAgo = Math.round((Date.now() - new Date(p.predictedAt).getTime()) / 86400000);
+                  return (
+                    <div key={i} className="shrink-0 px-2.5 py-2 rounded-lg border border-gray-700 bg-gray-900/50 min-w-[130px] max-w-[160px] space-y-0.5">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px]">⏳</span>
+                        <span className="text-[10px] font-medium text-gray-300 truncate">{p.topic}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-yellow-400 font-mono font-bold">{p.likelihood}%</span>
+                        <span className="text-[9px] text-gray-600">{daysAgo === 0 ? (lang === 'he' ? 'היום' : 'today') : `${daysAgo}d`}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          );
-        })}
-      </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Accuracy ring + breakdown */}
+          <div className="flex items-center gap-4">
+            <AccuracyRing accuracy={accuracy} correct={correct} total={resolved.length} />
+            <div className="flex-1 space-y-2">
+              {[
+                { label: lang === 'he' ? 'נכון' : 'Correct', count: correct, color: 'text-emerald-400', bar: 'bg-emerald-500' },
+                { label: lang === 'he' ? 'שגוי' : 'Wrong',   count: wrong,   color: 'text-red-400',     bar: 'bg-red-500'     },
+                { label: lang === 'he' ? 'ממתין' : 'Pending', count: pending, color: 'text-gray-500',    bar: 'bg-gray-600'    },
+              ].map(({ label, count, color, bar }) => {
+                const total = predictions.length;
+                const pct   = total > 0 ? Math.round((count / total) * 100) : 0;
+                return (
+                  <div key={label} className="space-y-0.5">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className={`font-medium ${color}`}>{label}</span>
+                      <span className="text-gray-500 font-mono">{count}</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                      <div className={`h-full ${bar} rounded-full transition-all duration-700`}
+                           style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="text-[9px] text-gray-600 pt-0.5">
+                {lang === 'he'
+                  ? `Signal מדויק ב-${Math.max(0, accuracy - 50)}% מעל בסיס אקראי`
+                  : `${Math.max(0, accuracy - 50)}% above random baseline`}
+              </div>
+            </div>
+          </div>
+
+          {/* Prediction tiles */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+            {predictions.map((p, i) => {
+              const icon   = p.outcome === 'correct' ? '✅' : p.outcome === 'wrong' ? '❌' : '⏳';
+              const border = p.outcome === 'correct' ? 'border-emerald-500/30 bg-emerald-500/5'
+                           : p.outcome === 'wrong'   ? 'border-red-500/30 bg-red-500/5'
+                           :                          'border-gray-700 bg-gray-900/50';
+              const daysAgo = Math.round((Date.now() - new Date(p.predictedAt).getTime()) / 86400000);
+              return (
+                <div key={i} className={`shrink-0 px-2.5 py-2 rounded-lg border ${border} min-w-[130px] max-w-[160px] space-y-0.5`}>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px]">{icon}</span>
+                    <span className="text-[10px] font-medium text-white truncate">{p.topic}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-yellow-400 font-mono font-bold">{p.likelihood}%</span>
+                    <span className="text-[9px] text-gray-600">{daysAgo}d</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

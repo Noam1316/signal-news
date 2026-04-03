@@ -193,7 +193,9 @@ export function matchStoriesWithMarkets(
         }
       }
 
-      if (matchScore > bestScore) {
+      // Require at least one genuine topic-category keyword hit (not just word overlap)
+      const hasCategoryHit = Object.values(categoryScores).some(s => s >= 2);
+      if (matchScore > bestScore && hasCategoryHit) {
         bestScore = matchScore;
         bestMatch = market;
         bestKeywords = matched;
@@ -202,7 +204,8 @@ export function matchStoriesWithMarkets(
       }
     }
 
-    if (bestMatch && bestScore >= 2) {
+    // Require score ≥ 4 to avoid spurious matches (e.g. "Danish warship" → "Trump China")
+    if (bestMatch && bestScore >= 4) {
       const marketProb = Math.round(bestMatch.outcomePrices[0] * 100);
       const delta = story.likelihood - marketProb;
       const absDelta = Math.abs(delta);
