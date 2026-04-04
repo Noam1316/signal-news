@@ -12,6 +12,7 @@ import { generateStories } from '@/services/story-clusterer';
 import { detectShocks } from '@/services/shock-detector';
 import { fetchPolymarketEvents, matchStoriesWithMarkets, getTopAlpha } from '@/services/polymarket';
 import { sendMail, isMailerConfigured } from '@/lib/mailer';
+import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { buildDailyBriefEmail } from '@/lib/email-templates';
 
 export async function GET(req: NextRequest) {
@@ -22,8 +23,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (!isMailerConfigured()) {
-    return NextResponse.json({ ok: false, reason: 'GMAIL_USER or GMAIL_APP_PASSWORD not configured' });
+  const resend = getResend();
+  const gmailOk = isMailerConfigured();
+  if (!resend && !gmailOk) {
+    return NextResponse.json({ ok: false, reason: 'No email provider configured (set RESEND_API_KEY or GMAIL_USER+GMAIL_APP_PASSWORD)' });
   }
 
   // Fetch fresh data
@@ -63,9 +66,21 @@ export async function GET(req: NextRequest) {
         email: sub.email,
       });
 
-      const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://signal-news-demo.vercel.app';
+      const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://signal-news-noam1316s-projects.vercel.app';
       const unsubscribeUrl = `${BASE}/api/unsubscribe?token=${sub.token}&email=${encodeURIComponent(sub.email)}`;
-      await sendMail({ to: sub.email, subject, html, unsubscribeUrl });
+
+      // Prefer Resend (already configured), fall back to Gmail SMTP
+      if (resend) {
+        await resend.emails.send({
+          from: FROM_EMAIL,
+          to: sub.email,
+          subject,
+          html,
+          headers: { 'List-Unsubscribe': `<${unsubscribeUrl}>` },
+        });
+      } else {
+        await sendMail({ to: sub.email, subject, html, unsubscribeUrl });
+      }
 
       return sub.email;
     })
