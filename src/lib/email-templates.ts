@@ -330,6 +330,9 @@ export function buildDailyBriefEmail(opts: {
                 <span style="color:#1e293b;"> | </span>
                 <a href="${SITE_URL}/brief/print" style="color:#6366f1; text-decoration:none;">📄 תקציר להדפסה / PDF</a>
               </div>
+              <div style="margin-top:12px; padding:8px 12px; background:#0f172a; border:1px solid #1e293b; border-radius:6px; font-size:11px; color:#64748b; direction:rtl;">
+                📬 קיבלת מייל זה בספאם? סמן <strong style="color:#94a3b8;">"לא ספאם"</strong> כדי שתקצירי הבוקר הבאים יגיעו ישירות לתיבה הראשית.
+              </div>
             </td>
           </tr>
 
