@@ -69,8 +69,10 @@ export async function GET(req: NextRequest) {
       const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://signal-news-noam1316s-projects.vercel.app';
       const unsubscribeUrl = `${BASE}/api/unsubscribe?token=${sub.token}&email=${encodeURIComponent(sub.email)}`;
 
-      // Prefer Resend (already configured), fall back to Gmail SMTP
-      if (resend) {
+      // Prefer Gmail SMTP (sends to everyone), fall back to Resend
+      if (gmailOk) {
+        await sendMail({ to: sub.email, subject, html, unsubscribeUrl });
+      } else if (resend) {
         await resend.emails.send({
           from: `זיקוק <${FROM_EMAIL}>`,
           to: sub.email,
@@ -78,8 +80,6 @@ export async function GET(req: NextRequest) {
           html,
           headers: { 'List-Unsubscribe': `<${unsubscribeUrl}>` },
         });
-      } else {
-        await sendMail({ to: sub.email, subject, html, unsubscribeUrl });
       }
 
       return sub.email;
