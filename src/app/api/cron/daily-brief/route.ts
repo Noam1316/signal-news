@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
       // Prefer Resend (already configured), fall back to Gmail SMTP
       if (resend) {
         await resend.emails.send({
-          from: FROM_EMAIL,
+          from: `זיקוק <${FROM_EMAIL}>`,
           to: sub.email,
           subject,
           html,
