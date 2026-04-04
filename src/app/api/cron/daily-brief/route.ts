@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
     }
   });
 
-  console.log(`[cron/daily-brief] Sent: ${sent}, Failed: ${failed}, Total: ${dailySubs.length}`);
+  console.log(`[cron/daily-brief] Sent: ${sent}, Failed: ${failed}, Total: ${dailySubs.length}, Provider: ${gmailOk ? 'gmail' : 'resend'}, GmailUser: ${process.env.GMAIL_USER ?? 'NOT_SET'}`);
 
   return NextResponse.json({ ok: true, sent, failed, total: dailySubs.length, provider: gmailOk ? 'gmail' : 'resend' });
 }
