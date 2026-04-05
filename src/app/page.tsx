@@ -86,10 +86,20 @@ const RISK_LABEL: Record<string, { he: string; en: string; color: string }> = {
   high:   { he: 'סיכון גבוה',   en: 'High Risk',   color: 'text-red-400'     },
 };
 
+const USE_CASES = [
+  { icon: '🏦', he: 'קרנות גידור', en: 'Hedge Funds', descHe: 'alpha גיאופוליטי לפני השוק', descEn: 'Geopolitical alpha before the market' },
+  { icon: '🎖️', he: 'מומחי ביטחון', en: 'Security Analysts', descHe: 'מודיעין מוקדם בזמן אמת', descEn: 'Early warning intelligence in real-time' },
+  { icon: '📰', he: 'עיתונאים', en: 'Journalists', descHe: 'פערי נרטיב וזיהוי סיפורים עולים', descEn: 'Narrative gaps & emerging story detection' },
+  { icon: '🏛️', he: 'ממשלות וNGOs', en: 'Governments & NGOs', descHe: 'ניתוח מדיניות מבוסס נתונים', descEn: 'Data-driven policy analysis' },
+];
+
 export default function LandingPage() {
   const [lang, setLang] = useState<'he' | 'en'>('he');
   const [stats, setStats] = useState<LiveStats | null>(null);
   const [pulse, setPulse] = useState(true);
+  const [accuracy, setAccuracy] = useState<number | null>(null);
+  const [email, setEmail] = useState('');
+  const [subState, setSubState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
 
   useEffect(() => {
     const saved = localStorage.getItem('signal_lang') as 'he' | 'en' | null;
@@ -102,8 +112,8 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
-    Promise.allSettled([fetch('/api/analyze'), fetch('/api/shocks')])
-      .then(([aRes, sRes]) => {
+    Promise.allSettled([fetch('/api/analyze'), fetch('/api/shocks'), fetch('/api/track-record')])
+      .then(([aRes, sRes, tRes]) => {
         let articles = 0, sources = 28, shocks = 0, riskIndex = 0;
         if (aRes.status === 'fulfilled' && aRes.value.ok) {
           aRes.value.json().then(d => {
@@ -119,7 +129,7 @@ export default function LandingPage() {
           sRes.value.json().then(d => {
             const list = d?.shocks ?? [];
             shocks = list.length;
-            const p = list.reduce((a: number, s: any) =>
+            const p = list.reduce((a: number, s: { confidence: string }) =>
               a + (s.confidence === 'high' ? 16 : s.confidence === 'medium' ? 8 : 4), 0);
             riskIndex += Math.min(40, p);
             const level: 'low' | 'medium' | 'high' = riskIndex >= 66 ? 'high' : riskIndex >= 34 ? 'medium' : 'low';
@@ -127,6 +137,11 @@ export default function LandingPage() {
           }).catch(() => {});
         } else {
           setStats({ articles, shocks, sources, riskLevel: 'low' });
+        }
+        if (tRes.status === 'fulfilled' && tRes.value.ok) {
+          tRes.value.json().then(d => {
+            setAccuracy(d?.accuracyRate ?? d?.signalWinRate ?? null);
+          }).catch(() => {});
         }
       });
   }, []);
@@ -137,12 +152,26 @@ export default function LandingPage() {
     localStorage.setItem('signal_lang', next);
   };
 
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.includes('@')) return;
+    setSubState('loading');
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, dailyBrief: true, topics: [], watchlistAlerts: false }),
+      });
+      setSubState(res.ok ? 'done' : 'error');
+    } catch { setSubState('error'); }
+  };
+
   const risk = stats ? RISK_LABEL[stats.riskLevel] : null;
 
   return (
     <div className="min-h-screen bg-gray-950 text-white" dir={lang === 'he' ? 'rtl' : 'ltr'}>
 
-      {/* Minimal top bar */}
+      {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800/50">
         <div className="flex items-center gap-2 font-bold text-xl">
           <span className="text-yellow-400">⚡</span>
@@ -161,7 +190,7 @@ export default function LandingPage() {
       </div>
 
       {/* Hero */}
-      <div className="max-w-4xl mx-auto px-6 pt-16 pb-12 text-center space-y-6">
+      <div className="max-w-4xl mx-auto px-6 pt-16 pb-10 text-center space-y-6">
 
         {/* Live badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-semibold">
@@ -177,16 +206,35 @@ export default function LandingPage() {
         {/* Headline */}
         <h1 className="text-4xl sm:text-5xl font-black leading-tight tracking-tight">
           {lang === 'he'
-            ? <>מודיעין גיאופוליטי<br /><span className="text-yellow-400">בזמן אמת</span></>
-            : <>Geopolitical Intelligence<br /><span className="text-yellow-400">in Real Time</span></>}
+            ? <>מודיעין גיאופוליטי<br /><span className="text-yellow-400">לפני השוק</span></>
+            : <>Geopolitical Intelligence<br /><span className="text-yellow-400">Before the Market</span></>}
         </h1>
 
         {/* Sub */}
         <p className="text-lg text-gray-400 max-w-xl mx-auto leading-relaxed">
           {lang === 'he'
-            ? 'מנתח RSS, מחלץ זעזועים, משווה לשווקי הימורים וזוהה פערי נרטיב — ללא מפתח AI.'
-            : 'Analyzes RSS, extracts shocks, compares to prediction markets, and surfaces narrative gaps — no AI key.'}
+            ? 'מנתח 28+ מקורות RSS, מחלץ זעזועים סטטיסטיים, ומשווה לשווקי הימורים — ללא מפתח AI.'
+            : 'Analyzes 28+ RSS sources, extracts statistical shocks, and compares against prediction markets — no AI key needed.'}
         </p>
+
+        {/* Accuracy badge */}
+        {accuracy !== null && (
+          <div className="inline-flex items-center gap-3 px-4 py-2.5 rounded-xl border border-yellow-400/25 bg-yellow-400/5">
+            <div className="text-center">
+              <div className="text-2xl font-black text-yellow-400 font-mono">{accuracy}%</div>
+              <div className="text-[10px] text-gray-500">
+                {lang === 'he' ? 'דיוק תחזיות' : 'prediction accuracy'}
+              </div>
+            </div>
+            <div className="w-px h-8 bg-gray-700" />
+            <div className="text-center">
+              <div className="text-2xl font-black text-emerald-400 font-mono">+{Math.max(0, accuracy - 50)}%</div>
+              <div className="text-[10px] text-gray-500">
+                {lang === 'he' ? 'מעל baseline אקראי' : 'above random baseline'}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* CTA */}
         <div className="flex items-center justify-center gap-3 flex-wrap">
@@ -228,6 +276,22 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* Who uses this */}
+      <div className="max-w-4xl mx-auto px-6 pb-14">
+        <h2 className="text-center text-sm font-bold uppercase tracking-widest text-gray-500 mb-8">
+          {lang === 'he' ? 'מי משתמש ב-Signal' : 'Who uses Signal'}
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {USE_CASES.map((u, i) => (
+            <div key={i} className="p-4 rounded-xl bg-gray-900/40 border border-gray-800 text-center space-y-2 hover:border-gray-700 transition-colors">
+              <div className="text-2xl">{u.icon}</div>
+              <h3 className="text-sm font-bold text-white">{lang === 'he' ? u.he : u.en}</h3>
+              <p className="text-[11px] text-gray-400 leading-relaxed">{lang === 'he' ? u.descHe : u.descEn}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Feature grid */}
       <div className="max-w-4xl mx-auto px-6 pb-16">
         <h2 className="text-center text-sm font-bold uppercase tracking-widest text-gray-500 mb-8">
@@ -248,8 +312,53 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Bottom CTA */}
-      <div className="border-t border-gray-800 py-12 text-center space-y-4">
+      {/* Email subscribe section */}
+      <div className="border-t border-gray-800 py-14">
+        <div className="max-w-md mx-auto px-6 text-center space-y-4">
+          <div className="text-2xl">📬</div>
+          <h2 className="text-xl font-black">
+            {lang === 'he' ? 'תקציר מודיעיני כל בוקר ב-7:00' : 'Intelligence brief every morning at 7am'}
+          </h2>
+          <p className="text-sm text-gray-400">
+            {lang === 'he'
+              ? 'הזעזועים המובילים, סיגנל מול שוק, ופערי נרטיב — ישר לתיבה.'
+              : 'Top shocks, signal vs market, narrative gaps — straight to your inbox.'}
+          </p>
+
+          {subState === 'done' ? (
+            <div className="py-4 text-emerald-400 font-bold">
+              ✅ {lang === 'he' ? 'נרשמת! תקציר ראשון מחר בבוקר.' : 'Subscribed! First brief tomorrow morning.'}
+            </div>
+          ) : (
+            <form onSubmit={handleSubscribe} className="flex gap-2" dir="ltr">
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                required
+                className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-yellow-500/50"
+              />
+              <button
+                type="submit"
+                disabled={subState === 'loading'}
+                className="px-5 py-2.5 rounded-lg bg-yellow-400 text-gray-950 font-bold text-sm hover:bg-yellow-300 transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {subState === 'loading' ? '...' : lang === 'he' ? 'הירשם' : 'Subscribe'}
+              </button>
+            </form>
+          )}
+          {subState === 'error' && (
+            <p className="text-red-400 text-xs">{lang === 'he' ? 'שגיאה, נסה שוב.' : 'Error, please try again.'}</p>
+          )}
+          <p className="text-[11px] text-gray-600">
+            {lang === 'he' ? 'ללא ספאם. ביטול בכל עת.' : 'No spam. Unsubscribe anytime.'}
+          </p>
+        </div>
+      </div>
+
+      {/* Bottom */}
+      <div className="border-t border-gray-800 py-8 text-center space-y-3">
         <p className="text-gray-500 text-sm">
           {lang === 'he'
             ? 'פלטפורמת דמו — מיזם מעוף | נבנה עם Next.js + TypeScript + Tailwind'
