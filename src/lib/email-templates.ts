@@ -94,7 +94,9 @@ function fullStoryCard(story: BriefStory, index: number): string {
               <div style="font-size:17px;font-weight:800;color:#f1f5f9;line-height:1.4;margin-bottom:8px;">${headline}</div>
 
               <!-- Summary -->
-              <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:10px;">${summary}</div>
+              <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:${why ? '8px' : '10px'};">${summary}</div>
+              <!-- Why -->
+              ${why ? `<div style="font-size:12px;color:#64748b;line-height:1.6;margin-bottom:10px;padding-right:10px;border-right:2px solid #374151;">💡 ${why}</div>` : ''}
 
               <!-- Footer row: delta + sources + impacts -->
               <table width="100%" cellpadding="0" cellspacing="0">
@@ -180,7 +182,10 @@ export function buildDailyBriefEmail(opts: {
   const topStory = stories[0];
   const topHeadline = topStory ? getT(topStory.headline) : '';
 
-  const subject = `⚡ תקציר מודיעיני — ${dateStr}`;
+  const shockSuffix = shocks.length > 0 ? ` · ${shocks.length} זעזועים` : '';
+  const subject = topStory
+    ? `⚡ ${topHeadline.slice(0, 55)}${topHeadline.length > 55 ? '...' : ''}${shockSuffix}`
+    : `⚡ תקציר מודיעיני — ${dateStr}`;
 
   const displayStories = stories.slice(0, 5);
   const displayShocks = shocks.slice(0, 2);
@@ -238,12 +243,24 @@ export function buildDailyBriefEmail(opts: {
                   ${signalCount > 0 ? `<td style="padding-left:8px;"><span style="background:#422006;color:#fbbf24;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">⚡ ${signalCount} סיגנלים</span></td>` : ''}
                 </tr>
               </table>
-              <!-- Top story lead -->
-              ${topStory ? `
-              <div style="font-size:15px;color:#f1f5f9;font-weight:700;line-height:1.5;margin-bottom:6px;">${topHeadline}</div>
-              <div style="font-size:13px;color:#64748b;line-height:1.6;margin-bottom:12px;">
-                סיגנל מוביל · סבירות <span style="color:${getLikelihoodColor(topStory.likelihood)};font-weight:700;">${topStory.likelihood}%</span>${topStory.delta ? ` · ${topStory.delta > 0 ? '↑' : '↓'}${Math.abs(topStory.delta)}% מאתמול` : ''}
-              </div>` : ''}
+              <!-- Narrative executive paragraph -->
+              ${topStory ? (() => {
+                const topSummary = escapeHtml(getT(topStory.summary));
+                const shockLine = shocks.length > 0
+                  ? ` זוהו ${shocks.length} זעזועים סטטיסטיים${shocks[0] ? ' — ' + escapeHtml(getT(shocks[0].headline)) : ''}.`
+                  : '';
+                const signalLine = signalCount > 1
+                  ? ` ${signalCount} אירועים בעלי ביטחון גבוה מחייבים תשומת לב.`
+                  : '';
+                return `
+                <div style="font-size:15px;color:#f1f5f9;font-weight:700;line-height:1.5;margin-bottom:8px;">${topHeadline}</div>
+                <div style="font-size:13px;color:#94a3b8;line-height:1.8;margin-bottom:12px;border-right:3px solid #6366f1;padding-right:12px;">
+                  ${topSummary}${shockLine}${signalLine}
+                </div>
+                <div style="font-size:12px;color:#64748b;margin-bottom:12px;">
+                  סבירות מוערכת: <span style="color:${getLikelihoodColor(topStory.likelihood)};font-weight:700;">${topStory.likelihood}%</span>${topStory.delta ? ` &nbsp;·&nbsp; ${topStory.delta > 0 ? '▲' : '▼'}${Math.abs(topStory.delta)}% מאתמול` : ''}
+                </div>`;
+              })() : ''}
               <!-- Sector impacts + stocks -->
               ${(() => {
                 const allImpacts = stories.flatMap(s => s.impacts || []);
