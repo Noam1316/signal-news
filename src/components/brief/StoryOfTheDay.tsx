@@ -149,11 +149,6 @@ export default function StoryOfTheDay() {
           {lang === 'he' ? 'סיגנל היום' : "Today's Top Signal"}
         </span>
         <div className="flex items-center gap-2">
-          {category && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-800 border border-gray-700 text-gray-400">
-              {category}
-            </span>
-          )}
           {story.isSignal && (
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-400/15 border border-yellow-400/30 text-yellow-400 font-bold">
               ⚡ Signal
@@ -175,7 +170,7 @@ export default function StoryOfTheDay() {
       {/* ── Summary ── */}
       {summary && (
         <div className="space-y-1">
-          <p className={`text-sm text-gray-300 leading-relaxed ${!summaryExpanded ? 'line-clamp-2' : ''}`}>
+          <p className={`text-sm text-gray-300 leading-relaxed ${summaryExpanded ? 'line-clamp-none' : 'line-clamp-2'}`}>
             {summary}
           </p>
           {summary.length > 120 && (
