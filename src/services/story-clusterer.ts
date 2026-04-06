@@ -332,7 +332,14 @@ function clusterByTopic(articles: FetchedArticle[]): Cluster[] {
 
   return Array.from(topicMap.entries())
     .map(([topic, items]) => ({ topic, articles: items }))
-    .filter((c) => c.articles.length >= 2) // Only clusters with 2+ articles
+    .filter((c) => {
+      // ① Minimum 2 articles
+      if (c.articles.length < 2) return false;
+      // ② Minimum 2 UNIQUE sources — 1-source clusters are unverified noise
+      const uniqueSrc = new Set(c.articles.map(a => a.article.sourceId)).size;
+      if (uniqueSrc < 2) return false;
+      return true;
+    })
     .sort((a, b) => b.articles.length - a.articles.length);
 }
 
@@ -484,12 +491,63 @@ function determineLens(cluster: Cluster): 'israel' | 'world' {
 /**
  * Generate BriefStory objects from live RSS articles
  */
+/**
+ * Compute an importance score for a cluster BEFORE building the full story.
+ * Used to pick the top N clusters before expensive processing.
+ *
+ * Factors:
+ *  + Likelihood (calculated cheaply from raw counts)
+ *  + Signal flag (1.3×)
+ *  + Unique sources (logarithmic boost)
+ *  + Has impacts defined for topic (1.15×)
+ *  − Staleness: age > 20h + no movement → penalty (0.7×)
+ *  − Sports / General topics → lower priority (0.75×)
+ */
+function scoreCluster(cluster: Cluster): number {
+  const uniqueSources = new Set(cluster.articles.map(a => a.article.sourceId)).size;
+  const signalCount = cluster.articles.filter(a => a.analysis.isSignal).length;
+  const hasImpacts = cluster.topic in TOPIC_IMPACTS;
+  const isLowPriority = cluster.topic === 'Sports' || cluster.topic === 'General';
+
+  // Quick likelihood proxy (no need for full calculation here)
+  const avgSignal = cluster.articles.reduce((s, a) => s + a.analysis.signalScore, 0) / cluster.articles.length;
+  const baseScore = Math.min(30, uniqueSources * 5) + Math.min(25, signalCount / cluster.articles.length * 15 + avgSignal / 10);
+
+  // Recency: newest article age
+  const now = Date.now();
+  const newestTs = cluster.articles
+    .map(a => a.article.pubDate ? new Date(a.article.pubDate).getTime() : 0)
+    .reduce((m, t) => Math.max(m, t), 0);
+  const ageHours = newestTs > 0 ? (now - newestTs) / 3600000 : 24;
+
+  // ④ Staleness penalty: old AND low delta proxy
+  const stale = ageHours > 20 && signalCount === 0;
+  const stalenessMultiplier = stale ? 0.7 : 1;
+
+  // ③ Impact multiplier
+  const impactMultiplier = hasImpacts ? 1.15 : 0.85;
+
+  // Signal boost
+  const signalMultiplier = signalCount > 0 ? 1.3 : 1;
+
+  // Low-priority topic penalty
+  const topicMultiplier = isLowPriority ? 0.75 : 1;
+
+  return baseScore * stalenessMultiplier * impactMultiplier * signalMultiplier * topicMultiplier;
+}
+
 export function generateStories(articles: FetchedArticle[], maxStories = 8): BriefStory[] {
   if (articles.length === 0) return [];
 
   const clusters = clusterByTopic(articles);
 
-  return clusters.slice(0, maxStories).map((cluster) => {
+  // ① Score + sort clusters by importance BEFORE building stories
+  const rankedClusters = clusters
+    .map(c => ({ cluster: c, score: scoreCluster(c) }))
+    .sort((a, b) => b.score - a.score)
+    .map(({ cluster }) => cluster);
+
+  return rankedClusters.slice(0, maxStories).map((cluster) => {
     const headline = pickHeadline(cluster);
     const summary = buildSummary(cluster);
     const { likelihood, delta, confidence } = calculateLikelihood(cluster);

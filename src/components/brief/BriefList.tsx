@@ -134,13 +134,29 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
       case 'sources':    return (b.sources?.length || 0) - (a.sources?.length || 0);
       case 'newest':     return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
       default: {
-        // Personalized sort: boost stories in user's interest areas
+        // Composite importance score for default ranking
+        const now = Date.now();
+        const ageA = a.updatedAt ? (now - new Date(a.updatedAt).getTime()) / 3600000 : 24;
+        const ageB = b.updatedAt ? (now - new Date(b.updatedAt).getTime()) / 3600000 : 24;
+        const staleA = ageA > 20 && Math.abs(a.delta) < 2 ? 0.7 : 1;
+        const staleB = ageB > 20 && Math.abs(b.delta) < 2 ? 0.7 : 1;
+        const hasImpactsA = a.impacts && a.impacts.length > 0 ? 1.15 : 0.85;
+        const hasImpactsB = b.impacts && b.impacts.length > 0 ? 1.15 : 0.85;
+        const srcA = (a.sources?.length || 1);
+        const srcB = (b.sources?.length || 1);
+
+        const scoreA = a.likelihood * (a.isSignal ? 1.3 : 1) * Math.log(srcA + 1) * staleA * hasImpactsA;
+        const scoreB = b.likelihood * (b.isSignal ? 1.3 : 1) * Math.log(srcB + 1) * staleB * hasImpactsB;
+
+        // Personalized boost on top
         if (totalClicks >= 5) {
           const wA = getInterestWeight(a.category.en) || getInterestWeight(a.category.he);
           const wB = getInterestWeight(b.category.en) || getInterestWeight(b.category.he);
-          if (Math.abs(wA - wB) > 0.1) return wB - wA;
+          const pScoreA = scoreA * (1 + wA * 0.3);
+          const pScoreB = scoreB * (1 + wB * 0.3);
+          return pScoreB - pScoreA;
         }
-        return 0;
+        return scoreB - scoreA;
       }
     }
   }), [filtered, sortKey, totalClicks, getInterestWeight]);
