@@ -3,6 +3,7 @@
  * Pre-warms the article cache every hour so users never hit a cold start.
  * Also pre-runs story generation to warm the stories cache.
  * Protected by CRON_SECRET.
+ * Also warms Groq KV cache for cross-instance availability.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
