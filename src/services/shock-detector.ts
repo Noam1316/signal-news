@@ -181,8 +181,9 @@ function detectLikelihoodShocks(topicStats: Map<string, TopicStats>): ShockEvent
     const signalRatio = stats.signalCount / articleCount;
     const sourceCount = stats.sourceSet.size;
 
-    // Threshold: significant volume + high signal ratio + multiple sources
-    if (articleCount >= 5 && signalRatio >= 0.4 && sourceCount >= 3) {
+    // Threshold: significant volume + signal presence + multiple sources
+    // signalRatio lowered from 0.4→0.2 since signal scoring is now stricter
+    if (articleCount >= 5 && signalRatio >= 0.2 && sourceCount >= 3) {
       const entities = extractEntities(stats.articles.map((a) => a.article));
       const entityStr = entities.length > 0
         ? entities.map((e) => e.en).slice(0, 3).join(', ')
@@ -426,7 +427,7 @@ function detectNarrativeShocks(topicStats: Map<string, TopicStats>): ShockEvent[
   const shocks: ShockEvent[] = [];
 
   for (const [topic, stats] of topicStats) {
-    if (NARRATIVE_BLOCKLIST.has(topic) || stats.articles.length < 4) continue;
+    if (NARRATIVE_BLOCKLIST.has(topic) || stats.articles.length < 3) continue;
 
     // Split articles by political leaning
     const rightArticles = stats.articles.filter((a) =>
@@ -436,7 +437,7 @@ function detectNarrativeShocks(topicStats: Map<string, TopicStats>): ShockEvent[
       a.analysis.politicalLeaning === 'left' || a.analysis.politicalLeaning === 'center-left'
     );
 
-    if (rightArticles.length < 2 || leftArticles.length < 2) continue;
+    if (rightArticles.length < 1 || leftArticles.length < 1) continue;
 
     // Calculate sentiment distribution for each side
     const rightNeg = rightArticles.filter((a) => a.analysis.sentiment === 'negative').length;
@@ -450,7 +451,7 @@ function detectNarrativeShocks(topicStats: Map<string, TopicStats>): ShockEvent[
     // Detect significant sentiment divergence between left and right
     const sentimentGap = Math.abs(rightNegRatio - leftNegRatio);
 
-    if (sentimentGap >= 0.4) {
+    if (sentimentGap >= 0.3) {
       const topicDisplay = TOPIC_DISPLAY[topic] || { he: topic, en: topic };
       const entities = extractEntities(stats.articles.map((a) => a.article));
 
