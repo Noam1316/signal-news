@@ -5,6 +5,9 @@
  *
  * Model: llama-3.3-70b-versatile (free, 6000 req/day on Groq)
  * Strategy: batch 8 articles per call → ~750 calls/day for 200 articles per cycle
+ *
+ * Cache: L1 in-memory Map (fast, per-instance) + L2 Vercel KV (shared across all instances)
+ * This ensures warm-cache results are visible to /api/analyze on any serverless instance.
  */
 
 import type { FetchedArticle } from './rss-fetcher';
@@ -29,54 +32,104 @@ const VALID_TOPICS = [
   'Security', 'Diplomacy', 'Sports', 'General',
 ];
 
-// In-memory cache: articleId → result
-const _groqCache = new Map<string, GroqArticleResult>();
+const KV_PREFIX = 'groq:article:';
+const KV_TTL_S = 7200; // 2 hours — matches article lifecycle
 
-export function getGroqResult(articleId: string): GroqArticleResult | null {
-  return _groqCache.get(articleId) ?? null;
+// L1: in-memory cache (fast, per-instance)
+const _memCache = new Map<string, GroqArticleResult>();
+
+// ── KV helpers (same pattern as article-cache.ts) ─────────────────────────────
+
+async function kvGet(articleId: string): Promise<GroqArticleResult | null> {
+  try {
+    if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) return null;
+    const { kv } = await import('@vercel/kv');
+    return await kv.get<GroqArticleResult>(`${KV_PREFIX}${articleId}`);
+  } catch { return null; }
 }
+
+async function kvSet(result: GroqArticleResult): Promise<void> {
+  try {
+    if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) return;
+    const { kv } = await import('@vercel/kv');
+    await kv.set(`${KV_PREFIX}${result.articleId}`, result, { ex: KV_TTL_S });
+  } catch { /* silent */ }
+}
+
+// ── Public API ─────────────────────────────────────────────────────────────────
 
 export function isGroqEnabled(): boolean {
   return !!process.env.GROQ_API_KEY;
 }
 
 /**
+ * Synchronous L1-only lookup.
+ * Always call warmGroqFromKV() before a batch of analyzeArticle() calls
+ * to ensure L1 is populated from KV for this serverless instance.
+ */
+export function getGroqResult(articleId: string): GroqArticleResult | null {
+  return _memCache.get(articleId) ?? null;
+}
+
+/**
+ * Batch-warm L1 from KV for a list of article IDs.
+ * Call this once per API request before running analyzeArticles().
+ * Uses mget for efficiency (single round-trip to KV).
+ */
+export async function warmGroqFromKV(articleIds: string[]): Promise<void> {
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) return;
+  // Only fetch IDs not already in L1
+  const missing = articleIds.filter(id => !_memCache.has(id));
+  if (missing.length === 0) return;
+  try {
+    const { kv } = await import('@vercel/kv');
+    const keys = missing.map(id => `${KV_PREFIX}${id}`);
+    const results = await kv.mget<GroqArticleResult[]>(...keys);
+    for (let i = 0; i < missing.length; i++) {
+      const result = results[i];
+      if (result) _memCache.set(missing[i], result);
+    }
+  } catch { /* silent — L1 stays empty, keyword fallback used */ }
+}
+
+/**
  * Pre-analyze a batch of articles with Groq.
- * Results are stored in the module-level cache.
- * Only analyzes articles not already cached.
- * Called from /api/stories before generateStories().
+ * Stores results in both L1 (memory) and L2 (KV) so all instances benefit.
+ * Called from /api/cron/warm-cache before generateStories().
  */
 export async function preAnalyzeWithGroq(articles: FetchedArticle[]): Promise<void> {
   if (!isGroqEnabled()) return;
 
-  // Only analyze articles not yet cached
-  const uncached = articles.filter(a => !_groqCache.has(a.id));
+  // Only analyze articles not already in L1
+  // (KV check would be too slow for 200 articles here — warm-cache is the source of truth)
+  const uncached = articles.filter(a => !_memCache.has(a.id));
   if (uncached.length === 0) return;
 
-  // Prioritize: take up to 80 articles (those with descriptions, skip very short ones)
+  // Prioritize articles with meaningful descriptions
   const toAnalyze = uncached
     .filter(a => a.description && a.description.length > 30)
     .slice(0, 120);
 
-  // Process in batches of 8
   const BATCH_SIZE = 8;
   for (let i = 0; i < toAnalyze.length; i += BATCH_SIZE) {
     const batch = toAnalyze.slice(i, i + BATCH_SIZE);
     try {
       const results = await analyzeBatch(batch);
       for (const result of results) {
-        _groqCache.set(result.articleId, result);
+        _memCache.set(result.articleId, result);
+        // Fire-and-forget KV write — don't block the batch loop
+        kvSet(result).catch(() => {});
       }
     } catch (err) {
-      // Batch failed — continue with remaining batches
       console.warn('[Groq] Batch failed:', err instanceof Error ? err.message : err);
     }
-    // Small delay between batches to respect rate limits
     if (i + BATCH_SIZE < toAnalyze.length) {
       await new Promise(r => setTimeout(r, 100));
     }
   }
 }
+
+// ── Batch analysis ─────────────────────────────────────────────────────────────
 
 async function analyzeBatch(articles: FetchedArticle[]): Promise<GroqArticleResult[]> {
   const articlesJson = articles.map((a, idx) => ({
@@ -146,7 +199,6 @@ Return ONLY a valid JSON array, no markdown, no explanation.`;
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content ?? '[]';
 
-  // Parse — Groq sometimes returns { "articles": [...] } or just [...]
   let parsed: unknown;
   try {
     parsed = JSON.parse(content);
@@ -166,7 +218,6 @@ Return ONLY a valid JSON array, no markdown, no explanation.`;
     })
     .map((item) => {
       const r = item as GroqArticleResult;
-      // Validate topics — only keep known ones
       const validatedTopics = (r.topics ?? [])
         .filter((t: string) => VALID_TOPICS.includes(t));
       return {

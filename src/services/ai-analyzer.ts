@@ -6,7 +6,7 @@
 
 import { FetchedArticle } from './rss-fetcher';
 import { getEnrichment } from './article-enrichment';
-import { getGroqResult } from './groq-analyzer';
+import { getGroqResult, warmGroqFromKV } from './groq-analyzer';
 
 export type PoliticalLeaning = 'left' | 'center-left' | 'center' | 'center-right' | 'right' | 'unknown';
 
@@ -447,6 +447,15 @@ export function analyzeArticle(article: FetchedArticle): ArticleAnalysis {
 }
 
 export function analyzeArticles(articles: FetchedArticle[]): ArticleAnalysis[] {
+  return articles.map(analyzeArticle);
+}
+
+/**
+ * Async version: warms L1 Groq cache from KV first (single mget round-trip),
+ * then runs synchronous analysis. Use this in API routes instead of analyzeArticles().
+ */
+export async function analyzeArticlesWithGroq(articles: FetchedArticle[]): Promise<ArticleAnalysis[]> {
+  await warmGroqFromKV(articles.map(a => a.id));
   return articles.map(analyzeArticle);
 }
 

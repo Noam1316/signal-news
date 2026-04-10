@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { analyzeArticles, extractTrendingTopics, extractTopicsByLeaning } from '@/services/ai-analyzer';
+import { analyzeArticlesWithGroq, extractTrendingTopics, extractTopicsByLeaning } from '@/services/ai-analyzer';
 import { getEnrichmentStats } from '@/services/article-enrichment';
 import { getCachedArticles } from '@/services/article-cache';
 
@@ -25,8 +25,8 @@ export async function GET() {
       });
     }
 
-    // Analyze all articles
-    const analyses = analyzeArticles(articles);
+    // Analyze all articles — warms Groq L1 from KV first
+    const analyses = await analyzeArticlesWithGroq(articles);
     const trending = extractTrendingTopics(articles, analyses);
     const topicsByLeaning = extractTopicsByLeaning(articles, analyses);
 

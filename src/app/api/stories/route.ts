@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server';
 import { generateStories } from '@/services/story-clusterer';
 import { getCachedArticles } from '@/services/article-cache';
-import { preAnalyzeWithGroq, isGroqEnabled } from '@/services/groq-analyzer';
+import { preAnalyzeWithGroq, isGroqEnabled, warmGroqFromKV } from '@/services/groq-analyzer';
 import type { BriefStory } from '@/lib/types';
 
 let cache: { stories: BriefStory[]; timestamp: number } | null = null;
@@ -32,7 +32,9 @@ export async function GET() {
       throw new Error('Not enough articles for clustering');
     }
 
-    // ── Groq pre-analysis (non-blocking if API key set) ──
+    // ── Groq: warm L1 from KV (results stored by warm-cache cron on another instance) ──
+    // Then pre-analyze any articles not yet in cache (first run / new articles)
+    await warmGroqFromKV(articles.map(a => a.id)).catch(() => {});
     if (isGroqEnabled()) {
       await preAnalyzeWithGroq(articles).catch(err =>
         console.warn('[Stories] Groq pre-analysis failed, using keywords:', err?.message)
