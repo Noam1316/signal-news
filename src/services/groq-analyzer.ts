@@ -155,8 +155,8 @@ isSignal = true ONLY if signalScore >= 55 AND the event is geopolitical/security
 Technology company revenues, sports results, and entertainment are NEVER isSignal=true.
 
 SUMMARY RULES:
-- summaryHe: exactly 1 complete Hebrew sentence. State the KEY FACT (who did what, where, outcome). No vague phrases like "עדכונים על" or "מצב ב". Be specific.
-- summaryEn: exactly 1 complete English sentence with the same key fact.
+- summaryHe: 2-3 Hebrew sentences. Sentence 1: the KEY FACT (who did what, where, outcome). Sentence 2: context or significance. Sentence 3 (optional): implication or next development. No vague phrases like "עדכונים על" or "מצב ב". Be specific.
+- summaryEn: 2-3 English sentences with the same structure.
 - Do NOT start summaries with "According to" or "Reports say" — state facts directly.
 
 For each article return:
@@ -185,7 +185,7 @@ Return ONLY a valid JSON array, no markdown, no explanation.`;
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.1,
-      max_tokens: 2000,
+      max_tokens: 3000,
       response_format: { type: 'json_object' },
     }),
     signal: AbortSignal.timeout(15000),
