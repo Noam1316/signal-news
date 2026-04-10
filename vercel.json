@@ -7,22 +7,6 @@
     {
       "path": "/api/cron/daily-brief",
       "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/cron/save-snapshots",
-      "schedule": "30 6 * * *"
-    },
-    {
-      "path": "/api/cron/check-shocks",
-      "schedule": "0 */2 * * *"
-    },
-    {
-      "path": "/api/cron/check-resolutions",
-      "schedule": "0 6 * * 0"
-    },
-    {
-      "path": "/api/cron/tweet-signal",
-      "schedule": "0 9 * * *"
     }
   ]
 }
