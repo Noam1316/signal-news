@@ -32,7 +32,13 @@ export async function GET() {
     const shocks = detectShocks(articles);
 
     if (shocks.length === 0) {
-      throw new Error('No shocks detected');
+      // No live shocks — silently serve static fallback
+      const { shocks: staticShocks } = await import('@/data/shocks');
+      return NextResponse.json({
+        shocks: staticShocks,
+        source: 'static-fallback',
+        detectedAt: new Date().toISOString(),
+      });
     }
 
     cache = { shocks, timestamp: Date.now() };
@@ -44,7 +50,7 @@ export async function GET() {
       detectedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Shocks] Detection failed, falling back to static:', error);
+    console.error('[Shocks] Detection failed:', error);
 
     // Fallback to static shocks
     const { shocks: staticShocks } = await import('@/data/shocks');

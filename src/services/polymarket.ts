@@ -94,7 +94,7 @@ export async function fetchPolymarketEvents(): Promise<PolymarketEvent[]> {
       'https://gamma-api.polymarket.com/events?closed=false&order=volume&ascending=false&limit=50',
       {
         headers: { 'Accept': 'application/json' },
-        next: { revalidate: 600 }, // cache 10 min
+        cache: 'no-store', // avoid Next.js data cache errors on Vercel
       }
     );
 
