@@ -14,6 +14,7 @@ import { getStoryLean, LEAN_LABEL, type Lean } from '@/utils/political-lean';
 import { useRecordStories } from '@/hooks/useLikelihoodHistory';
 import { usePersonalization } from '@/hooks/usePersonalization';
 import { useIntelScore } from '@/hooks/useIntelScore';
+import BreakingBanner from './BreakingBanner';
 
 type SortKey = 'default' | 'likelihood' | 'delta' | 'sources' | 'newest';
 
@@ -383,6 +384,9 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
         </button>
       </div>
 
+      {/* Breaking News Banner */}
+      {!loading && stories.length > 0 && <BreakingBanner stories={stories} />}
+
       {/* Daily Intelligence Summary */}
       {!loading && stories.length > 0 && (
         <DailySummary stories={stories} shocks={shocks} />
@@ -457,20 +461,32 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
 
       {/* Empty states */}
       {!loading && sorted.length === 0 && showWatchlistOnly && (
-        <div className="text-center py-8 text-gray-500 text-sm">
-          <p className="text-2xl mb-2">★</p>
-          <p>{lang === 'he' ? 'אין סיפורים ברשימת המעקב עדיין' : 'No watched stories yet'}</p>
-          <p className="text-xs mt-1 text-gray-600">{lang === 'he' ? 'לחץ ★ על כרטיס' : 'Click ★ on a card'}</p>
+        <div className="text-center py-10 space-y-2">
+          <p className="text-3xl animate-bounce">★</p>
+          <p className="text-sm text-gray-400 font-medium">{lang === 'he' ? 'אין סיפורים ברשימת המעקב עדיין' : 'No watched stories yet'}</p>
+          <p className="text-xs text-gray-600">{lang === 'he' ? 'לחץ ★ על כרטיס כדי להוסיף למעקב' : 'Click ★ on any card to start watching'}</p>
         </div>
       )}
       {!loading && sorted.length === 0 && search && !showWatchlistOnly && (
-        <div className="text-center py-6 text-gray-500 text-sm">
-          {lang === 'he' ? `אין תוצאות עבור "${search}"` : `No results for "${search}"`}
+        <div className="text-center py-8 space-y-2">
+          <p className="text-3xl">🔍</p>
+          <p className="text-sm text-gray-400">{lang === 'he' ? `לא נמצאו תוצאות עבור "${search}"` : `No results for "${search}"`}</p>
+          <button onClick={() => setSearch('')} className="text-xs text-yellow-400/70 hover:text-yellow-400 transition-colors">
+            {lang === 'he' ? 'נקה חיפוש' : 'Clear search'}
+          </button>
         </div>
       )}
       {!loading && sorted.length === 0 && !search && !showWatchlistOnly && stories.length > 0 && (
-        <div className="text-center py-8 text-gray-500 text-sm">
-          {lang === 'he' ? 'אין סיפורים בעדשה הזו' : 'No stories in this lens'}
+        <div className="text-center py-8 space-y-2">
+          <p className="text-3xl">🔭</p>
+          <p className="text-sm text-gray-400">{lang === 'he' ? 'אין סיפורים בעדשה הזו' : 'No stories in this lens'}</p>
+        </div>
+      )}
+      {!loading && stories.length === 0 && !search && !showWatchlistOnly && (
+        <div className="text-center py-12 space-y-3">
+          <div className="text-4xl animate-pulse">📡</div>
+          <p className="text-sm font-medium text-gray-300">{lang === 'he' ? 'אוסף נתונים...' : 'Collecting intelligence...'}</p>
+          <p className="text-xs text-gray-600">{lang === 'he' ? 'מנתח ערוצי RSS ומחלץ סיגנלים' : 'Analyzing RSS feeds and extracting signals'}</p>
         </div>
       )}
     </div>

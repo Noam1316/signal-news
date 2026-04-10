@@ -7,9 +7,9 @@ const KEY_PREFIX = 'signal_hist_';
 const MAX_ENTRIES = 24;       // keep up to 24 snapshots per story
 const REAL_DELTA_WINDOW = 6 * 60 * 60 * 1000; // 6 hours
 
-interface Snapshot { v: number; t: number; } // value, timestamp
+export interface Snapshot { v: number; t: number; } // value, timestamp
 
-function loadHistory(slug: string): Snapshot[] {
+export function loadHistory(slug: string): Snapshot[] {
   try {
     const raw = localStorage.getItem(KEY_PREFIX + slug);
     return raw ? JSON.parse(raw) : [];

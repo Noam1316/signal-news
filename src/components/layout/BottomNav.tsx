@@ -1,73 +1,102 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import dynamic from 'next/dynamic';
 import { useLanguage } from '@/i18n/context';
+import { usePreferences } from '@/contexts/PreferencesContext';
+
+const PreferencesPanel = dynamic(() => import('@/components/preferences/PreferencesPanel'), { ssr: false });
 
 const SECTIONS = [
-  {
-    id: 'brief', heLabel: 'תקציר', enLabel: 'Brief',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}
-        strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <rect x="4" y="4" width="16" height="16" rx="2" />
-        <path d="M8 8h8M8 12h5M8 16h6" />
-      </svg>
-    ),
-  },
-  {
-    id: 'shocks', heLabel: 'זעזועים', enLabel: 'Shocks',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}
-        strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-      </svg>
-    ),
-  },
-  {
-    id: 'map', heLabel: 'מפה', enLabel: 'Map',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}
-        strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-      </svg>
-    ),
-  },
-  {
-    id: 'intel', heLabel: 'מודיעין', enLabel: 'Intel',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}
-        strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M12 2a8 8 0 0 0-8 8c0 3.37 2.1 6.27 5 7.42V20h6v-2.58c2.9-1.15 5-4.05 5-7.42a8 8 0 0 0-8-8z" />
-        <path d="M10 22h4" />
-      </svg>
-    ),
-  },
+  { id: 'brief',  icon: '📋', en: 'Brief',  he: 'תקציר' },
+  { id: 'shocks', icon: '⚡', en: 'Shocks', he: 'זעזועים' },
+  { id: 'map',    icon: '🌍', en: 'Map',    he: 'מפה' },
+  { id: 'intel',  icon: '🧠', en: 'Intel',  he: 'מודיעין' },
 ];
 
 export default function BottomNav() {
-  const { lang } = useLanguage();
+  const { lang, dir } = useLanguage();
+  const { prefs } = usePreferences();
+  const [active, setActive] = useState('brief');
+  const [showPrefs, setShowPrefs] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  const activeCount = prefs.topics.length + prefs.hiddenSections.length + (prefs.alertProfile !== 'all' ? 1 : 0) + (prefs.compactMode ? 1 : 0);
+
+  useEffect(() => {
+    setMounted(true);
+    const observers: IntersectionObserver[] = [];
+    for (const section of SECTIONS) {
+      const el = document.getElementById(section.id);
+      if (!el) continue;
+      const observer = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) setActive(section.id); },
+        { rootMargin: '-30% 0px -60% 0px', threshold: 0 }
+      );
+      observer.observe(el);
+      observers.push(observer);
+    }
+    return () => observers.forEach(o => o.disconnect());
+  }, []);
 
   const scrollTo = (id: string) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  if (!mounted) return null;
+
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-gray-950/95 backdrop-blur-md border-t border-gray-800">
-      <div className="flex items-center justify-around h-14">
-        {SECTIONS.map((s) => (
+    <>
+      <nav
+        dir={dir}
+        className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-gray-950/98 backdrop-blur-xl border-t border-gray-800/70"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="flex items-center justify-around px-1 py-1">
+          {SECTIONS.map(section => {
+            const isActive = active === section.id;
+            return (
+              <button
+                key={section.id}
+                onClick={() => scrollTo(section.id)}
+                className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-all duration-200 touch-manipulation flex-1 relative
+                  ${isActive ? 'text-yellow-400' : 'text-gray-500 active:text-gray-300'}`}
+              >
+                {isActive && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-yellow-400" />
+                )}
+                <span className="text-xl leading-none">{section.icon}</span>
+                <span className={`text-[10px] font-medium leading-none mt-0.5 ${isActive ? 'text-yellow-400' : 'text-gray-500'}`}>
+                  {lang === 'he' ? section.he : section.en}
+                </span>
+              </button>
+            );
+          })}
+
+          {/* Settings */}
           <button
-            key={s.id}
-            onClick={() => scrollTo(s.id)}
-            className="flex flex-col items-center gap-0.5 text-gray-400 hover:text-yellow-400 transition-colors active:scale-95"
+            onClick={() => setShowPrefs(true)}
+            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-all duration-200 touch-manipulation flex-1 relative
+              ${activeCount > 0 ? 'text-yellow-400' : 'text-gray-500 active:text-gray-300'}`}
           >
-            {s.icon}
-            <span className="text-[10px] font-medium">
-              {lang === 'he' ? s.heLabel : s.enLabel}
+            <span className="text-xl leading-none">⚙️</span>
+            <span className={`text-[10px] font-medium leading-none mt-0.5 ${activeCount > 0 ? 'text-yellow-400' : 'text-gray-500'}`}>
+              {lang === 'he' ? 'הגדרות' : 'Settings'}
             </span>
+            {activeCount > 0 && (
+              <span className="absolute top-0.5 end-1 w-4 h-4 bg-yellow-400 text-gray-950 text-[8px] font-bold rounded-full flex items-center justify-center">
+                {activeCount}
+              </span>
+            )}
           </button>
-        ))}
-      </div>
-    </nav>
+        </div>
+      </nav>
+
+      {showPrefs && mounted && createPortal(
+        <PreferencesPanel onClose={() => setShowPrefs(false)} />,
+        document.body
+      )}
+    </>
   );
 }

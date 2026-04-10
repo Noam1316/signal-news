@@ -37,11 +37,11 @@ function StatCounter({ value, label, color }: { value: number | null; label: str
 
 const FEATURES = [
   {
-    icon: '🌡️',
-    titleHe: 'מד עוצמת סיגנל',
-    titleEn: 'Signal Intensity Gauge',
-    bodyHe: 'ציון 0-10 גיאופוליטי חי, מסנטימנט + זעזועים + צפיפות כיסוי.',
-    bodyEn: 'Live 0-10 geopolitical score from sentiment + shocks + coverage density.',
+    icon: '🔴',
+    titleHe: 'התראות שבירה בזמן אמת',
+    titleEn: 'Real-Time Breaking Alerts',
+    bodyHe: 'בנר אוטומטי לסיפורים חמים — סבירות גבוהה + גיל פחות מ-3 שעות.',
+    bodyEn: 'Auto banner for hot stories — high likelihood + under 3 hours old.',
   },
   {
     icon: '⚡',
@@ -61,15 +61,29 @@ const FEATURES = [
     icon: '🗣️',
     titleHe: 'ניתוח הטיה תקשורתית',
     titleEn: 'Media Bias Analysis',
-    bodyHe: '35+ מקורות ממופים. פערי כיסוי, פיצולי נרטיב, נקודות עיוורון.',
-    bodyEn: '35+ sources mapped. Coverage gaps, narrative splits, blind spots surfaced.',
+    bodyHe: '43+ מקורות ממופים. פערי כיסוי, פיצולי נרטיב, נקודות עיוורון.',
+    bodyEn: '43+ sources mapped. Coverage gaps, narrative splits, blind spots surfaced.',
+  },
+  {
+    icon: '🧠',
+    titleHe: 'NLP עברי עם Groq',
+    titleEn: 'Hebrew NLP via Groq',
+    bodyHe: 'ניתוח LLaMA 3.3 70B לכתבות — נושאים מדויקים, סנטימנט, וסיכומים בעברית.',
+    bodyEn: 'LLaMA 3.3 70B analysis per article — accurate topics, sentiment, Hebrew summaries.',
+  },
+  {
+    icon: '🏷️',
+    titleHe: 'עמודי נושא חיים',
+    titleEn: 'Live Topic Pages',
+    bodyHe: 'לחיצה על נושא → כל הסיפורים הפעילים בנושא זה, ממויינים לפי חשיבות.',
+    bodyEn: 'Click any topic → all active stories on that topic, ranked by importance.',
   },
   {
     icon: '🎯',
     titleHe: 'השלכות אסטרטגיות',
     titleEn: 'Strategic Implications',
-    bodyHe: 'לכל נושא — "אם מסלים ←" תוצאה ספציפית. ללא AI, keyword-based.',
-    bodyEn: 'Per topic — "if escalates ←" specific outcome. No AI, keyword-based.',
+    bodyHe: 'לכל סיפור — השפעה על שוק הנפט, המט"ח, הביטחון האזורי ועוד.',
+    bodyEn: 'Per story — impact on oil, forex, regional security and more.',
   },
   {
     icon: '🏆',
@@ -195,7 +209,7 @@ export default function LandingPage() {
         {/* Live badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-semibold">
           <span className={`w-1.5 h-1.5 rounded-full bg-emerald-400 ${pulse ? 'opacity-100' : 'opacity-30'} transition-opacity duration-1000`} />
-          {lang === 'he' ? 'מנטר 28+ מקורות RSS עכשיו' : 'Monitoring 28+ RSS sources now'}
+          {lang === 'he' ? 'מנטר 43+ מקורות RSS עכשיו' : 'Monitoring 43+ RSS sources now'}
           {risk && (
             <span className={`ms-2 font-bold ${risk.color}`}>
               · {lang === 'he' ? risk.he : risk.en}
@@ -213,8 +227,8 @@ export default function LandingPage() {
         {/* Sub */}
         <p className="text-lg text-gray-400 max-w-xl mx-auto leading-relaxed">
           {lang === 'he'
-            ? 'מנתח 28+ מקורות RSS, מחלץ זעזועים סטטיסטיים, ומשווה לשווקי הימורים — ללא מפתח AI.'
-            : 'Analyzes 28+ RSS sources, extracts statistical shocks, and compares against prediction markets — no AI key needed.'}
+            ? 'מנתח 43+ מקורות עברית ואנגלית, מזהה שבירות בזמן אמת, ומשווה לשווקי הימורים — כולל NLP בעברית.'
+            : 'Analyzes 43+ Hebrew & English sources, detects breaking news in real-time, and compares against prediction markets — including Hebrew NLP.'}
         </p>
 
         {/* Accuracy badge */}
@@ -297,7 +311,7 @@ export default function LandingPage() {
         <h2 className="text-center text-sm font-bold uppercase tracking-widest text-gray-500 mb-8">
           {lang === 'he' ? 'מה Signal מוסיף מעבר לחדשות רגילות' : 'What Signal adds beyond regular news'}
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {FEATURES.map((f, i) => (
             <div key={i} className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 space-y-2 hover:border-gray-700 transition-colors">
               <div className="text-2xl">{f.icon}</div>

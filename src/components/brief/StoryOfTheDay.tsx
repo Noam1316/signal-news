@@ -173,7 +173,7 @@ export default function StoryOfTheDay() {
           <p className={`text-sm text-gray-300 leading-relaxed ${summaryExpanded ? 'line-clamp-none' : 'line-clamp-2'}`}>
             {summary}
           </p>
-          {summary.length > 120 && (
+          {summary.length > 80 && (
             <button
               type="button"
               onClick={e => { e.stopPropagation(); setSummaryExpanded(v => !v); }}

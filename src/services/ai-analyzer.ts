@@ -6,6 +6,7 @@
 
 import { FetchedArticle } from './rss-fetcher';
 import { getEnrichment } from './article-enrichment';
+import { getGroqResult } from './groq-analyzer';
 
 export type PoliticalLeaning = 'left' | 'center-left' | 'center' | 'center-right' | 'right' | 'unknown';
 
@@ -87,24 +88,56 @@ export interface TopicByLeaning {
 // ── Keyword-based analysis (no API needed) ──
 
 const TOPIC_KEYWORDS: Record<string, string[]> = {
-  'Iran Nuclear': ['iran', 'nuclear', 'iaea', 'uranium', 'enrichment', 'tehran', 'sanctions', 'jcpoa', 'khamenei', 'rouhani', 'פזי', 'איראן', 'גרעין', 'עשרה'],
-  'Gaza Conflict': ['gaza', 'hamas', 'ceasefire', 'hostages', 'idf', 'humanitarian', 'rafah', 'khan younis', 'sinwar', 'unrwa', 'עזה', 'חמאס', 'חטופים', 'רפח', 'אונר"א', 'הפסקת אש'],
+  'Iran Nuclear': [
+    // English — nuclear/military
+    'iran', 'nuclear', 'iaea', 'uranium', 'enrichment', 'tehran', 'sanctions', 'jcpoa',
+    'khamenei', 'rouhani', 'pezeshkian', 'revolutionary guard', 'irgc',
+    // English — US-Israel-Iran deal/ceasefire
+    'israel iran', 'iran strike', 'iran attack', 'iran war', 'iran deal', 'iran ceasefire',
+    'iran diplomacy', 'us iran', 'america iran', 'iran negotiations', 'iran agreement',
+    'iran framework', 'iran truce', 'iran talks', 'iran nuclear deal',
+    // Hebrew — core
+    'איראן', 'גרעין', 'טהרן', 'חמינאי', 'משמרות המהפכה',
+    // Hebrew — US-Israel-Iran ceasefire/deal
+    'ישראל איראן', 'תקיפה באיראן', 'מלחמה עם איראן', 'הסכם עם איראן',
+    'הפסקת אש עם איראן', 'הפסקת אש באיראן', 'מו"מ איראן', 'שיחות עם איראן',
+    'תיווך איראן', 'ארה"ב איראן', 'אמריקה איראן', 'ישראל ארצות הברית איראן',
+    'הסכם גרעין', 'שיחות גרעין', 'משא ומתן איראן', 'נסיגה מאיראן',
+    'הפצצה באיראן', 'מתקפה על איראן', 'תגובת איראן', 'איראן ישראל',
+    // Strait of Hormuz — Iranian strategic pressure
+    'hormuz', 'strait of hormuz', 'persian gulf blockade', 'gulf shipping', 'tanker seizure',
+    'oil tanker iran', 'naval blockade iran', 'gulf of oman',
+    'מצר הורמוז', 'הורמוז', 'חסימת הורמוז', 'המפרץ הפרסי', 'חסימת מצר',
+    'ספנות המפרץ', 'עצירת מכלית', 'מכלית נפט איראן', 'חסימה ימית',
+  ],
+  'Gaza Conflict': ['gaza', 'hamas', 'hostages', 'idf', 'humanitarian', 'rafah', 'khan younis', 'sinwar', 'unrwa', 'עזה', 'חמאס', 'חטופים', 'רפח', 'אונר"א', 'ceasefire gaza', 'הפסקת אש עזה', 'הפסקת אש בעזה'],
   'Lebanon/Hezbollah': ['lebanon', 'hezbollah', 'nasrallah', 'beirut', 'south lebanon', 'לבנון', 'חיזבאללה', 'ביירות', 'דרום לבנון'],
   'Saudi Normalization': ['saudi', 'normalization', 'mbs', 'abraham accords', 'riyadh', 'arab states', 'סעודיה', 'נורמליזציה', 'אברהם', 'ריאד'],
   'US Politics': ['trump', 'biden', 'harris', 'congress', 'white house', 'washington', 'senate', 'republican', 'democrat', 'tariff', 'tariffs', 'election', 'oval office', 'state department', 'פה', 'מכס', 'טראמפ', 'ביידן'],
   'China': ['china', 'beijing', 'xi jinping', 'taiwan', 'chinese', 'prc', 'bri', 'huawei', 'סין', 'בייג\'ינג', 'שי ג\'ינפינג', 'טיוואן'],
   'West Bank': ['west bank', 'settlements', 'jenin', 'ramallah', 'nablus', 'palestinian authority', 'abu mazen', 'יהודה ושומרון', 'התנחלויות', 'ג\'נין', 'שכם', 'רמאללה'],
   'Syria': ['syria', 'damascus', 'hts', 'hayat tahrir', 'aleppo', 'idlib', 'jolani', 'סוריה', 'דמשק', 'ארגון'],
-  'Economy': ['economy', 'inflation', 'gdp', 'fed', 'federal reserve', 'interest rate', 'recession', 'market', 'stock', 'trade', 'dollar', 'oil price', 'tariff', 'כלכלה', 'אינפלציה', 'ריבית', 'מיתון', 'שוק', 'נפט', 'דולר', 'מכס'],
+  'Economy': ['economy', 'inflation', 'gdp', 'fed', 'federal reserve', 'interest rate', 'recession', 'market', 'stock', 'trade', 'dollar', 'oil price', 'tariff', 'crude oil', 'brent', 'opec', 'hormuz oil', 'shipping disruption', 'supply chain', 'כלכלה', 'אינפלציה', 'ריבית', 'מיתון', 'שוק', 'נפט', 'דולר', 'מכס', 'מחיר נפט', 'אופ"ק', 'שיבוש אספקה', 'הורמוז נפט'],
   'Technology': ['tech', 'ai', 'artificial intelligence', 'openai', 'cyber', 'startup', 'semiconductor', 'chip', 'nvidia', 'הייטק', 'סייבר', 'בינה מלאכותית', 'שבב'],
   'Climate': ['climate', 'emissions', 'cop', 'renewable', 'solar', 'green', 'energy transition', 'אקלים', 'פחמן', 'אנרגיה ירוקה'],
   'Ukraine/Russia': ['ukraine', 'russia', 'putin', 'zelensky', 'nato', 'kyiv', 'moscow', 'donbas', 'אוקראינה', 'רוסיה', 'פוטין', 'נאטו'],
   'Turkey/Egypt': ['turkey', 'erdogan', 'ankara', 'egypt', 'sisi', 'cairo', 'regional', 'טורקיה', 'ארדואן', 'מצרים', 'סיסי', 'קהיר'],
   'Judicial Reform': ['judicial', 'supreme court', 'democracy', 'protest', 'coalition', 'knesset', 'רפורמה', 'בג"צ', 'מחאה', 'קואליציה', 'כנסת'],
-  'Security': ['security', 'terror', 'attack', 'missile', 'rocket', 'drone', 'airstrike', 'defense', 'ביטחון', 'טרור', 'טיל', 'כטב"מ', 'תקיפה', 'פיגוע'],
+  'Security': ['terror attack', 'missile strike', 'rocket fire', 'drone strike', 'airstrike', 'naval blockade', 'warship', 'tanker attack', 'military operation', 'security threat', 'טרור', 'טיל', 'כטב"מ', 'תקיפה צבאית', 'פיגוע', 'ספינת מלחמה', 'חסימה ימית', 'מצר הורמוז', 'תקיפת מכלית', 'מבצע צבאי', 'איום ביטחוני', 'ביטחון לאומי'],
   'Diplomacy': ['diplomat', 'summit', 'agreement', 'treaty', 'ambassador', 'un ', 'united nations', 'foreign minister', 'דיפלומטיה', 'פסגה', 'הסכם', 'שגריר', 'האו"ם', 'שר חוץ'],
   'Sports': ['football', 'soccer', 'basketball', 'tennis', 'olympic', 'world cup', 'champions league', 'fifa', 'nba', 'premier league', 'מכבי', 'הפועל', 'בית"ר', 'כדורגל', 'כדורסל', 'טניס', 'אולימפי', 'ליגה', 'גביע', 'אליפות'],
   'General': ['society', 'culture', 'education', 'health', 'crime', 'law', 'religion', 'tourism', 'חברה', 'תרבות', 'חינוך', 'בריאות', 'פשע', 'משפט', 'דת', 'תיירות'],
+  'Entertainment': [
+    // TV/Media drama
+    'שידור', 'רייטינג', 'ערוץ 12', 'ערוץ 13', 'ערוץ 11', 'ערוץ 14', 'קאן', 'מאקו', 'רשת 13',
+    'מנחה', 'כוכב', 'סלבריטי', 'ריאליטי', 'סדרה', 'תוכנית בידור', 'צופים', 'מדדים', 'שיא צפייה',
+    'בידור', 'פרסים', 'אירוע', 'מסיבה', 'אופנה', 'מוסיקה', 'להיט', 'זמרת', 'שחקן', 'שחקנית',
+    'שידורים', 'עורכי דין', 'קידום', 'פיטורים', 'ריב בסטודיו', 'מאחורי הקלעים',
+    // English
+    'celebrity', 'reality show', 'ratings', 'viewership', 'tv host', 'broadcaster',
+    'entertainment', 'showbiz', 'gossip', 'talk show', 'sitcom', 'drama series',
+    'red carpet', 'awards show', 'music chart', 'pop star', 'actor', 'actress',
+  ],
 };
 
 const NEGATIVE_WORDS = [
@@ -139,9 +172,38 @@ const POSITIVE_WORDS = [
 
 const SIGNAL_INDICATORS = [
   'breaking', 'exclusive', 'first time', 'unprecedented', 'major', 'significant',
-  'dramatic', 'shift', 'reversal', 'surprise', 'shock', 'milestone',
-  'בלעדי', 'חדשות', 'דרמטי', 'מפנה', 'תפנית', 'פריצת דרך',
+  'dramatic shift', 'reversal', 'surprise', 'shock', 'milestone',
+  'בלעדי', 'דרמטי', 'מפנה', 'תפנית', 'פריצת דרך',
+  // Note: 'חדשות' removed — appears in every Hebrew news article, not a signal indicator
 ];
+
+// Entertainment/media content — deprioritize these heavily
+const ENTERTAINMENT_KEYWORDS = [
+  // Israeli reality / TV
+  'האח הגדול', 'ריאליטי', 'שידור', 'רייטינג', 'מדדי צפייה', 'שיא צפייה',
+  'כוכב', 'כוכבת', 'סלבריטי', 'בידור', 'להיט', 'זמרת', 'זמר', 'מנחה',
+  'שחקן', 'שחקנית', 'עורכי תוכנית', 'הישרדות', 'כוכב נולד', 'מאסטר שף',
+  'הקול הבא', 'ביג בראדר', 'ארץ נהדרת', 'פרפר נחמד', 'סרט ישראלי',
+  'עם הפנים', 'הצחוק', 'קומדי', 'מועדון לילה', 'פסטיגל',
+  // Gossip / personal drama
+  'זועם', 'מתפרץ', 'ריב', 'פרידה', 'גירושין', 'נשיקה', 'רומן',
+  'ממש לא', 'בן זוג של', 'בת זוג של', 'מאהב', 'בגידה',
+  // English
+  'celebrity', 'reality show', 'ratings', 'viewership', 'entertainment', 'showbiz',
+  'gossip', 'talk show', 'pop star', 'red carpet', 'awards show', 'sitcom',
+  'big brother', 'survivor', 'bachelor', 'idol',
+];
+
+function isEntertainmentContent(text: string): boolean {
+  const lower = text.toLowerCase();
+  // Single strong indicator is enough (e.g. "האח הגדול" or "ריאליטי")
+  const strongKeywords = ['האח הגדול', 'ריאליטי', 'big brother', 'survivor', 'bachelor',
+    'הישרדות', 'כוכב נולד', 'מאסטר שף', 'ארץ נהדרת', 'celebrity gossip', 'showbiz'];
+  if (strongKeywords.some(kw => lower.includes(kw))) return true;
+  // Otherwise require 2+ hits
+  const hits = ENTERTAINMENT_KEYWORDS.filter(kw => lower.includes(kw)).length;
+  return hits >= 2;
+}
 
 // ── Political Leaning Keyword Dictionaries (for content-based classification) ──
 
@@ -220,15 +282,51 @@ export function classifyPoliticalLeaning(
   return 'right';
 }
 
+// Topics with generic single-word keywords require 2+ hits before being assigned.
+// Topics with specific/rare keywords (hamas, hezbollah, etc.) only need 1 hit.
+const TOPIC_MIN_SCORE: Record<string, number> = {
+  'China':          3,  // 'china', 'chinese' are too generic alone
+  'Technology':     3,  // 'tech', 'chip', 'ai' appear in many unrelated articles
+  'Economy':        3,  // 'market', 'trade', 'stock' are very common
+  'Climate':        2,
+  'Diplomacy':      2,  // 'agreement', 'summit' can appear in non-diplomatic contexts
+  'Sports':         2,
+  'General':        2,
+  'Turkey/Egypt':   2,
+  'US Politics':    2,  // 'trump', 'washington' are specific enough with 1 hit
+  'Syria':          2,
+  // These have very specific keywords — 1 hit is reliable
+  'Iran Nuclear':   1,
+  'Gaza Conflict':  1,
+  'Lebanon/Hezbollah': 1,
+  'Saudi Normalization': 1,
+  'Ukraine/Russia': 1,
+  'West Bank':      1,
+  'Security':       1,
+  'Judicial Reform': 1,
+};
+
 function detectTopics(text: string): string[] {
   const lower = text.toLowerCase();
-  const found: string[] = [];
+
+  const scores: { topic: string; score: number }[] = [];
+
   for (const [topic, keywords] of Object.entries(TOPIC_KEYWORDS)) {
-    if (keywords.some((kw) => lower.includes(kw))) {
-      found.push(topic);
+    let score = 0;
+    for (const kw of keywords) {
+      if (lower.includes(kw)) {
+        // Multi-word keywords are more specific — weight them higher
+        score += kw.includes(' ') ? 2 : 1;
+      }
     }
+    const minScore = TOPIC_MIN_SCORE[topic] ?? 2;
+    if (score >= minScore) scores.push({ topic, score });
   }
-  return found.length > 0 ? found : ['General'];
+
+  if (scores.length === 0) return ['General'];
+
+  scores.sort((a, b) => b.score - a.score);
+  return scores.map(s => s.topic);
 }
 
 function detectSentiment(text: string): 'positive' | 'negative' | 'neutral' | 'mixed' {
@@ -245,8 +343,11 @@ function detectSentiment(text: string): 'positive' | 'negative' | 'neutral' | 'm
 function detectSignal(text: string): { isSignal: boolean; score: number } {
   const lower = text.toLowerCase();
   const signalHits = SIGNAL_INDICATORS.filter((w) => lower.includes(w)).length;
-  const score = Math.min(100, 30 + signalHits * 20);
-  return { isSignal: signalHits >= 1, score };
+  // Base score 15 (not 30) — articles without signal indicators start low
+  // Each signal hit adds 20 points: 0 hits=15, 1 hit=35, 2 hits=55, 3+=75
+  const score = Math.min(100, 15 + signalHits * 20);
+  // isSignal requires at least 2 signal indicators OR 1 strong hit
+  return { isSignal: signalHits >= 2, score };
 }
 
 function detectRegion(article: FetchedArticle): 'israel' | 'middle-east' | 'global' {
@@ -279,25 +380,66 @@ export function analyzeArticle(article: FetchedArticle): ArticleAnalysis {
   const baseText = `${article.title} ${article.description}`;
   const analysisText = enrichment ? `${baseText} ${enrichment.fullText}` : baseText;
 
-  const topics = detectTopics(analysisText);
-  const sentiment = detectSentiment(analysisText);
-  const { isSignal, score } = detectSignal(analysisText);
-  const region = detectRegion(article);
+  // ── Entertainment check — deprioritize media/celebrity articles ──
+  const isEntertainment = isEntertainmentContent(analysisText);
 
+  // ── Keyword baseline ──
+  const kwTopics = isEntertainment
+    ? ['Entertainment', 'General']
+    : detectTopics(analysisText);
+  const kwSentiment = detectSentiment(analysisText);
+  const { isSignal: kwIsSignal, score: kwScore } = isEntertainment
+    ? { isSignal: false, score: 10 }  // entertainment is never a signal
+    : detectSignal(analysisText);
+  const region = detectRegion(article);
   const sourceLeaning = detectPoliticalLeaning(article);
   const politicalLeaning = enrichment
     ? classifyPoliticalLeaning(enrichment.fullText, sourceLeaning)
     : sourceLeaning;
+
+  // ── Groq enhancement (if pre-analysis ran for this article) ──
+  const groq = getGroqResult(article.id);
+
+  const topics    = isEntertainment
+    ? ['Entertainment', 'General']
+    : (groq && groq.topics.length > 0 ? groq.topics : kwTopics);
+  const sentiment = groq ? groq.sentiment : kwSentiment;
+  const isSignal  = isEntertainment ? false : (groq ? groq.isSignal : kwIsSignal);
+  const signalScore = isEntertainment
+    ? 10  // hard cap for entertainment
+    : groq
+      ? groq.signalScore  // trust Groq over keyword score — it's calibrated better
+      : kwScore;
+
+  // Groq political lean → map to PoliticalLeaning scale
+  let finalLeaning = politicalLeaning;
+  if (groq && groq.politicalLean !== 'none') {
+    const groqMap: Record<string, PoliticalLeaning> = {
+      left: 'left', center: 'center', right: 'right',
+    };
+    const groqLeaning = groqMap[groq.politicalLean] ?? politicalLeaning;
+    // Blend: 40% source-based + 60% Groq content-based
+    const scale: Record<PoliticalLeaning, number> = {
+      left: -2, 'center-left': -1, center: 0, 'center-right': 1, right: 2, unknown: 0,
+    };
+    const blended = scale[politicalLeaning] * 0.4 + scale[groqLeaning] * 0.6;
+    if (blended <= -1.5) finalLeaning = 'left';
+    else if (blended <= -0.5) finalLeaning = 'center-left';
+    else if (blended <= 0.5) finalLeaning = 'center';
+    else if (blended <= 1.5) finalLeaning = 'center-right';
+    else finalLeaning = 'right';
+  }
 
   const result: ArticleAnalysis = {
     articleId: article.id,
     topics,
     sentiment,
     isSignal,
-    signalScore: score,
+    signalScore,
     region,
-    politicalLeaning,
-    isEnriched: !!enrichment,
+    politicalLeaning: finalLeaning,
+    isEnriched: !!enrichment || !!groq,
+    summary: groq?.summaryHe || groq?.summaryEn || undefined,
   };
 
   _analysisCache.set(article.id, result);

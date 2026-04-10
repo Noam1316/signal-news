@@ -7,6 +7,7 @@
 import type { FetchedArticle } from './rss-fetcher';
 import type { BriefStory, Confidence, ImpactItem, NarrativeSplit } from '@/lib/types';
 import { analyzeArticle, type ArticleAnalysis } from './ai-analyzer';
+import { getGroqResult } from './groq-analyzer';
 
 interface ArticleWithAnalysis {
   article: FetchedArticle;
@@ -315,29 +316,62 @@ function slugify(text: string): string {
 }
 
 /**
- * Cluster articles by primary topic
+ * Cluster articles by topic.
+ * Each article is assigned to its PRIMARY topic (highest keyword score).
+ * If the article also has a strong SECONDARY topic (score ≥ 60% of primary),
+ * it is contributed to BOTH clusters — preventing fragmentation of cross-topic
+ * breaking stories (e.g. "US-Israel-Iran ceasefire" spans Iran Nuclear + US Politics).
  */
 function clusterByTopic(articles: FetchedArticle[]): Cluster[] {
   const topicMap = new Map<string, ArticleWithAnalysis[]>();
 
   for (const article of articles) {
     const analysis = analyzeArticle(article);
+
+    // topics[] is already sorted by score descending (from detectTopics)
     const primaryTopic = analysis.topics[0] || 'General';
 
-    if (!topicMap.has(primaryTopic)) {
-      topicMap.set(primaryTopic, []);
-    }
+    if (!topicMap.has(primaryTopic)) topicMap.set(primaryTopic, []);
     topicMap.get(primaryTopic)!.push({ article, analysis });
+
+    // Secondary topic cross-contribution:
+    // If there is a second strong topic AND it is different from primary,
+    // add the article there too (deduplication happens via unique sources filter)
+    const secondaryTopic = analysis.topics[1];
+    if (
+      secondaryTopic &&
+      secondaryTopic !== primaryTopic &&
+      secondaryTopic !== 'General'
+    ) {
+      // Only cross-contribute if primary is a high-signal geopolitical topic
+      // (avoids flooding Sports/Economy with every article that mentions "market")
+      const HIGH_SIGNAL_TOPICS = new Set([
+        'Iran Nuclear', 'Gaza Conflict', 'Lebanon/Hezbollah',
+        'Ukraine/Russia', 'Saudi Normalization', 'West Bank',
+        'US Politics', 'China', 'Security', 'Diplomacy',
+      ]);
+      if (HIGH_SIGNAL_TOPICS.has(primaryTopic) && HIGH_SIGNAL_TOPICS.has(secondaryTopic)) {
+        if (!topicMap.has(secondaryTopic)) topicMap.set(secondaryTopic, []);
+        topicMap.get(secondaryTopic)!.push({ article, analysis });
+      }
+    }
   }
+
+  const HIGH_PRIORITY_FOR_FILTER = new Set([
+    'Iran Nuclear', 'Gaza Conflict', 'Lebanon/Hezbollah', 'Ukraine/Russia',
+    'Saudi Normalization', 'West Bank', 'US Politics', 'China', 'Security', 'Diplomacy', 'Syria',
+  ]);
 
   return Array.from(topicMap.entries())
     .map(([topic, items]) => ({ topic, articles: items }))
     .filter((c) => {
-      // ① Minimum 2 articles
       if (c.articles.length < 2) return false;
-      // ② Minimum 2 UNIQUE sources — 1-source clusters are unverified noise
       const uniqueSrc = new Set(c.articles.map(a => a.article.sourceId)).size;
-      if (uniqueSrc < 2) return false;
+      // High-priority topics: allow single source if 3+ articles (active breaking coverage)
+      if (uniqueSrc < 2) {
+        if (HIGH_PRIORITY_FOR_FILTER.has(c.topic) && c.articles.length >= 3) return true;
+        return false;
+      }
       return true;
     })
     .sort((a, b) => b.articles.length - a.articles.length);
@@ -345,13 +379,16 @@ function clusterByTopic(articles: FetchedArticle[]): Cluster[] {
 
 /**
  * Pick best headline from cluster (highest signal score article)
+ * Returns both the localized headline AND the winning article (for summary coherence)
  */
-function pickHeadline(cluster: Cluster): { he: string; en: string } {
-  // Find highest signal-score article
+function pickHeadline(cluster: Cluster): { headline: { he: string; en: string }; bestArticle: ArticleWithAnalysis } {
+  // Sort by signal score — highest first
   const sorted = [...cluster.articles].sort(
     (a, b) => b.analysis.signalScore - a.analysis.signalScore
   );
   const template = TOPIC_HEADLINES[cluster.topic] || { he: cluster.topic, en: cluster.topic };
+  const topicHintHe = (template.he + ' ' + (TOPIC_CATEGORIES[cluster.topic]?.he || '')).toLowerCase();
+  const topicHintEn = (template.en + ' ' + (TOPIC_CATEGORIES[cluster.topic]?.en || '')).toLowerCase();
 
   // Filter out titles that are channel/feed names (contain " | " pattern with source name)
   const isJunkTitle = (title: string) =>
@@ -359,54 +396,216 @@ function pickHeadline(cluster: Cluster): { he: string; en: string } {
     /^(חדשות|ידיעות|וואלה|מאקו|גלובס)\s*\d*\s*\|/i.test(title) ||
     title.length < 15;
 
-  // Find best headline — skip junk titles
-  const best = sorted.find(a => !isJunkTitle(a.article.title)) || sorted[0];
+  // High-priority topics require stricter title matching (minShared=2) to avoid false headlines
+  const HIGH_PRIORITY_TOPICS = new Set(['Iran Nuclear', 'Gaza Conflict', 'Lebanon/Hezbollah', 'Ukraine/Russia', 'Security', 'West Bank', 'US Politics']);
+  const minSharedForTopic = HIGH_PRIORITY_TOPICS.has(cluster.topic) ? 2 : 1;
+  const isTopicRelevant = (title: string) => isSameTopic(topicHintHe + ' ' + topicHintEn, title, minSharedForTopic);
 
-  if (best.article.language === 'he') {
-    return { he: isJunkTitle(best.article.title) ? template.he : best.article.title, en: template.en };
+  const relevantSorted = sorted.filter(a => !isJunkTitle(a.article.title) && isTopicRelevant(a.article.title));
+  const best = relevantSorted[0] ?? sorted.find(a => !isJunkTitle(a.article.title)) ?? sorted[0];
+
+  // Build localized headline
+  let heTitle: string;
+  let enTitle: string;
+
+  if (best.article.language === 'he' && !isJunkTitle(best.article.title)) {
+    heTitle = best.article.title;
+    // For English: try to find a relevant English article title
+    const enBest = sorted.find(a => a.article.language !== 'he' && !isJunkTitle(a.article.title) && isTopicRelevant(a.article.title));
+    enTitle = enBest ? enBest.article.title : template.en;
+  } else if (best.article.language !== 'he' && !isJunkTitle(best.article.title)) {
+    enTitle = best.article.title;
+    // For Hebrew: try Groq summaryHe first (more specific than template), then find a Hebrew title
+    const groqHe = getGroqResult(best.article.id)?.summaryHe;
+    if (groqHe && groqHe.length > 15) {
+      heTitle = groqHe;
+    } else {
+      const heBest = sorted.find(a => a.article.language === 'he' && !isJunkTitle(a.article.title) && isTopicRelevant(a.article.title));
+      heTitle = heBest ? heBest.article.title : template.he;
+    }
   } else {
-    return { he: template.he, en: isJunkTitle(best.article.title) ? template.en : best.article.title };
+    // Both junk — use templates, but try Groq for Hebrew
+    const groqHe = getGroqResult(best.article.id)?.summaryHe;
+    heTitle = (groqHe && groqHe.length > 15) ? groqHe : template.he;
+    enTitle = template.en;
   }
+
+  return { headline: { he: heTitle, en: enTitle }, bestArticle: best };
 }
 
 /**
  * Build summary from top articles in cluster
  */
-// Clean a raw RSS description — remove junk metadata
+
+// Clean a raw RSS description — remove junk metadata and normalize
 function cleanDescription(desc: string): string {
   return desc
+    .replace(/<[^>]+>/g, ' ')                                 // strip HTML tags
     .replace(/\d+\s*כתבות\s*מ-\d+\s*מקורות[^.]*\./g, '')   // "386 כתבות מ-32 מקורות שונים."
     .replace(/רמת ביטחון:[^.]*\./g, '')                       // "רמת ביטחון: גבוה (81%)."
     .replace(/זוהה כסיגנל[^.]*\./g, '')                       // "זוהה כסיגנל חדשותי משמעותי."
     .replace(/[A-Za-z]{2,}\s+en\s+\w+\s*\|[^|]*/g, '')       // "Kan en français | ..."
     .replace(/^\d{1,2}\.\d{1,2}\.\d{4}\s*/g, '')             // leading dates
     .replace(/\|[^|]{0,40}$/g, '')                            // trailing " | source name"
+    // Normalize bullet points → sentence separators
+    .replace(/\s*[•·]\s*/g, '. ')
+    .replace(/\s*[-–—]\s+(?=[א-ת])/g, '. ')                  // dash before Hebrew text → sentence
+    // Remove repeated sentence fragments
+    .replace(/\.{2,}/g, '.')
     .replace(/\s{2,}/g, ' ')
     .trim();
 }
 
-function buildSummary(cluster: Cluster): { he: string; en: string } {
+// Extract the first complete sentence that's long enough to be meaningful
+function extractFirstSentence(text: string, minLen = 40): string {
+  const sentences = text
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length >= minLen);
+  return sentences[0] ?? text;
+}
+
+// Slice text at the last sentence boundary before maxLen chars
+function sliceAtSentence(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  const chunk = text.slice(0, maxLen);
+  // Find last sentence-ending punctuation (. ! ? ׃)
+  const lastEnd = Math.max(
+    chunk.lastIndexOf('.'),
+    chunk.lastIndexOf('!'),
+    chunk.lastIndexOf('?'),
+    chunk.lastIndexOf('׃'),
+  );
+  if (lastEnd > maxLen * 0.4) return chunk.slice(0, lastEnd + 1).trim();
+  // No good boundary — fall back to last word boundary
+  const lastSpace = chunk.lastIndexOf(' ');
+  return lastSpace > 0 ? chunk.slice(0, lastSpace).trim() + '…' : chunk + '…';
+}
+
+// Remove prefix overlap between headline and description
+function deduplicateWithHeadline(desc: string, headline: string): string {
+  if (!headline || !desc) return desc;
+  // Compare first N words of headline vs desc (case-insensitive)
+  const headWords = headline.toLowerCase().split(/\s+/).slice(0, 6).join(' ');
+  const descStart = desc.toLowerCase().slice(0, headWords.length + 10);
+  if (descStart.includes(headWords)) {
+    // Find where the overlap ends in the original desc and skip past it
+    const overlapEnd = desc.toLowerCase().indexOf(headWords) + headWords.length;
+    const rest = desc.slice(overlapEnd).replace(/^[\s,:\-–—]+/, '');
+    return rest.length > 30 ? rest : desc; // only skip if enough remains
+  }
+  return desc;
+}
+
+// Impact-keyword scoring — higher = more important sentence
+const IMPACT_WORDS_HE = ['נהרג', 'פצוע', 'מיליארד', 'מיליון', 'הסכם', 'הפסקת אש', 'מתקפה', 'ירי',
+  'פיגוע', 'מלחמה', 'הכריז', 'אישר', 'דחה', 'קרס', 'ירד', 'עלה', 'שיא', 'ראשון', 'חסר תקדים'];
+const IMPACT_WORDS_EN = ['killed', 'wounded', 'billion', 'million', 'deal', 'ceasefire', 'attack',
+  'strike', 'war', 'declared', 'approved', 'rejected', 'collapsed', 'record', 'first', 'unprecedented'];
+
+// Check whether two texts share enough meaningful words to be about the same subject
+function isSameTopic(textA: string, textB: string, minShared = 2): boolean {
+  const stopWords = new Set([
+    'של', 'את', 'עם', 'על', 'הם', 'הן', 'הוא', 'היא', 'זה', 'כי', 'לא', 'גם', 'כל', 'אבל',
+    'אם', 'רק', 'כך', 'כן', 'כבר', 'היה', 'יש', 'אין', 'כדי', 'עוד', 'אחד', 'אחת',
+    'the', 'a', 'an', 'in', 'on', 'of', 'to', 'is', 'was', 'are', 'and', 'or', 'but',
+    'for', 'with', 'that', 'this', 'it', 'he', 'she', 'we', 'not', 'as', 'by', 'at',
+  ]);
+  const tokenize = (t: string) =>
+    t.toLowerCase().split(/[\s,.\-–—:!?״"'()[\]]+/).filter(w => w.length > 2 && !stopWords.has(w));
+  const setA = new Set(tokenize(textA));
+  const shared = tokenize(textB).filter(w => setA.has(w)).length;
+  return shared >= minShared;
+}
+
+function scoreImpact(sentence: string, isHe: boolean): number {
+  const lower = sentence.toLowerCase();
+  const words = isHe ? IMPACT_WORDS_HE : IMPACT_WORDS_EN;
+  return words.reduce((n, w) => n + (lower.includes(w) ? 1 : 0), 0);
+}
+
+// Extract the most impactful sentence from a description
+function extractBestSentence(desc: string, isHe: boolean): string {
+  const sentences = desc.split(/(?<=[.!?׃])\s+/).filter(s => s.length > 20);
+  if (sentences.length <= 1) return desc;
+  return sentences.reduce((best, s) => scoreImpact(s, isHe) >= scoreImpact(best, isHe) ? s : best, sentences[0]);
+}
+
+function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he: string; en: string } {
   const isJunkDesc = (d: string) =>
     !d || d.length < 20 ||
     /^\d+\s*כתבות/.test(d) ||
     /en\s+fran[çc]ais/i.test(d) ||
     /^[\d./ ]+$/.test(d);
 
-  const heArticles = cluster.articles
-    .filter((a) => a.article.language === 'he')
-    .map((a) => ({ ...a, cleaned: cleanDescription(a.article.description) }))
-    .filter((a) => !isJunkDesc(a.cleaned));
+  // Topic anchor — used to verify that an article's description is actually about this topic
+  const topicTemplate = TOPIC_HEADLINES[cluster.topic];
+  const topicHintHe = (topicTemplate?.he || cluster.topic) + ' ' + (TOPIC_CATEGORIES[cluster.topic]?.he || '');
+  const topicHintEn = (topicTemplate?.en || cluster.topic) + ' ' + (TOPIC_CATEGORIES[cluster.topic]?.en || '');
 
-  const enArticles = cluster.articles
-    .filter((a) => a.article.language !== 'he')
-    .map((a) => ({ ...a, cleaned: cleanDescription(a.article.description) }))
-    .filter((a) => !isJunkDesc(a.cleaned));
+  /**
+   * Find the best article for the summary in a given language.
+   * Priority: highest signal-score article whose description is relevant to the topic.
+   * Fallback: any non-junk description in that language.
+   */
+  const findSummarySource = (lang: 'he' | 'en', topicHint: string): { source: ArticleWithAnalysis; desc: string } | null => {
+    const candidates = [...cluster.articles]
+      .filter(a => a.article.language === lang)
+      .map(a => ({ a, desc: cleanDescription(a.article.description) }))
+      .filter(({ desc }) => !isJunkDesc(desc))
+      .sort((x, y) => y.a.analysis.signalScore - x.a.analysis.signalScore);
 
-  const heSummary = heArticles.slice(0, 2).map((a) => a.cleaned.slice(0, 160)).join(' ') ||
-    `${cluster.articles.length} כתבות על ${TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic}`;
+    if (candidates.length === 0) return null;
 
-  const enSummary = enArticles.slice(0, 2).map((a) => a.cleaned.slice(0, 160)).join(' ') ||
-    `${cluster.articles.length} articles about ${cluster.topic}`;
+    // Prefer an article whose description shares ≥2 words with the topic hint
+    // minShared=2 prevents accidental single-word matches (e.g. "בית" in both Big Brother and housing news)
+    const relevant = candidates.filter(({ desc }) => isSameTopic(topicHint, desc, 2));
+    // fallback: any 1-word match, then any non-junk
+    const fallback1 = candidates.filter(({ desc }) => isSameTopic(topicHint, desc, 1));
+    const chosen = relevant[0] ?? fallback1[0] ?? candidates[0];
+    return { source: chosen.a, desc: chosen.desc };
+  };
+
+  const heSource = findSummarySource('he', topicHintHe);
+  const enSource = findSummarySource('en', topicHintEn);
+
+  // ── Build Hebrew summary ──
+  let heSummary: string;
+  if (heSource) {
+    const { source, desc } = heSource;
+
+    // Priority 1: Groq-generated Hebrew summary — already coherent, single sentence
+    const groqSummary = getGroqResult(source.article.id)?.summaryHe;
+    if (groqSummary && groqSummary.length > 30) {
+      heSummary = deduplicateWithHeadline(groqSummary, source.article.title || '');
+    } else {
+      // Priority 2: First complete sentence from cleaned description
+      const deduped = deduplicateWithHeadline(desc, source.article.title || '');
+      const firstSentence = extractFirstSentence(deduped, 40);
+      heSummary = sliceAtSentence(firstSentence, 240);
+    }
+  } else {
+    heSummary = `${cluster.articles.length} כתבות על ${TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic}`;
+  }
+
+  // ── Build English summary ──
+  let enSummary: string;
+  if (enSource) {
+    const { source, desc } = enSource;
+
+    // Priority 1: Groq-generated English summary
+    const groqSummaryEn = getGroqResult(source.article.id)?.summaryEn;
+    if (groqSummaryEn && groqSummaryEn.length > 30) {
+      enSummary = deduplicateWithHeadline(groqSummaryEn, source.article.title || '');
+    } else {
+      // Priority 2: First complete sentence
+      const deduped = deduplicateWithHeadline(desc, source.article.title || '');
+      const firstSentence = extractFirstSentence(deduped, 40);
+      enSummary = sliceAtSentence(firstSentence, 240);
+    }
+  } else {
+    enSummary = `${cluster.articles.length} articles about ${cluster.topic}`;
+  }
 
   return { he: heSummary, en: enSummary };
 }
@@ -503,11 +702,36 @@ function determineLens(cluster: Cluster): 'israel' | 'world' {
  *  − Staleness: age > 20h + no movement → penalty (0.7×)
  *  − Sports / General topics → lower priority (0.75×)
  */
+// Israeli source IDs — stories covered by Israeli media get a relevance boost
+const ISRAELI_SOURCE_IDS = new Set([
+  'ynet', 'ynet-en', 'mako', 'n12', 'reshet13', 'kan', 'walla', 'calcalist', 'globes',
+  'israelhayom', 'haaretz', 'haaretz-en', 'inn', 'timesofisrael', 'jpost', 'i24news',
+  'channel14', '972mag',
+]);
+
 function scoreCluster(cluster: Cluster): number {
   const uniqueSources = new Set(cluster.articles.map(a => a.article.sourceId)).size;
   const signalCount = cluster.articles.filter(a => a.analysis.isSignal).length;
   const hasImpacts = cluster.topic in TOPIC_IMPACTS;
-  const isLowPriority = cluster.topic === 'Sports' || cluster.topic === 'General';
+  const isLowPriority = cluster.topic === 'Sports' || cluster.topic === 'General' || cluster.topic === 'Entertainment' || cluster.topic === 'Technology' || cluster.topic === 'Climate';
+
+  // Israeli source boost: count unique Israeli sources covering this story
+  const israeliSources = new Set(
+    cluster.articles
+      .map(a => a.article.sourceId)
+      .filter(id => ISRAELI_SOURCE_IDS.has(id))
+  ).size;
+
+  // Topic importance tiers
+  const isTopPriority = [
+    'Iran Nuclear', 'Gaza Conflict', 'Lebanon/Hezbollah', 'Ukraine/Russia',
+    'US Politics', 'Security', 'West Bank',
+  ].includes(cluster.topic);
+
+  const isHighPriority = [
+    'Economy', 'Diplomacy', 'Saudi Normalization', 'China', 'Syria',
+    'Judicial Reform', 'Turkey/Egypt',
+  ].includes(cluster.topic);
 
   // Quick likelihood proxy (no need for full calculation here)
   const avgSignal = cluster.articles.reduce((s, a) => s + a.analysis.signalScore, 0) / cluster.articles.length;
@@ -530,10 +754,35 @@ function scoreCluster(cluster: Cluster): number {
   // Signal boost
   const signalMultiplier = signalCount > 0 ? 1.3 : 1;
 
-  // Low-priority topic penalty
-  const topicMultiplier = isLowPriority ? 0.75 : 1;
+  // Topic priority multiplier
+  const topicMultiplier =
+    isLowPriority   ? 0.75 :   // Sports / General — deprioritize
+    isTopPriority   ? 1.4  :   // ביטחון / פוליטיקה / עזה — boost חזק
+    isHighPriority  ? 1.2  :   // כלכלה / דיפלומטיה — boost בינוני
+    1.0;                       // שאר הנושאים
 
-  return baseScore * stalenessMultiplier * impactMultiplier * signalMultiplier * topicMultiplier;
+  // ── Trending multiplier: more unique sources = more editors independently chose this story ──
+  // 2 sources → 1.0×  (baseline, already filtered)
+  // 3 sources → 1.2×
+  // 4 sources → 1.45×
+  // 5 sources → 1.75×
+  // 6+ sources → 2.1×  (viral / breaking)
+  const trendingMultiplier =
+    uniqueSources >= 6 ? 2.1 :
+    uniqueSources >= 5 ? 1.75 :
+    uniqueSources >= 4 ? 1.45 :
+    uniqueSources >= 3 ? 1.2 : 1.0;
+
+  // ── Israeli source multiplier: stories covered by Israeli media are more relevant to this platform ──
+  // 1 Israeli source → 1.1×
+  // 2 Israeli sources → 1.25×
+  // 3+ Israeli sources → 1.4×
+  const israeliMultiplier =
+    israeliSources >= 3 ? 1.4 :
+    israeliSources >= 2 ? 1.25 :
+    israeliSources >= 1 ? 1.1 : 1.0;
+
+  return baseScore * stalenessMultiplier * impactMultiplier * signalMultiplier * topicMultiplier * trendingMultiplier * israeliMultiplier;
 }
 
 export function generateStories(articles: FetchedArticle[], maxStories = 8): BriefStory[] {
@@ -548,8 +797,8 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
     .map(({ cluster }) => cluster);
 
   return rankedClusters.slice(0, maxStories).map((cluster) => {
-    const headline = pickHeadline(cluster);
-    const summary = buildSummary(cluster);
+    const { headline, bestArticle } = pickHeadline(cluster);
+    const summary = buildSummary(cluster, bestArticle);
     const { likelihood, delta, confidence } = calculateLikelihood(cluster);
     const lens = determineLens(cluster);
     const isSignal = cluster.articles.some((a) => a.analysis.isSignal);
@@ -578,12 +827,17 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
 
     const likelihoodLabel: Confidence = likelihood >= 70 ? 'high' : likelihood >= 40 ? 'medium' : 'low';
 
-    // Build "why" explanation with confidence
-    const confLabel = confidence >= 70 ? 'high' : confidence >= 40 ? 'medium' : 'low';
-    const confLabelHe = confidence >= 70 ? 'גבוה' : confidence >= 40 ? 'בינוני' : 'נמוך';
+    // Build "why" explanation — name actual sources for credibility
+    const confLabelHe = confidence >= 70 ? 'גבוהה' : confidence >= 40 ? 'בינונית' : 'נמוכה';
+    const sourceNames = Array.from(sourcesMap.keys()).slice(0, 3);
+    const sourceListHe = sourceNames.length >= 2
+      ? sourceNames.slice(0, -1).join(', ') + ' ו-' + sourceNames.at(-1)
+      : sourceNames[0] || '';
+    const sourceListEn = sourceNames.join(', ');
+    const extraSources = sourcesMap.size > 3 ? sourcesMap.size - 3 : 0;
     const why = {
-      he: `${cluster.articles.length} כתבות מ-${sourcesMap.size} מקורות שונים. רמת ביטחון: ${confLabelHe} (${confidence}%). ${isSignal ? 'זוהה כסיגנל חדשותי משמעותי.' : ''}`,
-      en: `${cluster.articles.length} articles from ${sourcesMap.size} sources. Confidence: ${confLabel} (${confidence}%). ${isSignal ? 'Identified as a significant news signal.' : ''}`,
+      he: `מכוסה ע"י ${sourceListHe}${extraSources > 0 ? ` ועוד ${extraSources}` : ''}. אמינות ${confLabelHe}.${isSignal ? ' זוהה כסיגנל חדשותי.' : ''}`,
+      en: `Covered by ${sourceListEn}${extraSources > 0 ? ` +${extraSources} more` : ''}. Confidence: ${confidence >= 70 ? 'high' : confidence >= 40 ? 'medium' : 'low'}.${isSignal ? ' Flagged as news signal.' : ''}`,
     };
 
     return {

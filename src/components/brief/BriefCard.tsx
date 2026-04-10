@@ -7,6 +7,7 @@ import type { BriefStory, ShockEvent } from '@/lib/types';
 import { useSidebar } from '@/contexts/SidebarContext';
 import type { SidebarArticle } from '@/contexts/SidebarContext';
 import SignalLabel from '@/components/shared/SignalLabel';
+import Link from 'next/link';
 import { getStoryLean, LEAN_LABEL, getSourceLeanBreakdown } from '@/utils/political-lean';
 import { computeGrade, GRADE_STYLE } from '@/utils/credibility-grade';
 import { getSparklineData, getRealDelta } from '@/hooks/useLikelihoodHistory';
@@ -20,6 +21,7 @@ import ShareStoryButton from '@/components/shared/ShareStoryButton';
 import ReaderMode from '@/components/shared/ReaderMode';
 import BiasBar from '@/components/shared/BiasBar';
 import BlindspotBadge from '@/components/shared/BlindspotBadge';
+import StoryTimeline from '@/components/shared/StoryTimeline';
 
 interface BriefCardProps {
   story: BriefStory;
@@ -104,7 +106,7 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
     <article
       dir={dir}
       onClick={handleClick}
-      className={`rounded-xl border transition-all cursor-pointer p-5 space-y-3 ${
+      className={`rounded-xl border transition-all cursor-pointer p-6 space-y-4 ${
         story.resolved
           ? 'border-gray-700/50 bg-gray-900/40 opacity-60 hover:opacity-80'
           : 'border-gray-800 bg-gray-900/80 hover:bg-gray-800/80 card-glow'
@@ -113,9 +115,13 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
       {/* Top row: category + badges + signal + watch */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-          <span className="text-xs uppercase tracking-wider text-gray-400 shrink-0">
+          <Link
+            href={`/topic/${encodeURIComponent(lang === 'he' ? story.category.he : story.category.en)}`}
+            onClick={e => e.stopPropagation()}
+            className="text-xs uppercase tracking-wider text-gray-400 hover:text-yellow-400 shrink-0 transition-colors"
+          >
             {t(story.category)}
-          </span>
+          </Link>
 
           {/* Source count badge with political breakdown tooltip */}
           {sourceCount > 0 && (
@@ -185,10 +191,10 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
       </div>
 
       {/* Headline */}
-      <h2 className="text-lg font-semibold leading-snug">{t(story.headline)}</h2>
+      <h2 className="text-xl font-bold leading-snug tracking-tight">{t(story.headline)}</h2>
 
       {/* Summary */}
-      <p className={`text-sm text-gray-300 ${expanded ? '' : 'line-clamp-2'}`}>{t(story.summary)}</p>
+      <p className={`text-sm text-gray-300 leading-relaxed ${expanded ? '' : 'line-clamp-3'}`}>{t(story.summary)}</p>
 
       {/* Mobile expand toggle — visible only on mobile */}
       <button
@@ -332,6 +338,9 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
               </div>
             </div>
           )}
+
+          {/* Likelihood Timeline */}
+          <StoryTimeline slug={story.slug} currentLikelihood={story.likelihood} />
 
           {/* Sources */}
           <div className="space-y-2">

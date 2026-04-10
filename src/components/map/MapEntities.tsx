@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useLanguage } from '@/i18n/context';
 import GeoMap from './GeoMap';
 import EntityGraph from '@/components/entities/EntityGraph';
+import TimeMachine from './TimeMachine';
 
 const TABS = [
-  { id: 'map', icon: '🗺️', en: 'Geo Map', he: 'מפה' },
-  { id: 'entities', icon: '🕸️', en: 'Entity Graph', he: 'גרף ישויות' },
+  { id: 'map',         icon: '🗺️',  en: 'Geo Map',      he: 'מפה'          },
+  { id: 'entities',   icon: '🕸️',  en: 'Entity Graph', he: 'גרף ישויות'   },
+  { id: 'timemachine',icon: '🕰️',  en: 'Time Machine', he: 'מכונת זמן'    },
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
@@ -25,7 +27,7 @@ export default function MapEntities() {
       </h2>
 
       {/* Tab bar */}
-      <div role="tablist" className="flex gap-1 bg-gray-900/80 rounded-xl p-1 border border-gray-800 max-w-xs">
+      <div role="tablist" className="flex gap-1 bg-gray-900/80 rounded-xl p-1 border border-gray-800">
         {TABS.map(tab => {
           const isActive = activeTab === tab.id;
           return (
@@ -53,16 +55,17 @@ export default function MapEntities() {
               }`}
             >
               <span className="text-xs">{tab.icon}</span>
-              {lang === 'he' ? tab.he : tab.en}
+              <span className="hidden sm:inline">{lang === 'he' ? tab.he : tab.en}</span>
             </button>
           );
         })}
       </div>
 
       {/* Tab content */}
-      <div role="tabpanel" aria-label={lang === 'he' ? TABS.find(t => t.id === activeTab)?.he : TABS.find(t => t.id === activeTab)?.en}>
-        {activeTab === 'map' && <GeoMap />}
-        {activeTab === 'entities' && <EntityGraph />}
+      <div role="tabpanel">
+        {activeTab === 'map'         && <GeoMap />}
+        {activeTab === 'entities'    && <EntityGraph />}
+        {activeTab === 'timemachine' && <TimeMachine />}
       </div>
     </div>
   );

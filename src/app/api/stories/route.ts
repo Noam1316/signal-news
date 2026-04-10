@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { generateStories } from '@/services/story-clusterer';
 import { getCachedArticles } from '@/services/article-cache';
+import { preAnalyzeWithGroq, isGroqEnabled } from '@/services/groq-analyzer';
 import type { BriefStory } from '@/lib/types';
 
 let cache: { stories: BriefStory[]; timestamp: number } | null = null;
@@ -25,14 +26,21 @@ export async function GET() {
 
   try {
     // Get latest articles from shared cache
-    const articles = (await getCachedArticles()).slice(0, 200);
+    const articles = (await getCachedArticles()).slice(0, 400);
 
     if (!articles || articles.length < 5) {
       throw new Error('Not enough articles for clustering');
     }
 
-    // Generate stories from clusters
-    const stories = generateStories(articles, 5);
+    // ── Groq pre-analysis (non-blocking if API key set) ──
+    if (isGroqEnabled()) {
+      await preAnalyzeWithGroq(articles).catch(err =>
+        console.warn('[Stories] Groq pre-analysis failed, using keywords:', err?.message)
+      );
+    }
+
+    // Generate stories from clusters (uses Groq results if available)
+    const stories = generateStories(articles, 20);
 
     if (stories.length === 0) {
       throw new Error('No clusters formed');

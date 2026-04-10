@@ -235,3 +235,70 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ─── Intel / Operational UI ─────────────────────────────────────────────── */
+
+/* Tabular numbers for data displays */
+.intel-number {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Intel card — green-tinted border glow */
+.intel-card {
+  border-color: rgba(34, 197, 94, 0.12) !important;
+  box-shadow:
+    0 0 0 1px rgba(34, 197, 94, 0.06),
+    0 4px 24px -4px rgba(0, 0, 0, 0.5),
+    inset 0 0 60px -20px rgba(34, 197, 94, 0.03);
+}
+
+/* Animated dash for SVG map lines */
+@keyframes dash-move {
+  to { stroke-dashoffset: -16; }
+}
+
+/* Radar ping */
+@keyframes radar-ping {
+  0%   { transform: scale(1); opacity: 0.6; }
+  70%  { transform: scale(2.5); opacity: 0; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.radar-ping {
+  animation: radar-ping 2s ease-out infinite;
+  transform-origin: center;
+}
+
+/* Terminal cursor blink */
+@keyframes terminal-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.terminal-cursor::after {
+  content: '█';
+  display: inline-block;
+  animation: terminal-blink 1s step-end infinite;
+  color: #22c55e;
+  font-size: 0.6em;
+  vertical-align: middle;
+  margin-inline-start: 2px;
+}
+
+/* Scanline overlay — subtle CRT feel */
+.scanline-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.04) 3px,
+    rgba(0, 0, 0, 0.04) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
+}

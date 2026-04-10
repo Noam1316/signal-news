@@ -15,7 +15,7 @@ export interface FetchedArticle {
   fetchedAt: string;
 }
 
-const parser = new Parser({ timeout: 15_000 });
+const parser = new Parser({ timeout: 5_000 });
 
 const FETCH_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -40,7 +40,7 @@ function mapItems(
   now: string,
 ): FetchedArticle[] {
   return (feed.items || [])
-    .slice(0, 50)
+    .slice(0, 15)
     .filter((item) => item.link)
     .map((item) => ({
       id: hashUrl(item.link!),
@@ -60,7 +60,7 @@ export async function fetchFromSource(source: RssSource): Promise<FetchedArticle
   const now = new Date().toISOString();
   const res = await fetch(source.url, {
     headers: FETCH_HEADERS,
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(5_000),
   });
   if (!res.ok) throw new Error(`Status code ${res.status}`);
   const text = await res.text();

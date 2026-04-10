@@ -15,7 +15,7 @@ export async function GET() {
 
   try {
     // Get latest articles from shared cache
-    const articles = (await getCachedArticles()).slice(0, 100);
+    const articles = (await getCachedArticles()).slice(0, 500);
 
     if (!articles || articles.length === 0) {
       return NextResponse.json({

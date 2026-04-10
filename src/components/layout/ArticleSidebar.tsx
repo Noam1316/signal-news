@@ -209,8 +209,13 @@ export default function ArticleSidebar() {
                   )}
                 </div>
 
-                {/* Signal Score */}
-                <SignalScoreBar score={article.signalScore} />
+                {/* Signal Score — only for security/political/geopolitical topics */}
+                {(() => {
+                  const cat = (article.category || '').toLowerCase();
+                  const showScore = ['security', 'geopolitics', 'politics', 'diplomacy', 'national security',
+                    'ביטחון', 'גיאופוליטיקה', 'פוליטיקה', 'דיפלומטיה', 'ביטחון לאומי', 'מזרח תיכון'].some(k => cat.includes(k));
+                  return showScore ? <SignalScoreBar score={article.signalScore} /> : null;
+                })()}
 
                 {/* All Sources */}
                 {article.allSources && article.allSources.length > 0 && (

@@ -40,11 +40,24 @@ export default function AnalystTable({ stories, shockBySlug }: AnalystTableProps
   };
   const col = lang === 'he' ? colHe : colEn;
 
+  // Mobile: rank + headline + likelihood + delta only
+  // Desktop: full columns
+  const mobileGrid = '24px 1fr 72px 36px';
+  const desktopGrid = '24px 1fr 100px 36px 36px 36px 56px 20px 20px 60px';
+
   return (
     <div dir={dir} className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
-      {/* Header */}
-      <div className="grid items-center gap-2 px-3 py-2 bg-gray-900 border-b border-gray-800 text-[10px] font-bold uppercase tracking-wider text-gray-500"
-        style={{ gridTemplateColumns: '24px 1fr 100px 36px 36px 36px 56px 20px 20px 60px' }}>
+      {/* Header — mobile */}
+      <div className="sm:hidden grid items-center gap-2 px-3 py-2 bg-gray-900 border-b border-gray-800 text-[10px] font-bold uppercase tracking-wider text-gray-500"
+        style={{ gridTemplateColumns: mobileGrid }}>
+        <span>{col.rank}</span>
+        <span>{col.headline}</span>
+        <span>{col.likelihood}</span>
+        <span className="text-center">{col.delta}</span>
+      </div>
+      {/* Header — desktop */}
+      <div className="hidden sm:grid items-center gap-2 px-3 py-2 bg-gray-900 border-b border-gray-800 text-[10px] font-bold uppercase tracking-wider text-gray-500"
+        style={{ gridTemplateColumns: desktopGrid }}>
         <span>{col.rank}</span>
         <span>{col.headline}</span>
         <span>{col.likelihood}</span>
@@ -73,63 +86,51 @@ export default function AnalystTable({ stories, shockBySlug }: AnalystTableProps
           const delta = realDelta !== null ? realDelta : (story.delta ?? 0);
           const hasShock = !!shockBySlug[story.slug];
           const srcCount = story.sources?.length ?? 0;
-
           const deltaColor = delta > 0 ? 'text-emerald-400' : delta < 0 ? 'text-red-400' : 'text-gray-600';
+          const deltaText = delta > 0 ? `+${delta}` : delta < 0 ? `${delta}` : '—';
 
           return (
-            <div
-              key={story.slug}
-              className="grid items-center gap-2 px-3 py-2 hover:bg-gray-800/40 transition-colors cursor-default group"
-              style={{ gridTemplateColumns: '24px 1fr 100px 36px 36px 36px 56px 20px 20px 60px' }}
-            >
-              {/* Rank */}
-              <span className="text-[10px] font-mono text-gray-600">{idx + 1}</span>
+            <div key={story.slug}>
+              {/* Mobile row */}
+              <div
+                className="sm:hidden grid items-center gap-2 px-3 py-2.5 hover:bg-gray-800/40 transition-colors"
+                style={{ gridTemplateColumns: mobileGrid }}
+              >
+                <span className="text-[10px] font-mono text-gray-600">{idx + 1}</span>
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-200 truncate font-medium" title={headline}>{headline}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {story.isSignal && <span className="text-[9px]">⚡</span>}
+                    {hasShock && <span className="text-[9px]">🔴</span>}
+                    <span className="text-[9px] text-gray-600">{srcCount} {lang === 'he' ? 'מקורות' : 'src'}</span>
+                    {leanData && <span className={`text-[9px] px-1 rounded border ${leanData.bg} ${leanData.color}`}>{lang === 'he' ? leanData.he : leanData.en}</span>}
+                  </div>
+                </div>
+                <LikelihoodCell value={story.likelihood} />
+                <span className={`text-[11px] font-mono font-bold text-center ${deltaColor}`}>{deltaText}</span>
+              </div>
 
-              {/* Headline */}
-              <span className="text-xs text-gray-200 truncate group-hover:text-white transition-colors" title={headline}>
-                {headline}
-              </span>
-
-              {/* Likelihood bar */}
-              <LikelihoodCell value={story.likelihood} />
-
-              {/* Delta */}
-              <span className={`text-[11px] font-mono font-bold text-center ${deltaColor}`}>
-                {delta > 0 ? `+${delta}` : delta < 0 ? `${delta}` : '—'}
-              </span>
-
-              {/* Sources */}
-              <span className="text-[11px] text-center text-gray-400 font-mono">{srcCount}</span>
-
-              {/* Grade */}
-              <span className={`text-[10px] font-bold text-center px-1 py-0.5 rounded border ${gradeStyle.bg} ${gradeStyle.color}`}>
-                {grade}
-              </span>
-
-              {/* Lean */}
-              {leanData ? (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium truncate ${leanData.bg} ${leanData.color}`}>
-                  {lang === 'he' ? leanData.he : leanData.en}
-                </span>
-              ) : (
-                <span className="text-[10px] text-gray-700">—</span>
-              )}
-
-              {/* Signal */}
-              <span className="text-center">
-                {story.isSignal ? <span className="text-xs">⚡</span> : <span className="text-[10px] text-gray-800">·</span>}
-              </span>
-
-              {/* Shock */}
-              <span className="text-center">
-                {hasShock ? <span className="text-xs">🔴</span> : <span className="text-[10px] text-gray-800">·</span>}
-              </span>
-
-              {/* Sparkline */}
-              <div className="flex justify-center">
-                {sparkData.length >= 2
-                  ? <SparkLine data={sparkData} width={56} height={20} />
-                  : <span className="text-[10px] text-gray-700">—</span>}
+              {/* Desktop row */}
+              <div
+                className="hidden sm:grid items-center gap-2 px-3 py-2 hover:bg-gray-800/40 transition-colors cursor-default group"
+                style={{ gridTemplateColumns: desktopGrid }}
+              >
+                <span className="text-[10px] font-mono text-gray-600">{idx + 1}</span>
+                <span className="text-xs text-gray-200 truncate group-hover:text-white transition-colors" title={headline}>{headline}</span>
+                <LikelihoodCell value={story.likelihood} />
+                <span className={`text-[11px] font-mono font-bold text-center ${deltaColor}`}>{deltaText}</span>
+                <span className="text-[11px] text-center text-gray-400 font-mono">{srcCount}</span>
+                <span className={`text-[10px] font-bold text-center px-1 py-0.5 rounded border ${gradeStyle.bg} ${gradeStyle.color}`}>{grade}</span>
+                {leanData ? (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium truncate ${leanData.bg} ${leanData.color}`}>
+                    {lang === 'he' ? leanData.he : leanData.en}
+                  </span>
+                ) : <span className="text-[10px] text-gray-700">—</span>}
+                <span className="text-center">{story.isSignal ? <span className="text-xs">⚡</span> : <span className="text-[10px] text-gray-800">·</span>}</span>
+                <span className="text-center">{hasShock ? <span className="text-xs">🔴</span> : <span className="text-[10px] text-gray-800">·</span>}</span>
+                <div className="flex justify-center">
+                  {sparkData.length >= 2 ? <SparkLine data={sparkData} width={56} height={20} /> : <span className="text-[10px] text-gray-700">—</span>}
+                </div>
               </div>
             </div>
           );

@@ -212,14 +212,25 @@ export default function GeoMap() {
       {mapData && (
         <>
           {/* SVG Map */}
-          <div className="relative rounded-xl bg-gray-900 border border-gray-800 p-4 overflow-hidden">
+          <div className="relative rounded-xl bg-gray-900 border border-gray-800 p-4 overflow-hidden intel-card">
+            {/* Situation Room label */}
+            <div className="absolute top-3 end-3 flex items-center gap-1.5 z-10">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[9px] font-mono font-bold text-emerald-400/70 uppercase tracking-widest">
+                {lang === 'he' ? 'חדר מצב' : 'SITUATION ROOM'}
+              </span>
+            </div>
             <svg viewBox="100 80 650 250" className="w-full h-auto" style={{ minHeight: '280px' }}>
-              {/* Grid lines */}
+              {/* Radar-style grid */}
               {[120, 160, 200, 240, 280].map(y => (
-                <line key={`h${y}`} x1="100" y1={y} x2="750" y2={y} stroke="#1f2937" strokeWidth="0.5" strokeDasharray="4 4" />
+                <line key={`h${y}`} x1="100" y1={y} x2="750" y2={y} stroke="#1f293780" strokeWidth="0.5" strokeDasharray="2 6" />
               ))}
               {[200, 300, 400, 500, 600, 700].map(x => (
-                <line key={`v${x}`} x1={x} y1="80" x2={x} y2="330" stroke="#1f2937" strokeWidth="0.5" strokeDasharray="4 4" />
+                <line key={`v${x}`} x1={x} y1="80" x2={x} y2="330" stroke="#1f293780" strokeWidth="0.5" strokeDasharray="2 6" />
+              ))}
+              {/* Radar concentric rings from center */}
+              {[30, 70, 120, 180].map(r => (
+                <circle key={`ring${r}`} cx="425" cy="205" r={r} fill="none" stroke="#ffffff06" strokeWidth="0.5" />
               ))}
 
               {/* Simplified land outlines (decorative) */}
@@ -236,19 +247,21 @@ export default function GeoMap() {
               <path d="M660,100 L720,95 L780,110 L800,140 L790,170 L770,190 L740,200 L700,195 L680,180 L660,150 Z"
                 fill="#1a2332" stroke="#2d3748" strokeWidth="0.5" />
 
-              {/* Connection lines between mentioned countries */}
-              {mapData.countries.length > 1 && mapData.countries.slice(0, 6).map((country, i) => {
-                // Draw lines from Israel to other mentioned countries
+              {/* Animated connection lines from Israel */}
+              {mapData.countries.length > 1 && mapData.countries.slice(0, 6).map((country) => {
                 const israel = mapData.countries.find(c => c.code === 'IL');
                 if (!israel || country.code === 'IL') return null;
+                const tension = computeTension(country, maxArticles);
+                const lineColor = tension >= 70 ? '#ef444430' : tension >= 40 ? '#f59e0b25' : '#22c55e18';
                 return (
                   <line
                     key={`line-${country.code}`}
                     x1={israel.cx} y1={israel.cy}
                     x2={country.cx} y2={country.cy}
-                    stroke="#fbbf2420"
-                    strokeWidth="1"
-                    strokeDasharray="3 3"
+                    stroke={lineColor}
+                    strokeWidth={tension >= 70 ? 1.5 : 1}
+                    strokeDasharray="4 4"
+                    style={{ animation: 'dash-move 2s linear infinite' }}
                   />
                 );
               })}

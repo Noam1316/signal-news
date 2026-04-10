@@ -56,13 +56,14 @@ export default function SectionNav() {
       className="sticky top-14 z-40 bg-gray-950/95 backdrop-blur-md border-b border-gray-800/50"
     >
       <div className="max-w-5xl mx-auto flex items-center gap-0 sm:gap-1 px-2 sm:px-4 overflow-x-auto scrollbar-hide">
+        {/* Section tabs — hidden on mobile (BottomNav handles mobile nav) */}
         {SECTIONS.map((section) => {
           const isActive = active === section.id;
           return (
             <button
               key={section.id}
               onClick={() => scrollTo(section.id)}
-              className={`shrink-0 flex items-center gap-1.5 px-3 sm:px-4 py-3 text-sm font-medium whitespace-nowrap
+              className={`hidden md:flex shrink-0 items-center gap-1.5 px-3 sm:px-4 py-3 text-sm font-medium whitespace-nowrap
                          border-b-2 transition-all duration-200 touch-manipulation
                 ${isActive
                   ? 'border-yellow-400 text-white'
@@ -75,10 +76,18 @@ export default function SectionNav() {
           );
         })}
 
-        {/* Customize button */}
+        {/* Mobile: show active section label */}
+        <div className="md:hidden flex items-center gap-2 py-3 px-1">
+          <span className="text-xs text-gray-500">{lang === 'he' ? 'קטע:' : 'Section:'}</span>
+          <span className="text-xs font-semibold text-yellow-400">
+            {SECTIONS.find(s => s.id === active)?.[lang === 'he' ? 'he' : 'en']}
+          </span>
+        </div>
+
+        {/* Customize button — desktop only (mobile uses BottomNav settings) */}
         <button
           onClick={() => setShowPrefs(true)}
-          className={`ms-auto shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
+          className={`hidden md:flex ms-auto shrink-0 items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
             activeCount > 0
               ? 'border-yellow-400/40 bg-yellow-400/10 text-yellow-400'
               : 'border-gray-800 text-gray-500 hover:text-gray-300 hover:border-gray-700'
