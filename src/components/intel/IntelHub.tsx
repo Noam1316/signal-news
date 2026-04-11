@@ -8,9 +8,11 @@ import MediaBiasPanel from './MediaBiasPanel';
 import LiveWire from '@/components/explore/LiveWire';
 import GroupedFeed from './GroupedFeed';
 import CredibilityDashboard from '@/components/credibility/CredibilityDashboard';
+import GeoCalendar from './GeoCalendar';
 
 const TABS = [
   { id: 'polymarket', icon: '📈', en: 'Signal vs Market', he: 'סיגנל vs שוק' },
+  { id: 'calendar',   icon: '📅', en: 'Calendar',         he: 'לוח אירועים' },
   { id: 'overview',   icon: '📊', en: 'Overview',         he: 'סקירה' },
   { id: 'bias',       icon: '🏛️', en: 'Media Bias',       he: 'הטיה תקשורתית' },
   { id: 'sources',    icon: '🛡️', en: 'Sources',          he: 'מקורות' },
@@ -73,6 +75,7 @@ export default function IntelHub() {
 
       {/* Tab content */}
       <div role="tabpanel" aria-label={lang === 'he' ? TABS.find(t => t.id === activeTab)?.he : TABS.find(t => t.id === activeTab)?.en} className="min-h-[300px]">
+        {activeTab === 'calendar' && <GeoCalendar />}
         {activeTab === 'overview' && <IntelDashboard />}
         {activeTab === 'polymarket' && <PolymarketComparison />}
         {activeTab === 'bias' && <MediaBiasPanel />}

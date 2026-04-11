@@ -825,6 +825,25 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       .filter((a) => a.article.pubDate)
       .sort((a, b) => new Date(b.article.pubDate).getTime() - new Date(a.article.pubDate).getTime())[0];
 
+    // First-Mover: which source published earliest in this cluster
+    const datedArticles = cluster.articles
+      .filter(a => a.article.pubDate)
+      .sort((a, b) => new Date(a.article.pubDate).getTime() - new Date(b.article.pubDate).getTime());
+    let firstMover: { sourceName: string; sourceUrl: string; minsAhead: number } | undefined;
+    if (datedArticles.length >= 2) {
+      const firstTs = new Date(datedArticles[0].article.pubDate).getTime();
+      const timestamps = datedArticles.map(a => new Date(a.article.pubDate).getTime());
+      const medianTs = timestamps[Math.floor(timestamps.length / 2)];
+      const minsAhead = Math.round((medianTs - firstTs) / 60000);
+      if (minsAhead >= 10) {
+        firstMover = {
+          sourceName: datedArticles[0].article.sourceName,
+          sourceUrl: datedArticles[0].article.link,
+          minsAhead,
+        };
+      }
+    }
+
     const likelihoodLabel: Confidence = likelihood >= 70 ? 'high' : likelihood >= 40 ? 'medium' : 'low';
 
     // Build "why" explanation — name actual sources for credibility
@@ -857,6 +876,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       narrativeSplit,
       strategicImplication,
       resolved: resolved || undefined,
+      firstMover,
     };
   }).sort((a, b) => {
     // Push resolved stories to the end

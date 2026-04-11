@@ -219,6 +219,19 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
         {sparkData.length >= 2 && <SparkLine data={sparkData} />}
       </div>
 
+      {/* First-Mover badge */}
+      {story.firstMover && story.firstMover.minsAhead >= 10 && (
+        <div className="flex items-center gap-1.5 text-[11px] text-amber-400/80">
+          <span>🚀</span>
+          <span className="font-semibold">{story.firstMover.sourceName}</span>
+          <span className="text-gray-500">
+            {lang === 'he'
+              ? `פרסם ראשון — ${story.firstMover.minsAhead} דקות לפני`
+              : `broke first — ${story.firstMover.minsAhead}m ahead`}
+          </span>
+        </div>
+      )}
+
       {/* Why */}
       <p className="text-sm italic text-gray-400">{t(story.why)}</p>
 

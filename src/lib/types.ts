@@ -44,6 +44,11 @@ export interface BriefStory {
   narrativeSplit?: NarrativeSplit;
   strategicImplication?: LocalizedText;
   resolved?: boolean;           // true if the event has already occurred/completed
+  firstMover?: {                // which source broke this story first
+    sourceName: string;
+    sourceUrl: string;
+    minsAhead: number;          // how many minutes before the median publication time
+  };
 }
 
 export type ShockStatus = 'fresh' | 'active' | 'fading';
