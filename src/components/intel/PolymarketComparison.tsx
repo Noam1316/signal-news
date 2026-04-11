@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/i18n/context';
+import MarketPulse from './MarketPulse';
 import type { AlphaBreakdown } from '@/services/polymarket';
 
 interface SignalVsMarket {
@@ -533,8 +534,17 @@ export default function PolymarketComparison() {
   const marketHigherCount = data.matches.filter(m => m.alphaDirection === 'market-higher').length;
   const topAlpha = [...data.matches].filter(m => m.alphaDirection !== 'aligned').sort((a,b) => b.alphaScore - a.alphaScore)[0];
 
+  // Collect all active topics across matches for market relevance filtering
+  const activeTopics = [...new Set(data.matches.map(m => m.topicCategory))];
+
   return (
     <div dir={dir} className="space-y-4">
+
+      {/* Market Pulse — financial indicators relevant to active stories */}
+      <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800">
+        <MarketPulse topics={activeTopics} />
+      </div>
+
       {/* Overview stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div className="p-2.5 rounded-lg bg-gray-900 border border-gray-800 text-center">
