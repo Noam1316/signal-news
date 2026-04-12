@@ -87,50 +87,71 @@ export const SECTOR_STOCKS: Record<string, { label: string; tickers: string[] }>
 /**
  * Fetch events from Polymarket Gamma API
  */
+const GEO_TAGS = ['politics', 'middle-east', 'elections', 'science', 'economics'];
+
+function parseEvents(events: any[]): PolymarketEvent[] {
+  return events
+    .filter((e: any) => e.markets && e.markets.length > 0)
+    .map((e: any) => {
+      const market = e.markets[0];
+      const prices = market.outcomePrices
+        ? (typeof market.outcomePrices === 'string'
+          ? JSON.parse(market.outcomePrices)
+          : market.outcomePrices)
+        : [0.5, 0.5];
+      return {
+        id: e.id || market.id,
+        title: e.title || market.question,
+        slug: e.slug || '',
+        outcomes: market.outcomes
+          ? (typeof market.outcomes === 'string' ? JSON.parse(market.outcomes) : market.outcomes)
+          : ['Yes', 'No'],
+        outcomePrices: prices.map((p: any) => parseFloat(p)),
+        volume: parseFloat(market.volume || '0'),
+        liquidity: parseFloat(market.liquidity || '0'),
+        endDate: e.endDate || market.endDate || '',
+        active: market.active !== false,
+        category: e.category || '',
+      };
+    })
+    .filter((e: PolymarketEvent) => e.outcomePrices.length >= 2);
+}
+
 export async function fetchPolymarketEvents(): Promise<PolymarketEvent[]> {
   try {
-    // Polymarket Gamma API - public, no auth needed
-    const res = await fetch(
-      'https://gamma-api.polymarket.com/events?closed=false&order=volume&ascending=false&limit=50',
-      {
-        headers: { 'Accept': 'application/json' },
-        cache: 'no-store', // avoid Next.js data cache errors on Vercel
-      }
+    // Fetch geopolitical markets from multiple relevant tags in parallel
+    const results = await Promise.allSettled(
+      GEO_TAGS.map(tag =>
+        fetch(
+          `https://gamma-api.polymarket.com/events?closed=false&limit=15&tag_slug=${tag}`,
+          { headers: { 'Accept': 'application/json' }, cache: 'no-store' }
+        ).then(r => r.ok ? r.json() : [])
+      )
     );
 
-    if (!res.ok) {
-      console.warn(`Polymarket API returned ${res.status}`);
+    const allEvents: any[] = [];
+    const seenIds = new Set<string>();
+
+    for (const result of results) {
+      if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+        for (const e of result.value) {
+          const id = e.id || e.slug;
+          if (id && !seenIds.has(id)) {
+            seenIds.add(id);
+            allEvents.push(e);
+          }
+        }
+      }
+    }
+
+    if (allEvents.length === 0) {
+      console.warn('[Polymarket] No events from geo tags, using fallback');
       return getFallbackEvents();
     }
 
-    const events = await res.json();
-
-    return events
-      .filter((e: any) => e.markets && e.markets.length > 0)
-      .map((e: any) => {
-        const market = e.markets[0];
-        const prices = market.outcomePrices
-          ? (typeof market.outcomePrices === 'string'
-            ? JSON.parse(market.outcomePrices)
-            : market.outcomePrices)
-          : [0.5, 0.5];
-
-        return {
-          id: e.id || market.id,
-          title: e.title || market.question,
-          slug: e.slug || '',
-          outcomes: market.outcomes
-            ? (typeof market.outcomes === 'string' ? JSON.parse(market.outcomes) : market.outcomes)
-            : ['Yes', 'No'],
-          outcomePrices: prices.map((p: any) => parseFloat(p)),
-          volume: parseFloat(market.volume || '0'),
-          liquidity: parseFloat(market.liquidity || '0'),
-          endDate: e.endDate || market.endDate || '',
-          active: market.active !== false,
-          category: e.category || '',
-        };
-      })
-      .filter((e: PolymarketEvent) => e.outcomePrices.length >= 2);
+    const parsed = parseEvents(allEvents);
+    console.log(`[Polymarket] Fetched ${parsed.length} geo markets from ${GEO_TAGS.length} tags`);
+    return parsed;
   } catch (err) {
     console.error('Polymarket fetch error:', err);
     return getFallbackEvents();
@@ -156,7 +177,9 @@ export function matchStoriesWithMarkets(
   const matches: SignalVsMarket[] = [];
 
   for (const story of stories) {
-    const storyText = `${story.headline} ${story.slug} ${story.category || ''}`.toLowerCase();
+    // Normalize slug: replace hyphens with spaces so "iran-nuclear" → "iran nuclear"
+    const slugNorm = (story.slug || '').replace(/-/g, ' ');
+    const storyText = `${story.headline} ${slugNorm} ${story.category || ''}`.toLowerCase();
 
     // Find matching topic keywords
     let bestMatch: PolymarketEvent | null = null;
@@ -165,7 +188,7 @@ export function matchStoriesWithMarkets(
     let bestCategory = 'other';
 
     for (const market of markets) {
-      const marketText = market.title.toLowerCase();
+      const marketText = (market.title + ' ' + (market.category || '')).toLowerCase();
       let matchScore = 0;
       const matched: string[] = [];
       const categoryScores: Record<string, number> = {};
@@ -179,11 +202,14 @@ export function matchStoriesWithMarkets(
             matchScore += 2;
             matched.push(kw);
             categoryScores[category] = (categoryScores[category] || 0) + 2;
+          } else if (storyHas) {
+            // Partial: keyword in story but not market — small bonus for category context
+            categoryScores[category] = (categoryScores[category] || 0) + 0.5;
           }
         }
       }
 
-      // Direct word overlap
+      // Direct word overlap (normalized)
       const storyWords = new Set(storyText.split(/\s+/).filter(w => w.length > 3));
       const marketWords = marketText.split(/\s+/).filter(w => w.length > 3);
       for (const w of marketWords) {
@@ -193,19 +219,18 @@ export function matchStoriesWithMarkets(
         }
       }
 
-      // Require at least one genuine topic-category keyword hit (not just word overlap)
+      // Require at least one genuine topic-category keyword hit in both texts
       const hasCategoryHit = Object.values(categoryScores).some(s => s >= 2);
       if (matchScore > bestScore && hasCategoryHit) {
         bestScore = matchScore;
         bestMatch = market;
         bestKeywords = matched;
-        // Winning category = the one with the most keyword hits for this market
         bestCategory = Object.entries(categoryScores).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'other';
       }
     }
 
-    // Require score ≥ 4 to avoid spurious matches (e.g. "Danish warship" → "Trump China")
-    if (bestMatch && bestScore >= 4) {
+    // Lowered threshold from 4 → 2: one strong keyword match is sufficient
+    if (bestMatch && bestScore >= 2) {
       const marketProb = Math.round(bestMatch.outcomePrices[0] * 100);
       const delta = story.likelihood - marketProb;
       const absDelta = Math.abs(delta);

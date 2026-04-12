@@ -32,6 +32,7 @@ const TOPIC_CATEGORIES: Record<string, { he: string; en: string }> = {
   'Technology':          { he: 'כלכלה וטכנולוגיה', en: 'Economy & Technology' },
   'Climate':             { he: 'סביבה',            en: 'Environment' },
   'Ukraine/Russia':      { he: 'גיאופוליטיקה',    en: 'Geopolitics' },
+  'Elections':           { he: 'פוליטיקה',        en: 'Politics' },
   'Judicial Reform':     { he: 'פוליטיקה',         en: 'Politics' },
   'Security':            { he: 'ביטחון',           en: 'Security' },
   'Diplomacy':           { he: 'דיפלומטיה',       en: 'Diplomacy' },
@@ -56,6 +57,7 @@ const TOPIC_HEADLINES: Record<string, { he: string; en: string }> = {
   'Technology':          { he: 'חדשות טכנולוגיה',                       en: 'Technology News' },
   'Climate':             { he: 'שינויי אקלים ואנרגיה',                  en: 'Climate & Energy' },
   'Ukraine/Russia':      { he: 'המלחמה באוקראינה',                      en: 'Ukraine War Updates' },
+  'Elections':           { he: 'בחירות ופוליטיקה עולמית',               en: 'Elections & World Politics' },
   'Judicial Reform':     { he: 'הרפורמה המשפטית והמחאה',                en: 'Judicial Reform & Protests' },
   'Security':            { he: 'עדכוני ביטחון',                         en: 'Security Updates' },
   'Diplomacy':           { he: 'דיפלומטיה בינלאומית',                   en: 'International Diplomacy' },
@@ -401,8 +403,27 @@ function pickHeadline(cluster: Cluster): { headline: { he: string; en: string };
   const minSharedForTopic = HIGH_PRIORITY_TOPICS.has(cluster.topic) ? 2 : 1;
   const isTopicRelevant = (title: string) => isSameTopic(topicHintHe + ' ' + topicHintEn, title, minSharedForTopic);
 
-  const relevantSorted = sorted.filter(a => !isJunkTitle(a.article.title) && isTopicRelevant(a.article.title));
-  const best = relevantSorted[0] ?? sorted.find(a => !isJunkTitle(a.article.title)) ?? sorted[0];
+  // Must-contain terms per topic — headline MUST include at least one core term
+  const TOPIC_MUST_CONTAIN: Record<string, RegExp> = {
+    'Ukraine/Russia':      /אוקראינ|רוסי|קייב|מוסקב|זלנסקי|פוטין|ukrain|russia|kyiv|moscow/i,
+    'Iran Nuclear':        /איראן|גרעין|ורמלת|פרדו|נתנז|iran|nuclear|enrichment/i,
+    'Gaza Conflict':       /עזה|חמאס|רפח|צבאי|הפסקת אש|gaza|hamas|rafah|ceasefire/i,
+    'Lebanon/Hezbollah':  /לבנון|חיזבאללה|נסראלה|lebanon|hezbollah/i,
+    'West Bank':           /גדה|יהודה|שומרון|מתנחל|west bank|settler|ramallah/i,
+    'Elections':           /בחירות|הצבעה|קלפי|מצביעים|election|ballot|vote|polling|orban|אורבן/i,
+    'Iran Talks':          /משא.ומתן|הסכם|שיחות|ורמה|עקרון|talks|deal|agreement|nuclear/i,
+  };
+  const mustContainRe = TOPIC_MUST_CONTAIN[cluster.topic];
+  const matchesTopic = (title: string) => !mustContainRe || mustContainRe.test(title);
+
+  const relevantSorted = sorted.filter(a =>
+    !isJunkTitle(a.article.title) && isTopicRelevant(a.article.title) && matchesTopic(a.article.title)
+  );
+  // Fallback: topic-relevant even without must-contain, then any non-junk
+  const best = relevantSorted[0]
+    ?? sorted.find(a => !isJunkTitle(a.article.title) && isTopicRelevant(a.article.title))
+    ?? sorted.find(a => !isJunkTitle(a.article.title))
+    ?? sorted[0];
 
   // Build localized headline
   let heTitle: string;

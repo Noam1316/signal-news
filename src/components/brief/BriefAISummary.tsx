@@ -20,6 +20,8 @@ export default function BriefAISummary() {
       .catch(() => setLoading(false));
   }, []);
 
+  // Also check IntelSynthesis — same stories, different display (see IntelHub)
+
   if (loading) {
     return (
       <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 space-y-2 animate-pulse">
@@ -38,12 +40,21 @@ export default function BriefAISummary() {
     ? `${now.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })} · ${now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`
     : `${now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
 
-  // Signals first, then by likelihood
-  const sorted = [...stories].sort((a, b) => {
-    if (a.isSignal && !b.isSignal) return -1;
-    if (!a.isSignal && b.isSignal) return 1;
-    return b.likelihood - a.likelihood;
-  });
+  // Signals first, then by likelihood — deduplicate by normalized headline
+  const seen = new Set<string>();
+  const sorted = [...stories]
+    .sort((a, b) => {
+      if (a.isSignal && !b.isSignal) return -1;
+      if (!a.isSignal && b.isSignal) return 1;
+      return b.likelihood - a.likelihood;
+    })
+    .filter(story => {
+      const headline = (isHe ? story.headline?.he : story.headline?.en) ?? '';
+      const key = headline.trim().slice(0, 40).toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
   return (
     <div dir={dir} className="rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 space-y-2.5">
@@ -56,28 +67,47 @@ export default function BriefAISummary() {
         <span className="ms-auto text-[10px] text-gray-600">{timeStr}</span>
       </div>
 
-      {/* Digest lines */}
-      <div className="space-y-1.5">
+      {/* Digest items */}
+      <div className="space-y-3">
         {sorted.map((story, i) => {
           const headline = isHe ? story.headline?.he : story.headline?.en;
+          const summary  = isHe ? story.summary?.he  : story.summary?.en;
           const category = isHe ? story.category?.he : story.category?.en;
           if (!headline) return null;
           return (
-            <div key={story.slug ?? i} className="flex items-start gap-2 text-sm leading-snug">
+            <div key={story.slug ?? i} className="flex items-start gap-2">
               <span className="shrink-0 mt-[3px] text-gray-600 text-[10px] font-mono w-3">
                 {i + 1}.
               </span>
-              <span className="text-white/80">{headline}</span>
-              {story.isSignal && (
-                <span className="shrink-0 mt-0.5 text-[9px] px-1 py-0.5 rounded bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 font-bold">
-                  ⚡
-                </span>
-              )}
-              {category && (
-                <span className="shrink-0 mt-0.5 text-[9px] text-gray-600 hidden sm:inline">
-                  · {category}
-                </span>
-              )}
+              <div className="space-y-0.5 min-w-0">
+                {/* Headline */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-sm font-semibold text-white/90 leading-snug">{headline}</span>
+                  {story.isSignal && (
+                    <span className="shrink-0 text-[9px] px-1 py-0.5 rounded bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 font-bold">
+                      ⚡
+                    </span>
+                  )}
+                  {category && (
+                    <span className="text-[10px] text-gray-600">· {category}</span>
+                  )}
+                </div>
+                {/* Summary — only if clean and not a repeat of the headline */}
+                {(() => {
+                  if (!summary || summary.length < 25) return null;
+                  // Check overlap with headline — skip if too similar
+                  // Normalize: remove punctuation so quote variants don't block matching
+                  const norm = (s: string) => s.replace(/[^\u05D0-\u05FAa-zA-Z0-9]/g, '');
+                  const headWords = new Set((headline ?? '').split(/\s+/).map(norm).filter(w => w.length > 3));
+                  const sumWords = summary.split(/\s+/).map(norm).filter(w => w.length > 3);
+                  const overlap = sumWords.filter(w => headWords.has(w)).length;
+                  // Ratio against summary length (the shorter text) — more accurate
+                  const overlapRatio = sumWords.length > 0 ? overlap / sumWords.length : 0;
+                  if (overlapRatio > 0.55) return null; // too similar to headline
+                  const text = summary.length > 160 ? summary.slice(0, 157).trimEnd() + '…' : summary;
+                  return <p className="text-xs text-gray-400 leading-snug line-clamp-1">{text}</p>;
+                })()}
+              </div>
             </div>
           );
         })}

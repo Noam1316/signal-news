@@ -12,7 +12,7 @@ import { preAnalyzeWithGroq, isGroqEnabled, warmGroqFromKV } from '@/services/gr
 import type { BriefStory } from '@/lib/types';
 
 let cache: { stories: BriefStory[]; timestamp: number } | null = null;
-const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export async function GET() {
   // Return cached if fresh

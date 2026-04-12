@@ -17,9 +17,21 @@ export default function IntelSynthesis() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/synthesis')
+    // First fetch stories (already cached from BriefList), then POST to synthesis
+    // This avoids cold-start RSS fetching inside the synthesis endpoint
+    fetch('/api/stories')
       .then(r => r.ok ? r.json() : null)
-      .then(d => { setData(d); setLoading(false); })
+      .then(async storiesData => {
+        if (!storiesData?.stories?.length) { setLoading(false); return; }
+        const res = await fetch('/api/synthesis', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stories: storiesData.stories }),
+        });
+        const d = res.ok ? await res.json() : null;
+        setData(d);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 
@@ -42,8 +54,7 @@ export default function IntelSynthesis() {
     { icon: '🌍', label: { he: 'התפתחות מרכזית', en: 'Main Development' }, text: isHe ? data.mainDevelopment.he : data.mainDevelopment.en },
     { icon: '📈', label: { he: 'סיגנל שוק',       en: 'Market Signal'    }, text: isHe ? data.marketSignal.he    : data.marketSignal.en    },
     { icon: '👁️', label: { he: 'לצפות ב-24 שעות', en: 'Watch Next 24h'   }, text: isHe ? data.watchFor.he        : data.watchFor.en        },
-    { icon: '🔍', label: { he: 'מה מוחמץ',        en: 'Blind Spot'       }, text: isHe ? data.blindSpot.he       : data.blindSpot.en       },
-  ].filter(b => b.text);
+  ].filter(b => b.text && !b.text.includes('GROQ_API_KEY') && !b.text.includes('Groq analysis'));
 
   const generatedAgo = (() => {
     const diff = Date.now() - new Date(data.generatedAt).getTime();

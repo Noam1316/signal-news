@@ -7,7 +7,7 @@ import { savePredictionSnapshots } from '@/services/prediction-tracker';
 import { computeEarlyMovers } from '@/services/signal-intelligence';
 
 let cache: { data: any; ts: number } | null = null;
-const TTL = 10 * 60 * 1000; // 10 min
+const TTL = 3 * 60 * 1000; // 3 min
 
 export async function GET() {
   if (cache && Date.now() - cache.ts < TTL) {
@@ -70,7 +70,7 @@ export async function GET() {
         slug: s.slug,
         headline: typeof s.headline === 'string' ? s.headline : s.headline.en || s.headline.he || '',
         likelihood: s.likelihood,
-        category: typeof s.category === 'string' ? s.category : '',
+        category: typeof s.category === 'string' ? s.category : (s.category?.en ?? s.category?.he ?? ''),
         sourceCount: s.sources?.length || 3,
         sources: s.sources.map(src => ({ name: src.name })),
         sentiment: dominantSentiment,

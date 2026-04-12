@@ -120,6 +120,19 @@ const TOPIC_KEYWORDS: Record<string, string[]> = {
   'Economy': ['economy', 'inflation', 'gdp', 'fed', 'federal reserve', 'interest rate', 'recession', 'market', 'stock', 'trade', 'dollar', 'oil price', 'tariff', 'crude oil', 'brent', 'opec', 'hormuz oil', 'shipping disruption', 'supply chain', 'כלכלה', 'אינפלציה', 'ריבית', 'מיתון', 'שוק', 'נפט', 'דולר', 'מכס', 'מחיר נפט', 'אופ"ק', 'שיבוש אספקה', 'הורמוז נפט'],
   'Technology': ['tech', 'ai', 'artificial intelligence', 'openai', 'cyber', 'startup', 'semiconductor', 'chip', 'nvidia', 'הייטק', 'סייבר', 'בינה מלאכותית', 'שבב'],
   'Climate': ['climate', 'emissions', 'cop', 'renewable', 'solar', 'green', 'energy transition', 'אקלים', 'פחמן', 'אנרגיה ירוקה'],
+  'Elections': [
+    // English — generic elections
+    'election', 'elections', 'vote', 'votes', 'ballot', 'polling', 'polls', 'voter', 'voters',
+    'candidate', 'campaign', 'polling station', 'exit poll', 'electoral', 'runoff',
+    'primary election', 'snap election', 'early election', 'elected', 're-elected',
+    // English — specific contexts
+    'orban', 'hungary', 'french election', 'german election', 'uk election', 'israeli election',
+    'knesset election', 'labour', 'conservatives', 'bundestag', 'parliament election',
+    // Hebrew
+    'בחירות', 'הצבעה', 'קלפי', 'מצביעים', 'מועמד', 'קמפיין', 'מפלגה', 'קואליציה בחירות',
+    'בחירות מוקדמות', 'סקר בחירות', 'תוצאות בחירות', 'ניצחון בחירות', 'מנדטים',
+    'אורבן', 'הונגריה', 'בחירות צרפת', 'בחירות גרמניה', 'בחירות בריטניה',
+  ],
   'Ukraine/Russia': ['ukraine', 'russia', 'putin', 'zelensky', 'nato', 'kyiv', 'moscow', 'donbas', 'אוקראינה', 'רוסיה', 'פוטין', 'נאטו'],
   'Turkey/Egypt': ['turkey', 'erdogan', 'ankara', 'egypt', 'sisi', 'cairo', 'regional', 'טורקיה', 'ארדואן', 'מצרים', 'סיסי', 'קהיר'],
   'Judicial Reform': ['judicial', 'supreme court', 'democracy', 'protest', 'coalition', 'knesset', 'רפורמה', 'בג"צ', 'מחאה', 'קואליציה', 'כנסת'],
@@ -301,6 +314,7 @@ const TOPIC_MIN_SCORE: Record<string, number> = {
   'Lebanon/Hezbollah': 1,
   'Saudi Normalization': 1,
   'Ukraine/Russia': 1,
+  'Elections':      1,
   'West Bank':      1,
   'Security':       1,
   'Judicial Reform': 1,

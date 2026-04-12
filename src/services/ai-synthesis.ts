@@ -42,9 +42,8 @@ export async function generateSynthesis(
     return synthesis;
   } catch (err) {
     console.warn('[synthesis] Groq failed, using fallback:', err instanceof Error ? err.message : err);
-    const fallback = buildFallback(stories, shocks);
-    _cache = { synthesis: fallback, timestamp: Date.now() };
-    return fallback;
+    // Don't cache fallbacks — retry Groq on next request
+    return buildFallback(stories, shocks);
   }
 }
 
@@ -54,17 +53,17 @@ async function callGroq(
   markets: MarketInstrument[]
 ): Promise<IntelSynthesis> {
   const topStories = stories.slice(0, 6).map(s => ({
-    topic: typeof s.category === 'string' ? s.category : s.category.en,
-    headline: typeof s.headline === 'string' ? s.headline : s.headline.en,
-    likelihood: s.likelihood,
-    isSignal: s.isSignal,
-    sources: s.sources.length,
+    topic: typeof s.category === 'string' ? s.category : (s.category?.en ?? ''),
+    headline: typeof s.headline === 'string' ? s.headline : (s.headline?.en ?? ''),
+    likelihood: s.likelihood ?? 50,
+    isSignal: s.isSignal ?? false,
+    sources: (s.sources ?? []).length,
   }));
 
-  const topShocks = shocks.slice(0, 3).map(s => ({
-    type: s.type,
-    headline: typeof s.headline === 'string' ? s.headline : s.headline.en,
-    confidence: s.confidence,
+  const topShocks = (shocks ?? []).slice(0, 3).map(s => ({
+    type: s.type ?? '',
+    headline: typeof s.headline === 'string' ? s.headline : (s.headline?.en ?? ''),
+    confidence: s.confidence ?? 'medium',
   }));
 
   const marketMoves = markets
@@ -72,7 +71,7 @@ async function callGroq(
     .slice(0, 5)
     .map(m => `${m.name}: ${m.changePct > 0 ? '+' : ''}${m.changePct.toFixed(1)}%`);
 
-  const prompt = `You are a senior geopolitical intelligence analyst specializing in Israeli and Middle East affairs. Based on today's news data, write a concise intelligence assessment.
+  const prompt = `You are a senior geopolitical intelligence analyst specializing in Israeli and Middle East affairs. Based on today's news, write a sharp 3-bullet intelligence assessment.
 
 TODAY'S TOP STORIES:
 ${JSON.stringify(topStories, null, 0)}
@@ -83,18 +82,23 @@ ${JSON.stringify(topShocks, null, 0)}
 MARKET MOVEMENTS:
 ${marketMoves.join(', ') || 'No significant moves'}
 
-Write a JSON intelligence assessment with these exact fields:
-- mainDevelopmentHe: 2-3 Hebrew sentences describing the PRIMARY geopolitical development today. Be specific — name actors, locations, actions. No vague phrases.
-- mainDevelopmentEn: same in English
-- marketSignalHe: 1-2 Hebrew sentences on what financial markets are signaling about geopolitical risk (mention specific instruments if relevant)
-- marketSignalEn: same in English
-- watchForHe: 1-2 Hebrew sentences on the most important thing to watch in the next 24 hours
-- watchForEn: same in English
-- blindSpotHe: 1-2 Hebrew sentences identifying what important story is underreported or missing from mainstream coverage today
-- blindSpotEn: same in English
-- threatLevel: one of "critical"|"high"|"medium"|"low" based on overall geopolitical tension today
+ANALYSIS PRIORITIES (always address if relevant):
+1. US-Iran negotiations — what is the current status, risk of collapse, and what happens to oil/markets if talks fail?
+2. Elections worldwide — any upcoming or recent results that shift regional power dynamics?
+3. Israel security — active fronts, ceasefire status, hostage deal progress
 
-Return ONLY valid JSON, no markdown.`;
+Write a JSON object with these EXACT fields:
+- mainDevelopmentHe: 2 Hebrew sentences on the #1 geopolitical development. Be specific: name actors, locations, numbers. No vague summaries.
+- mainDevelopmentEn: same in English
+- marketSignalHe: 1-2 Hebrew sentences — what are markets pricing in? If Iran talks risk collapse, say so. Mention oil, VIX, gold, or ILS if relevant.
+- marketSignalEn: same in English
+- watchForHe: 1-2 Hebrew sentences — top 2 specific events to monitor in next 24h (e.g. "תגובת טהרן להצעת ארה"ב", "תוצאות בחירות הונגריה")
+- watchForEn: same in English
+- blindSpotHe: 1-2 Hebrew sentences — one important story getting ZERO mainstream attention today
+- blindSpotEn: same in English
+- threatLevel: "critical"|"high"|"medium"|"low"
+
+Return ONLY valid JSON, no markdown, no explanation.`;
 
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -109,7 +113,7 @@ Return ONLY valid JSON, no markdown.`;
       max_tokens: 1200,
       response_format: { type: 'json_object' },
     }),
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(8000),
   });
 
   if (!res.ok) throw new Error(`Groq ${res.status}`);

@@ -1,35 +1,43 @@
-import { NextResponse } from 'next/server';
-import { getCachedArticles } from '@/services/article-cache';
-import { generateStories } from '@/services/story-clusterer';
-import { detectShocks } from '@/services/shock-detector';
+import { NextRequest, NextResponse } from 'next/server';
 import { generateSynthesis } from '@/services/ai-synthesis';
-import { fetchMarketData } from '@/services/market-data';
-import { warmGroqFromKV, isGroqEnabled, preAnalyzeWithGroq } from '@/services/groq-analyzer';
+import type { BriefStory, ShockEvent } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// GET — used by crons (fetches its own articles)
 export async function GET() {
   try {
-    const articles = (await getCachedArticles()).slice(0, 400);
-    if (!articles.length) {
-      return NextResponse.json({ error: 'No articles' }, { status: 503 });
-    }
+    const { getCachedArticles } = await import('@/services/article-cache');
+    const { generateStories } = await import('@/services/story-clusterer');
+    const { detectShocks } = await import('@/services/shock-detector');
 
-    // Warm Groq cache (same pattern as stories route)
-    await warmGroqFromKV(articles.map(a => a.id)).catch(() => {});
-    if (isGroqEnabled()) {
-      await preAnalyzeWithGroq(articles).catch(() => {});
-    }
+    const articles = (await getCachedArticles()).slice(0, 200);
+    if (!articles.length) return NextResponse.json({ error: 'No articles' }, { status: 503 });
 
-    const stories = generateStories(articles, 20);
+    const stories = generateStories(articles, 12);
     const shocks = detectShocks(articles);
-    const markets = await fetchMarketData().catch(() => []);
-
-    const synthesis = await generateSynthesis(stories, shocks, markets);
+    const synthesis = await generateSynthesis(stories, shocks, []);
     return NextResponse.json(synthesis);
   } catch (err) {
-    console.error('[synthesis]', err);
-    return NextResponse.json({ error: 'Synthesis failed' }, { status: 500 });
+    console.error('[synthesis GET]', err);
+    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+  }
+}
+
+// POST — client sends stories + shocks, we just call Groq (fast, no RSS fetch)
+export async function POST(req: NextRequest) {
+  try {
+    const { stories, shocks } = await req.json() as {
+      stories: BriefStory[];
+      shocks?: ShockEvent[];
+    };
+    if (!stories?.length) return NextResponse.json({ error: 'No stories' }, { status: 400 });
+
+    const synthesis = await generateSynthesis(stories, shocks ?? [], []);
+    return NextResponse.json(synthesis);
+  } catch (err) {
+    console.error('[synthesis POST]', err);
+    return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }
 }
