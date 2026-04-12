@@ -72,8 +72,24 @@ export default function BriefAISummary() {
         {sorted.map((story, i) => {
           const headline = isHe ? story.headline?.he : story.headline?.en;
           const summary  = isHe ? story.summary?.he  : story.summary?.en;
+          const why      = isHe ? story.why?.he       : story.why?.en;
           const category = isHe ? story.category?.he : story.category?.en;
           if (!headline) return null;
+
+          // Pick the best sub-text: summary → why → source names fallback
+          const normStart = (s: string) => s.replace(/[^\u05D0-\u05FAa-zA-Z0-9\s]/g, '').trim().slice(0, 35).toLowerCase();
+          const isSameAsHeadline = (t: string) => normStart(t) === normStart(headline);
+
+          const subText = (() => {
+            if (summary && summary.length >= 20 && !isSameAsHeadline(summary))
+              return summary.length > 180 ? summary.slice(0, 177).trimEnd() + '…' : summary;
+            if (why && why.length >= 20 && !isSameAsHeadline(why))
+              return why.length > 180 ? why.slice(0, 177).trimEnd() + '…' : why;
+            // Last resort: source names
+            const srcNames = (story.sources ?? []).map(s => s.name).slice(0, 3).join(' · ');
+            return srcNames || null;
+          })();
+
           return (
             <div key={story.slug ?? i} className="flex items-start gap-2">
               <span className="shrink-0 mt-[3px] text-gray-600 text-[10px] font-mono w-3">
@@ -92,15 +108,10 @@ export default function BriefAISummary() {
                     <span className="text-[10px] text-gray-600">· {category}</span>
                   )}
                 </div>
-                {/* Summary — show if meaningfully longer than headline */}
-                {(() => {
-                  if (!summary || summary.length < 20) return null;
-                  // Only skip if summary is basically identical to the headline (start match)
-                  const normStart = (s: string) => s.replace(/[^\u05D0-\u05FAa-zA-Z0-9\s]/g, '').trim().slice(0, 30).toLowerCase();
-                  if (normStart(summary) === normStart(headline ?? '')) return null;
-                  const text = summary.length > 180 ? summary.slice(0, 177).trimEnd() + '…' : summary;
-                  return <p className="text-xs text-gray-400 leading-snug line-clamp-2">{text}</p>;
-                })()}
+                {/* Sub-text: summary → why → sources */}
+                {subText && (
+                  <p className="text-xs text-gray-400 leading-snug line-clamp-2">{subText}</p>
+                )}
               </div>
             </div>
           );
