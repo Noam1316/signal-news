@@ -844,6 +844,30 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       }
     }
 
+    // Contradiction Detector: same cluster, opposite sentiments from different sources
+    let contradiction: { sourceA: string; headlineA: string; sourceB: string; headlineB: string; gapPct: number } | undefined;
+    const hasUsableTitle = (t: string) => t.length >= 15;
+    const positiveArticles = cluster.articles.filter(a => a.analysis.sentiment === 'positive' && hasUsableTitle(a.article.title));
+    const negativeArticles = cluster.articles.filter(a => a.analysis.sentiment === 'negative' && hasUsableTitle(a.article.title));
+    if (positiveArticles.length >= 1 && negativeArticles.length >= 1) {
+      const posA = positiveArticles[0];
+      const negA = negativeArticles[0];
+      // Only flag if they're from different sources
+      if (posA.article.sourceName !== negA.article.sourceName) {
+        const totalSentiment = positiveArticles.length + negativeArticles.length;
+        const gapPct = Math.round(Math.abs(positiveArticles.length - negativeArticles.length) / totalSentiment * 100);
+        if (gapPct <= 80) { // not too lopsided — genuine split
+          contradiction = {
+            sourceA: posA.article.sourceName,
+            headlineA: posA.article.title,
+            sourceB: negA.article.sourceName,
+            headlineB: negA.article.title,
+            gapPct,
+          };
+        }
+      }
+    }
+
     const likelihoodLabel: Confidence = likelihood >= 70 ? 'high' : likelihood >= 40 ? 'medium' : 'low';
 
     // Build "why" explanation — name actual sources for credibility
@@ -877,6 +901,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       strategicImplication,
       resolved: resolved || undefined,
       firstMover,
+      contradiction,
     };
   }).sort((a, b) => {
     // Push resolved stories to the end

@@ -232,6 +232,25 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
         </div>
       )}
 
+      {/* Contradiction badge */}
+      {story.contradiction && (
+        <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-2 text-[11px] space-y-1">
+          <div className="flex items-center gap-1 text-orange-400 font-semibold">
+            <span>⚔️</span>
+            <span>{lang === 'he' ? 'סיקור סותר' : 'Contradictory Coverage'}</span>
+            <span className="ms-auto text-orange-400/60">{story.contradiction.gapPct}% gap</span>
+          </div>
+          <div className="text-gray-400 leading-snug">
+            <span className="text-green-400/80 font-medium">{story.contradiction.sourceA}:</span>{' '}
+            <span className="truncate">{story.contradiction.headlineA.slice(0, 80)}{story.contradiction.headlineA.length > 80 ? '…' : ''}</span>
+          </div>
+          <div className="text-gray-400 leading-snug">
+            <span className="text-red-400/80 font-medium">{story.contradiction.sourceB}:</span>{' '}
+            <span className="truncate">{story.contradiction.headlineB.slice(0, 80)}{story.contradiction.headlineB.length > 80 ? '…' : ''}</span>
+          </div>
+        </div>
+      )}
+
       {/* Why */}
       <p className="text-sm italic text-gray-400">{t(story.why)}</p>
 

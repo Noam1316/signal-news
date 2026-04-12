@@ -14,6 +14,9 @@ import { fetchPolymarketEvents, matchStoriesWithMarkets, getTopAlpha } from '@/s
 import { sendMail, isMailerConfigured } from '@/lib/mailer';
 import { getResend, FROM_EMAIL } from '@/lib/resend';
 import { buildDailyBriefEmail } from '@/lib/email-templates';
+import { generateSynthesis } from '@/services/ai-synthesis';
+import { fetchMarketData } from '@/services/market-data';
+import { sendDailySynthesis, isTelegramEnabled } from '@/services/telegram-bot';
 
 export async function GET(req: NextRequest) {
   // Auth check — only enforce if CRON_SECRET is configured
@@ -51,6 +54,17 @@ export async function GET(req: NextRequest) {
     const { shocks: sh } = await import('@/data/shocks');
     stories = s;
     shocks = sh;
+  }
+
+  // Send Telegram daily synthesis if configured
+  if (isTelegramEnabled() && stories && shocks) {
+    try {
+      const markets = await fetchMarketData().catch(() => []);
+      const synthesis = await generateSynthesis(stories, shocks, markets);
+      await sendDailySynthesis(synthesis);
+    } catch (err) {
+      console.warn('[cron/daily-brief] Telegram synthesis failed:', err instanceof Error ? err.message : err);
+    }
   }
 
   const subscribers = await getAllSubscribers();

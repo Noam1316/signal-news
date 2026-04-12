@@ -49,6 +49,13 @@ export interface BriefStory {
     sourceUrl: string;
     minsAhead: number;          // how many minutes before the median publication time
   };
+  contradiction?: {             // contradictory coverage detected
+    sourceA: string;
+    headlineA: string;
+    sourceB: string;
+    headlineB: string;
+    gapPct: number;             // sentiment divergence 0-100
+  };
 }
 
 export type ShockStatus = 'fresh' | 'active' | 'fading';

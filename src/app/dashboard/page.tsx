@@ -11,6 +11,7 @@ import DateHeader from '@/components/brief/DateHeader';
 import HeroBar from '@/components/brief/HeroBar';
 import TrackRecord from '@/components/brief/TrackRecord';
 import StoryOfTheDay from '@/components/brief/StoryOfTheDay';
+import BriefAISummary from '@/components/brief/BriefAISummary';
 import SignalVsTraditional from '@/components/brief/SignalVsTraditional';
 import ScrollToTop from '@/components/shared/ScrollToTop';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
@@ -131,6 +132,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-4 space-y-4">
+              <BriefAISummary />
               <StoryOfTheDay />
               <SignalVsTraditional />
               {/* 2-column on large screens: news feed left, track record right */}

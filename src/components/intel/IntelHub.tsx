@@ -9,6 +9,7 @@ import LiveWire from '@/components/explore/LiveWire';
 import GroupedFeed from './GroupedFeed';
 import CredibilityDashboard from '@/components/credibility/CredibilityDashboard';
 import GeoCalendar from './GeoCalendar';
+import IntelSynthesis from './IntelSynthesis';
 
 const TABS = [
   { id: 'polymarket', icon: '📈', en: 'Signal vs Market', he: 'סיגנל vs שוק' },
@@ -34,6 +35,9 @@ export default function IntelHub() {
           {lang === 'he' ? 'מרכז מודיעין' : 'Intelligence Hub'}
         </h2>
       </header>
+
+      {/* AI Synthesis */}
+      <IntelSynthesis />
 
       {/* Tab bar */}
       <div role="tablist" className="flex gap-1 bg-gray-900/80 rounded-xl p-1 border border-gray-800">
