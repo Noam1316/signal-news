@@ -468,6 +468,7 @@ function cleanDescription(desc: string): string {
     .replace(/[A-Za-z]{2,}\s+en\s+\w+\s*\|[^|]*/g, '')       // "Kan en français | ..."
     .replace(/^\d{1,2}\.\d{1,2}\.\d{4}\s*/g, '')             // leading dates
     .replace(/\|[^|]{0,40}$/g, '')                            // trailing " | source name"
+    .replace(/\s*[-–—]\s*(הארץ|ינט|ynet|וואלה|וואלה!|Walla|Kan|כאן|גלובס|Globes|הגשש|מעריב|ישראל היום|Israel Hayom|Jerusalem Post|Times of Israel|Reuters|AP|BBC)\s*$/i, '') // trailing " - source"
     // Normalize bullet points → sentence separators
     .replace(/\s*[•·]\s*/g, '. ')
     .replace(/\s*[-–—]\s+(?=[א-ת])/g, '. ')                  // dash before Hebrew text → sentence
@@ -513,6 +514,10 @@ function deduplicateWithHeadline(desc: string, headline: string): string {
     // Find where the overlap ends in the original desc and skip past it
     const overlapEnd = desc.toLowerCase().indexOf(headWords) + headWords.length;
     const rest = desc.slice(overlapEnd).replace(/^[\s,:\-–—]+/, '');
+    // Don't return a fragment: if it starts with a Hebrew preposition-prefix (ב,ל,מ,כ,ו,ש)
+    // it means we cut mid-sentence — return the full desc instead
+    const startsFragmented = /^[בלמכושמ][א-ת]/.test(rest.trim());
+    if (startsFragmented) return desc;
     return rest.length > 30 ? rest : desc; // only skip if enough remains
   }
   return desc;
