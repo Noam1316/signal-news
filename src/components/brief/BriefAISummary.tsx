@@ -92,20 +92,14 @@ export default function BriefAISummary() {
                     <span className="text-[10px] text-gray-600">· {category}</span>
                   )}
                 </div>
-                {/* Summary — only if clean and not a repeat of the headline */}
+                {/* Summary — show if meaningfully longer than headline */}
                 {(() => {
-                  if (!summary || summary.length < 25) return null;
-                  // Check overlap with headline — skip if too similar
-                  // Normalize: remove punctuation so quote variants don't block matching
-                  const norm = (s: string) => s.replace(/[^\u05D0-\u05FAa-zA-Z0-9]/g, '');
-                  const headWords = new Set((headline ?? '').split(/\s+/).map(norm).filter(w => w.length > 3));
-                  const sumWords = summary.split(/\s+/).map(norm).filter(w => w.length > 3);
-                  const overlap = sumWords.filter(w => headWords.has(w)).length;
-                  // Ratio against summary length (the shorter text) — more accurate
-                  const overlapRatio = sumWords.length > 0 ? overlap / sumWords.length : 0;
-                  if (overlapRatio > 0.55) return null; // too similar to headline
-                  const text = summary.length > 160 ? summary.slice(0, 157).trimEnd() + '…' : summary;
-                  return <p className="text-xs text-gray-400 leading-snug line-clamp-1">{text}</p>;
+                  if (!summary || summary.length < 20) return null;
+                  // Only skip if summary is basically identical to the headline (start match)
+                  const normStart = (s: string) => s.replace(/[^\u05D0-\u05FAa-zA-Z0-9\s]/g, '').trim().slice(0, 30).toLowerCase();
+                  if (normStart(summary) === normStart(headline ?? '')) return null;
+                  const text = summary.length > 180 ? summary.slice(0, 177).trimEnd() + '…' : summary;
+                  return <p className="text-xs text-gray-400 leading-snug line-clamp-2">{text}</p>;
                 })()}
               </div>
             </div>
