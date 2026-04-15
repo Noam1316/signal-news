@@ -405,13 +405,18 @@ function pickHeadline(cluster: Cluster): { headline: { he: string; en: string };
 
   // Must-contain terms per topic — headline MUST include at least one core term
   const TOPIC_MUST_CONTAIN: Record<string, RegExp> = {
-    'Ukraine/Russia':      /אוקראינ|רוסי|קייב|מוסקב|זלנסקי|פוטין|ukrain|russia|kyiv|moscow/i,
-    'Iran Nuclear':        /איראן|גרעין|ורמלת|פרדו|נתנז|iran|nuclear|enrichment/i,
-    'Gaza Conflict':       /עזה|חמאס|רפח|צבאי|הפסקת אש|gaza|hamas|rafah|ceasefire/i,
-    'Lebanon/Hezbollah':  /לבנון|חיזבאללה|נסראלה|lebanon|hezbollah/i,
-    'West Bank':           /גדה|יהודה|שומרון|מתנחל|west bank|settler|ramallah/i,
-    'Elections':           /בחירות|הצבעה|קלפי|מצביעים|election|ballot|vote|polling|orban|אורבן/i,
-    'Iran Talks':          /משא.ומתן|הסכם|שיחות|ורמה|עקרון|talks|deal|agreement|nuclear/i,
+    'Ukraine/Russia':       /אוקראינ|רוסי|קייב|מוסקב|זלנסקי|פוטין|ukrain|russia|kyiv|moscow/i,
+    'Iran Nuclear':         /איראן|גרעין|ורמלת|פרדו|נתנז|iran|nuclear|enrichment/i,
+    'Gaza Conflict':        /עזה|חמאס|רפח|הפסקת אש|gaza|hamas|rafah|ceasefire/i,
+    'Lebanon/Hezbollah':    /לבנון|חיזבאללה|נסראלה|lebanon|hezbollah/i,
+    'West Bank':            /גדה|יהודה|שומרון|מתנחל|west bank|settler|ramallah/i,
+    'Elections':            /בחירות|הצבעה|קלפי|מצביעים|election|ballot|vote|polling|orban|אורבן/i,
+    'Iran Talks':           /איראן.*שיחות|שיחות.*איראן|משא.ומתן.*גרעין|iran.*talks|talks.*iran|nuclear.*deal/i,
+    'Saudi Normalization':  /סעודי|ריאד|ממלכה|אברהם|מוחמד בן|saudi|riyadh|abraham accord/i,
+    'US Politics':          /טראמפ|ביידן|וושינגטון|קונגרס|הבית הלבן|trump|biden|washington|congress|white house/i,
+    'Syria':                /סוריה|דמשק|אסד|מורדים|syria|damascus|assad|rebel/i,
+    'China':                /סין|טייוואן|בייג'ינג|שי|china|taiwan|beijing|xi jinping/i,
+    'Judicial Reform':      /רפורמה|בית משפט עליון|כנסת|קואליציה|judicial|supreme court|coalition/i,
   };
   const mustContainRe = TOPIC_MUST_CONTAIN[cluster.topic];
   const matchesTopic = (title: string) => !mustContainRe || mustContainRe.test(title);
@@ -619,10 +624,13 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
     return { source: chosen.a, desc: chosen.desc };
   };
 
-  // ── Priority 0: use bestArticle directly — guaranteed to match the headline topic ──
+  // ── Priority 0: use bestArticle directly — only if its title is actually on-topic ──
   const bestDesc = cleanDescription(bestArticle.article.description);
   const bestTitle = bestArticle.article.title || '';
   const bestLang = bestArticle.article.language;
+  // Verify bestArticle is actually about this topic (not just high-signal from a different topic)
+  const topicHintCombined = topicHintHe + ' ' + topicHintEn;
+  const bestArticleOnTopic = isSameTopic(topicHintCombined, bestTitle, 2);
 
   function buildFromArticle(article: ArticleWithAnalysis): string {
     const desc = cleanDescription(article.article.description);
@@ -641,8 +649,8 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
   // ── Build Hebrew summary ──
   let heSummary = '';
 
-  // 1. Try bestArticle if Hebrew
-  if (bestLang === 'he' && !isJunkDesc(bestDesc)) {
+  // 1. Try bestArticle if Hebrew AND on-topic
+  if (bestLang === 'he' && !isJunkDesc(bestDesc) && bestArticleOnTopic) {
     heSummary = buildFromArticle(bestArticle);
   }
   // 2. Try findSummarySource (topic-filtered)
@@ -660,8 +668,8 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
   // ── Build English summary ──
   let enSummary = '';
 
-  // 1. Try bestArticle if English
-  if (bestLang === 'en' && !isJunkDesc(bestDesc)) {
+  // 1. Try bestArticle if English AND on-topic
+  if (bestLang === 'en' && !isJunkDesc(bestDesc) && bestArticleOnTopic) {
     enSummary = buildFromArticle(bestArticle);
   }
   // 2. Try findSummarySource (topic-filtered)
