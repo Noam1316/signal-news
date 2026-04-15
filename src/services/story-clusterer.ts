@@ -661,21 +661,40 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
     const heSource = findSummarySource('he', topicHintHe);
     if (heSource) heSummary = buildFromArticle(heSource.source);
   }
-  // 3. Any Hebrew article with non-junk description
+  // 3. Any Hebrew article with non-junk description AND on-topic title
   if (!heSummary) {
-    const anyHe = cluster.articles.find(a => a.article.language === 'he' && !isJunkDesc(cleanDescription(a.article.description)));
+    const mustRe2 = SUMMARY_MUST_CONTAIN[cluster.topic];
+    const anyHe = cluster.articles.find(a =>
+      a.article.language === 'he' &&
+      !isJunkDesc(cleanDescription(a.article.description)) &&
+      (!mustRe2 || mustRe2.test(a.article.title))
+    );
     if (anyHe) heSummary = buildFromArticle(anyHe);
   }
-  // 4. TITLE-BASED SYNTHESIS — RSS has no descriptions, synthesize from top article titles
+
+  // 4. TITLE-BASED SYNTHESIS — RSS has no descriptions: join top article titles
+  const stripSource = (t: string) => t.trim()
+    .replace(/[–—\-]\s*(הארץ|ינט|ynet|וואלה|כאן|גלובס|מעריב|ישראל היום|Jerusalem Post|Reuters|AP|BBC)\s*$/i, '')
+    .trim();
+
   if (!heSummary || heSummary.includes('כתבות על')) {
+    // Try Hebrew titles first
     const heTitles = cluster.articles
       .filter(a => a.article.language === 'he' && !isJunkTitle(a.article.title))
       .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
       .slice(0, 3)
-      .map(a => a.article.title.trim().replace(/[–—\-]\s*(הארץ|ינט|ynet|וואלה|כאן|גלובס|מעריב|ישראל היום)\s*$/i, '').trim())
+      .map(a => stripSource(a.article.title))
       .filter(t => t.length > 10);
-    if (heTitles.length >= 2) heSummary = heTitles.slice(0, 2).join(' · ');
-    else if (heTitles.length === 1) heSummary = heTitles[0];
+    // Fallback: English titles translated to context (just use them as-is — user sees category label anyway)
+    const enTitlesFallback = cluster.articles
+      .filter(a => a.article.language === 'en' && !isJunkTitle(a.article.title))
+      .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
+      .slice(0, 2)
+      .map(a => stripSource(a.article.title))
+      .filter(t => t.length > 10);
+    const titles = heTitles.length > 0 ? heTitles : enTitlesFallback;
+    if (titles.length >= 2) heSummary = titles.slice(0, 2).join(' · ');
+    else if (titles.length === 1) heSummary = titles[0];
   }
   if (!heSummary) heSummary = `${cluster.articles.length} כתבות על ${TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic}`;
 
@@ -691,9 +710,14 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
     const enSource = findSummarySource('en', topicHintEn);
     if (enSource) enSummary = buildFromArticle(enSource.source);
   }
-  // 3. Any English article
+  // 3. Any English article with on-topic title
   if (!enSummary) {
-    const anyEn = cluster.articles.find(a => a.article.language === 'en' && !isJunkDesc(cleanDescription(a.article.description)));
+    const mustRe3 = SUMMARY_MUST_CONTAIN[cluster.topic];
+    const anyEn = cluster.articles.find(a =>
+      a.article.language === 'en' &&
+      !isJunkDesc(cleanDescription(a.article.description)) &&
+      (!mustRe3 || mustRe3.test(a.article.title))
+    );
     if (anyEn) enSummary = buildFromArticle(anyEn);
   }
   // 4. TITLE-BASED SYNTHESIS for English
@@ -702,7 +726,7 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
       .filter(a => a.article.language === 'en' && !isJunkTitle(a.article.title))
       .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
       .slice(0, 3)
-      .map(a => a.article.title.trim().replace(/\s*[-–]\s*(Reuters|AP|BBC|CNN|NYT|Times)\s*$/i, '').trim())
+      .map(a => stripSource(a.article.title))
       .filter(t => t.length > 10);
     if (enTitles.length >= 2) enSummary = enTitles.slice(0, 2).join(' · ');
     else if (enTitles.length === 1) enSummary = enTitles[0];
