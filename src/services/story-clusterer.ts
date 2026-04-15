@@ -379,6 +379,15 @@ function clusterByTopic(articles: FetchedArticle[]): Cluster[] {
     .sort((a, b) => b.articles.length - a.articles.length);
 }
 
+// Filter out titles that are channel/feed names — used in both pickHeadline and buildSummary
+function isJunkTitle(title: string): boolean {
+  return (
+    /\|\s*(רשת|ערוץ|חדשות|ynet|walla|mako|n12|kan|globes|calcalist|haaretz|jpost|times of israel)/i.test(title) ||
+    /^(חדשות|ידיעות|וואלה|מאקו|גלובס)\s*\d*\s*\|/i.test(title) ||
+    title.length < 15
+  );
+}
+
 /**
  * Pick best headline from cluster (highest signal score article)
  * Returns both the localized headline AND the winning article (for summary coherence)
@@ -391,12 +400,6 @@ function pickHeadline(cluster: Cluster): { headline: { he: string; en: string };
   const template = TOPIC_HEADLINES[cluster.topic] || { he: cluster.topic, en: cluster.topic };
   const topicHintHe = (template.he + ' ' + (TOPIC_CATEGORIES[cluster.topic]?.he || '')).toLowerCase();
   const topicHintEn = (template.en + ' ' + (TOPIC_CATEGORIES[cluster.topic]?.en || '')).toLowerCase();
-
-  // Filter out titles that are channel/feed names (contain " | " pattern with source name)
-  const isJunkTitle = (title: string) =>
-    /\|\s*(רשת|ערוץ|חדשות|ynet|walla|mako|n12|kan|globes|calcalist|haaretz|jpost|times of israel)/i.test(title) ||
-    /^(חדשות|ידיעות|וואלה|מאקו|גלובס)\s*\d*\s*\|/i.test(title) ||
-    title.length < 15;
 
   // High-priority topics require stricter title matching (minShared=2) to avoid false headlines
   const HIGH_PRIORITY_TOPICS = new Set(['Iran Nuclear', 'Gaza Conflict', 'Lebanon/Hezbollah', 'Ukraine/Russia', 'Security', 'West Bank', 'US Politics']);
