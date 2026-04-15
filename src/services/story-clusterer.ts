@@ -651,9 +651,11 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
       if (!mustRe || mustRe.test(title)) return deduplicateWithHeadline(groq, title);
     }
     if (!isJunkDesc(desc)) {
-      // Validate description is related to the article title (not a different story)
-      const descRelated = !mustRe || mustRe.test(title) || isSameTopic(title, desc, 1);
-      if (descRelated) {
+      // Validate: description must share words with article title (not a different story injected by RSS)
+      // AND if topic has a must-contain rule, the title must satisfy it
+      const titleOnTopic = !mustRe || mustRe.test(title);
+      const descMatchesTitle = isSameTopic(title, desc, 1);
+      if (titleOnTopic && descMatchesTitle) {
         const deduped = deduplicateWithHeadline(desc, title);
         return sliceAtSentence(extractFirstSentence(deduped, 40), 240);
       }
