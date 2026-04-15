@@ -49,6 +49,9 @@ export default function BriefAISummary() {
       return b.likelihood - a.likelihood;
     })
     .filter(story => {
+      // Skip generic/sports topics
+      const cat = story.category?.en ?? '';
+      if (cat === 'General' || cat === 'Sports') return false;
       const headline = (isHe ? story.headline?.he : story.headline?.en) ?? '';
       const key = headline.trim().slice(0, 40).toLowerCase();
       if (!key || seen.has(key)) return false;
@@ -81,13 +84,13 @@ export default function BriefAISummary() {
           const isSameAsHeadline = (t: string) => normStart(t) === normStart(headline);
 
           const subText = (() => {
-            if (summary && summary.length >= 20 && !isSameAsHeadline(summary))
+            // Skip English text when in Hebrew mode
+            const isEnglish = (t: string) => /^[a-zA-Z]/.test(t.trim());
+            if (summary && summary.length >= 20 && !isSameAsHeadline(summary) && !(isHe && isEnglish(summary)))
               return summary.length > 180 ? summary.slice(0, 177).trimEnd() + '…' : summary;
-            if (why && why.length >= 20 && !isSameAsHeadline(why))
+            if (why && why.length >= 20 && !isSameAsHeadline(why) && !(isHe && isEnglish(why)))
               return why.length > 180 ? why.slice(0, 177).trimEnd() + '…' : why;
-            // Last resort: source names
-            const srcNames = (story.sources ?? []).map(s => s.name).slice(0, 3).join(' · ');
-            return srcNames || null;
+            return null;
           })();
 
           return (

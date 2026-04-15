@@ -638,16 +638,25 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
   const topicHintCombined = topicHintHe + ' ' + topicHintEn;
   const bestArticleOnTopic = isSameTopic(topicHintCombined, bestTitle, 2);
 
-  function buildFromArticle(article: ArticleWithAnalysis): string {
+  function buildFromArticle(article: ArticleWithAnalysis, validateTopic = true): string {
     const desc = cleanDescription(article.article.description);
     const title = article.article.title || '';
+    const mustRe = validateTopic ? SUMMARY_MUST_CONTAIN[cluster.topic] : undefined;
+
     const groqHe = getGroqResult(article.article.id)?.summaryHe;
     const groqEn = getGroqResult(article.article.id)?.summaryEn;
     const groq = article.article.language === 'he' ? groqHe : groqEn;
-    if (groq && groq.length > 30) return deduplicateWithHeadline(groq, title);
+    if (groq && groq.length > 30) {
+      // Validate Groq summary is on-topic (check title, not groq text)
+      if (!mustRe || mustRe.test(title)) return deduplicateWithHeadline(groq, title);
+    }
     if (!isJunkDesc(desc)) {
-      const deduped = deduplicateWithHeadline(desc, title);
-      return sliceAtSentence(extractFirstSentence(deduped, 40), 240);
+      // Validate description is related to the article title (not a different story)
+      const descRelated = !mustRe || mustRe.test(title) || isSameTopic(title, desc, 1);
+      if (descRelated) {
+        const deduped = deduplicateWithHeadline(desc, title);
+        return sliceAtSentence(extractFirstSentence(deduped, 40), 240);
+      }
     }
     return '';
   }
@@ -681,25 +690,22 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
     .trim();
 
   if (!heSummary || heSummary.includes('כתבות על')) {
-    // Try Hebrew titles first
+    // Hebrew titles only — never fallback to English for Hebrew summary
+    const mustRe4 = SUMMARY_MUST_CONTAIN[cluster.topic];
     const heTitles = cluster.articles
-      .filter(a => a.article.language === 'he' && !isJunkTitle(a.article.title))
+      .filter(a => a.article.language === 'he' && !isJunkTitle(a.article.title) && (!mustRe4 || mustRe4.test(a.article.title)))
       .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
       .slice(0, 3)
       .map(a => stripSource(a.article.title))
       .filter(t => t.length > 10);
-    // Fallback: English titles translated to context (just use them as-is — user sees category label anyway)
-    const enTitlesFallback = cluster.articles
-      .filter(a => a.article.language === 'en' && !isJunkTitle(a.article.title))
-      .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
-      .slice(0, 2)
-      .map(a => stripSource(a.article.title))
-      .filter(t => t.length > 10);
-    const titles = heTitles.length > 0 ? heTitles : enTitlesFallback;
-    if (titles.length >= 2) heSummary = titles.slice(0, 2).join(' · ');
-    else if (titles.length === 1) heSummary = titles[0];
+    if (heTitles.length >= 2) heSummary = heTitles.slice(0, 2).join(' · ');
+    else if (heTitles.length === 1) heSummary = heTitles[0];
   }
-  if (!heSummary) heSummary = `${cluster.articles.length} כתבות על ${TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic}`;
+  // Final fallback: topic template headline (always Hebrew, always relevant)
+  if (!heSummary || heSummary.includes('כתבות על')) {
+    const tmpl = TOPIC_HEADLINES[cluster.topic];
+    heSummary = tmpl ? `${cluster.articles.length} כתבות על ${tmpl.he}` : `${cluster.articles.length} כתבות על ${TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic}`;
+  }
 
   // ── Build English summary ──
   let enSummary = '';
