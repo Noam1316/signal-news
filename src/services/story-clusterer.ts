@@ -567,7 +567,10 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
     !d || d.length < 20 ||
     /^\d+\s*כתבות/.test(d) ||
     /en\s+fran[çc]ais/i.test(d) ||
-    /^[\d./ ]+$/.test(d);
+    /^[\d./ ]+$/.test(d) ||
+    /מגיש מדי יום סקירה/i.test(d) ||          // Globes boilerplate
+    /לחצו לקריאה|קרא עוד|read more/i.test(d) || // generic CTA
+    /^<img|^<a /i.test(d.trim());                // HTML without text
 
   // Topic anchor — used to verify that an article's description is actually about this topic
   const topicTemplate = TOPIC_HEADLINES[cluster.topic];
@@ -658,10 +661,21 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
     const heSource = findSummarySource('he', topicHintHe);
     if (heSource) heSummary = buildFromArticle(heSource.source);
   }
-  // 3. Any Hebrew article in cluster with non-junk description
+  // 3. Any Hebrew article with non-junk description
   if (!heSummary) {
     const anyHe = cluster.articles.find(a => a.article.language === 'he' && !isJunkDesc(cleanDescription(a.article.description)));
     if (anyHe) heSummary = buildFromArticle(anyHe);
+  }
+  // 4. TITLE-BASED SYNTHESIS — RSS has no descriptions, synthesize from top article titles
+  if (!heSummary || heSummary.includes('כתבות על')) {
+    const heTitles = cluster.articles
+      .filter(a => a.article.language === 'he' && !isJunkTitle(a.article.title))
+      .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
+      .slice(0, 3)
+      .map(a => a.article.title.trim().replace(/[–—\-]\s*(הארץ|ינט|ynet|וואלה|כאן|גלובס|מעריב|ישראל היום)\s*$/i, '').trim())
+      .filter(t => t.length > 10);
+    if (heTitles.length >= 2) heSummary = heTitles.slice(0, 2).join(' · ');
+    else if (heTitles.length === 1) heSummary = heTitles[0];
   }
   if (!heSummary) heSummary = `${cluster.articles.length} כתבות על ${TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic}`;
 
@@ -677,10 +691,21 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
     const enSource = findSummarySource('en', topicHintEn);
     if (enSource) enSummary = buildFromArticle(enSource.source);
   }
-  // 3. Any English article in cluster
+  // 3. Any English article
   if (!enSummary) {
     const anyEn = cluster.articles.find(a => a.article.language === 'en' && !isJunkDesc(cleanDescription(a.article.description)));
     if (anyEn) enSummary = buildFromArticle(anyEn);
+  }
+  // 4. TITLE-BASED SYNTHESIS for English
+  if (!enSummary || enSummary.includes('articles about')) {
+    const enTitles = cluster.articles
+      .filter(a => a.article.language === 'en' && !isJunkTitle(a.article.title))
+      .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
+      .slice(0, 3)
+      .map(a => a.article.title.trim().replace(/\s*[-–]\s*(Reuters|AP|BBC|CNN|NYT|Times)\s*$/i, '').trim())
+      .filter(t => t.length > 10);
+    if (enTitles.length >= 2) enSummary = enTitles.slice(0, 2).join(' · ');
+    else if (enTitles.length === 1) enSummary = enTitles[0];
   }
   if (!enSummary) enSummary = `${cluster.articles.length} articles about ${cluster.topic}`;
 
