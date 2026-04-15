@@ -619,46 +619,62 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
     return { source: chosen.a, desc: chosen.desc };
   };
 
-  const heSource = findSummarySource('he', topicHintHe);
-  const enSource = findSummarySource('en', topicHintEn);
+  // ── Priority 0: use bestArticle directly — guaranteed to match the headline topic ──
+  const bestDesc = cleanDescription(bestArticle.article.description);
+  const bestTitle = bestArticle.article.title || '';
+  const bestLang = bestArticle.article.language;
+
+  function buildFromArticle(article: ArticleWithAnalysis): string {
+    const desc = cleanDescription(article.article.description);
+    const title = article.article.title || '';
+    const groqHe = getGroqResult(article.article.id)?.summaryHe;
+    const groqEn = getGroqResult(article.article.id)?.summaryEn;
+    const groq = article.article.language === 'he' ? groqHe : groqEn;
+    if (groq && groq.length > 30) return deduplicateWithHeadline(groq, title);
+    if (!isJunkDesc(desc)) {
+      const deduped = deduplicateWithHeadline(desc, title);
+      return sliceAtSentence(extractFirstSentence(deduped, 40), 240);
+    }
+    return '';
+  }
 
   // ── Build Hebrew summary ──
-  let heSummary: string;
-  if (heSource) {
-    const { source, desc } = heSource;
+  let heSummary = '';
 
-    // Priority 1: Groq-generated Hebrew summary — already coherent, single sentence
-    const groqSummary = getGroqResult(source.article.id)?.summaryHe;
-    if (groqSummary && groqSummary.length > 30) {
-      heSummary = deduplicateWithHeadline(groqSummary, source.article.title || '');
-    } else {
-      // Priority 2: First complete sentence from cleaned description
-      const deduped = deduplicateWithHeadline(desc, source.article.title || '');
-      const firstSentence = extractFirstSentence(deduped, 40);
-      heSummary = sliceAtSentence(firstSentence, 240);
-    }
-  } else {
-    heSummary = `${cluster.articles.length} כתבות על ${TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic}`;
+  // 1. Try bestArticle if Hebrew
+  if (bestLang === 'he' && !isJunkDesc(bestDesc)) {
+    heSummary = buildFromArticle(bestArticle);
   }
+  // 2. Try findSummarySource (topic-filtered)
+  if (!heSummary) {
+    const heSource = findSummarySource('he', topicHintHe);
+    if (heSource) heSummary = buildFromArticle(heSource.source);
+  }
+  // 3. Any Hebrew article in cluster with non-junk description
+  if (!heSummary) {
+    const anyHe = cluster.articles.find(a => a.article.language === 'he' && !isJunkDesc(cleanDescription(a.article.description)));
+    if (anyHe) heSummary = buildFromArticle(anyHe);
+  }
+  if (!heSummary) heSummary = `${cluster.articles.length} כתבות על ${TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic}`;
 
   // ── Build English summary ──
-  let enSummary: string;
-  if (enSource) {
-    const { source, desc } = enSource;
+  let enSummary = '';
 
-    // Priority 1: Groq-generated English summary
-    const groqSummaryEn = getGroqResult(source.article.id)?.summaryEn;
-    if (groqSummaryEn && groqSummaryEn.length > 30) {
-      enSummary = deduplicateWithHeadline(groqSummaryEn, source.article.title || '');
-    } else {
-      // Priority 2: First complete sentence
-      const deduped = deduplicateWithHeadline(desc, source.article.title || '');
-      const firstSentence = extractFirstSentence(deduped, 40);
-      enSummary = sliceAtSentence(firstSentence, 240);
-    }
-  } else {
-    enSummary = `${cluster.articles.length} articles about ${cluster.topic}`;
+  // 1. Try bestArticle if English
+  if (bestLang === 'en' && !isJunkDesc(bestDesc)) {
+    enSummary = buildFromArticle(bestArticle);
   }
+  // 2. Try findSummarySource (topic-filtered)
+  if (!enSummary) {
+    const enSource = findSummarySource('en', topicHintEn);
+    if (enSource) enSummary = buildFromArticle(enSource.source);
+  }
+  // 3. Any English article in cluster
+  if (!enSummary) {
+    const anyEn = cluster.articles.find(a => a.article.language === 'en' && !isJunkDesc(cleanDescription(a.article.description)));
+    if (anyEn) enSummary = buildFromArticle(anyEn);
+  }
+  if (!enSummary) enSummary = `${cluster.articles.length} articles about ${cluster.topic}`;
 
   return { he: heSummary, en: enSummary };
 }
