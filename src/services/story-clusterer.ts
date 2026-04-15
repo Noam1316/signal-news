@@ -574,19 +574,46 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
    * Priority: highest signal-score article whose description is relevant to the topic.
    * Fallback: any non-junk description in that language.
    */
+  // Reuse TOPIC_MUST_CONTAIN from the clustering phase (defined above in generateStories scope,
+  // but we rebuild a local lookup here for summary filtering)
+  const SUMMARY_MUST_CONTAIN: Record<string, RegExp> = {
+    'Ukraine/Russia':   /אוקראינ|רוסי|קייב|מוסקב|זלנסקי|פוטין|ukrain|russia|kyiv|moscow/i,
+    'Iran Nuclear':     /איראן|גרעין|ורמלת|פרדו|נתנז|iran|nuclear|enrichment/i,
+    'Gaza Conflict':    /עזה|חמאס|רפח|צבאי|הפסקת אש|gaza|hamas|rafah|ceasefire/i,
+    'Lebanon/Hezbollah':/לבנון|חיזבאללה|נסראלה|lebanon|hezbollah/i,
+    'West Bank':        /גדה|יהודה|שומרון|מתנחל|west bank|settler|ramallah/i,
+    'Elections':        /בחירות|הצבעה|קלפי|מצביעים|election|ballot|vote|polling|orban|אורבן/i,
+    'Iran Talks':       /משא.ומתן|הסכם|שיחות|talks|deal|agreement|nuclear/i,
+  };
+
   const findSummarySource = (lang: 'he' | 'en', topicHint: string): { source: ArticleWithAnalysis; desc: string } | null => {
+    const mustRe = SUMMARY_MUST_CONTAIN[cluster.topic];
+
     const candidates = [...cluster.articles]
       .filter(a => a.article.language === lang)
       .map(a => ({ a, desc: cleanDescription(a.article.description) }))
       .filter(({ desc }) => !isJunkDesc(desc))
+      // If this topic has a must-contain rule, only pick articles whose TITLE matches it
+      // (description may not repeat key terms, but title always signals the topic)
+      .filter(({ a }) => !mustRe || mustRe.test(a.article.title))
       .sort((x, y) => y.a.analysis.signalScore - x.a.analysis.signalScore);
 
-    if (candidates.length === 0) return null;
+    if (candidates.length === 0) {
+      // Fallback: no must-contain filter — just pick by relevance
+      const allCandidates = [...cluster.articles]
+        .filter(a => a.article.language === lang)
+        .map(a => ({ a, desc: cleanDescription(a.article.description) }))
+        .filter(({ desc }) => !isJunkDesc(desc))
+        .sort((x, y) => y.a.analysis.signalScore - x.a.analysis.signalScore);
+      if (allCandidates.length === 0) return null;
+      const relevant = allCandidates.filter(({ desc }) => isSameTopic(topicHint, desc, 2));
+      const fallback1 = allCandidates.filter(({ desc }) => isSameTopic(topicHint, desc, 1));
+      const chosen = relevant[0] ?? fallback1[0] ?? allCandidates[0];
+      return { source: chosen.a, desc: chosen.desc };
+    }
 
     // Prefer an article whose description shares ≥2 words with the topic hint
-    // minShared=2 prevents accidental single-word matches (e.g. "בית" in both Big Brother and housing news)
     const relevant = candidates.filter(({ desc }) => isSameTopic(topicHint, desc, 2));
-    // fallback: any 1-word match, then any non-junk
     const fallback1 = candidates.filter(({ desc }) => isSameTopic(topicHint, desc, 1));
     const chosen = relevant[0] ?? fallback1[0] ?? candidates[0];
     return { source: chosen.a, desc: chosen.desc };
