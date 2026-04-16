@@ -433,24 +433,30 @@ function pickHeadline(cluster: Cluster): { headline: { he: string; en: string };
     ?? sorted.find(a => !isJunkTitle(a.article.title))
     ?? sorted[0];
 
+  // Strip trailing source name / domain from a title
+  const cleanHL = (t: string) => t
+    .replace(/\s*[–—\-|]\s*[\w.-]+\.(co\.il|com|net|org|il)\s*$/i, '')
+    .replace(/\s*[–—\-|]\s*(הארץ|ינט|ynet|וואלה|כאן|גלובס|מעריב|ישראל היום|Jerusalem Post|Reuters|AP|BBC|CNN|i24NEWS|Times of Israel|Al-Monitor|Middle East Eye)\s*$/i, '')
+    .trim();
+
   // Build localized headline
   let heTitle: string;
   let enTitle: string;
 
   if (best.article.language === 'he' && !isJunkTitle(best.article.title)) {
-    heTitle = best.article.title;
+    heTitle = cleanHL(best.article.title);
     // For English: try to find a relevant English article title
     const enBest = sorted.find(a => a.article.language !== 'he' && !isJunkTitle(a.article.title) && isTopicRelevant(a.article.title));
-    enTitle = enBest ? enBest.article.title : template.en;
+    enTitle = enBest ? cleanHL(enBest.article.title) : template.en;
   } else if (best.article.language !== 'he' && !isJunkTitle(best.article.title)) {
-    enTitle = best.article.title;
+    enTitle = cleanHL(best.article.title);
     // For Hebrew: try Groq summaryHe first (more specific than template), then find a Hebrew title
     const groqHe = getGroqResult(best.article.id)?.summaryHe;
     if (groqHe && groqHe.length > 15) {
       heTitle = groqHe;
     } else {
       const heBest = sorted.find(a => a.article.language === 'he' && !isJunkTitle(a.article.title) && isTopicRelevant(a.article.title));
-      heTitle = heBest ? heBest.article.title : template.he;
+      heTitle = heBest ? cleanHL(heBest.article.title) : template.he;
     }
   } else {
     // Both junk — use templates, but try Groq for Hebrew
