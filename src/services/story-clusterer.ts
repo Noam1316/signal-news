@@ -655,7 +655,10 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
 
   // Strip source names from end of titles
   const stripSource = (t: string) => t.trim()
+    // Strip "- Source Name" or "| Source Name" at end
     .replace(/\s*[–—\-|]\s*(הארץ|ינט|ynet|וואלה|כאן|גלובס|מעריב|ישראל היום|Jerusalem Post|Reuters|AP|BBC|CNN|i24NEWS|Times of Israel|Al-Monitor|Middle East Eye)\s*$/i, '')
+    // Strip domain names: "- ynet.co.il", "- haaretz.com" etc.
+    .replace(/\s*[–—\-|]\s*[\w.-]+\.(co\.il|com|net|org|il)\s*$/i, '')
     .trim();
 
   // Check if a title is too similar to the main headline (don't repeat it)
@@ -924,8 +927,34 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
     .sort((a, b) => b.score - a.score)
     .map(({ cluster }) => cluster);
 
-  return rankedClusters.slice(0, maxStories).map((cluster) => {
+  // Must-contain map — same as in pickHeadline, used here to validate final headline
+  const HEADLINE_MUST_CONTAIN: Record<string, RegExp> = {
+    'Ukraine/Russia':       /אוקראינ|רוסי|קייב|פוטין|ukrain|russia|kyiv|moscow/i,
+    'Iran Nuclear':         /איראן|גרעין|iran|nuclear/i,
+    'Gaza Conflict':        /עזה|חמאס|הפסקת אש|gaza|hamas|ceasefire/i,
+    'Lebanon/Hezbollah':    /לבנון|חיזבאללה|lebanon|hezbollah/i,
+    'West Bank':            /גדה|יהודה|שומרון|west bank|settler/i,
+    'Elections':            /בחירות|election|vote|ballot/i,
+    'Iran Talks':           /איראן|iran/i,
+    'Saudi Normalization':  /סעודי|נורמליזציה|saudi|normali/i,
+    'US Politics':          /טראמפ|קונגרס|trump|congress|washington/i,
+    'Syria':                /סוריה|syria/i,
+    'China':                /סין|טייוואן|china|taiwan/i,
+    'Judicial Reform':      /רפורמה|בית משפט|בג.ץ|judicial|supreme court/i,
+    'Security':             /צה.ל|ביטחון|טיל|פיגוע|idf|military|attack|missile/i,
+  };
+
+  const stories = rankedClusters.slice(0, maxStories).map((cluster) => {
     const { headline, bestArticle } = pickHeadline(cluster);
+
+    // Validate: if the cluster has a must-contain rule, the chosen headline must pass it
+    // Otherwise the cluster yielded an off-topic fallback headline — skip it
+    const mustRe = HEADLINE_MUST_CONTAIN[cluster.topic];
+    if (mustRe) {
+      const hl = (headline.he || '') + ' ' + (headline.en || '');
+      if (!mustRe.test(hl)) return null; // Off-topic headline — discard
+    }
+
     const summary = buildSummary(cluster, bestArticle);
     const { likelihood, delta, confidence } = calculateLikelihood(cluster);
     const lens = determineLens(cluster);
@@ -1034,10 +1063,13 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       firstMover,
       contradiction,
     };
-  }).sort((a, b) => {
-    // Push resolved stories to the end
-    if (a.resolved && !b.resolved) return 1;
-    if (!a.resolved && b.resolved) return -1;
-    return 0;
-  });
+  }).filter((s): s is BriefStory => s !== null)
+    .sort((a, b) => {
+      // Push resolved stories to the end
+      if (a.resolved && !b.resolved) return 1;
+      if (!a.resolved && b.resolved) return -1;
+      return 0;
+    });
+
+  return stories;
 }
