@@ -59,15 +59,10 @@ export const rssSources: RssSource[] = [
   { id: 'economist', name: 'The Economist', url: 'https://www.economist.com/middle-east-and-africa/rss.xml', language: 'en', lensCategory: 'international', country: 'UK' },
   { id: 'cfr', name: 'Council on Foreign Relations', url: 'https://news.google.com/rss/search?q=site:cfr.org+middle+east&hl=en&gl=US&ceid=US:en', language: 'en', lensCategory: 'international', country: 'US' },
 
-  // ── Telegram Channels (via RSShub — breaking news, faster than RSS) ──
-  { id: 'tg-kann',    name: 'כאן חדשות (TG)',   url: 'https://rsshub.app/telegram/channel/kann_news',    language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
-  { id: 'tg-n12',     name: 'N12 חדשות (TG)',   url: 'https://rsshub.app/telegram/channel/N12news',     language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
-  { id: 'tg-walla',   name: 'Walla חדשות (TG)', url: 'https://rsshub.app/telegram/channel/wallanews',   language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
-  { id: 'tg-ynet',    name: 'Ynet חדשות (TG)',  url: 'https://rsshub.app/telegram/channel/ynetalerts',  language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
-  { id: 'tg-13',      name: 'רשת 13 (TG)',       url: 'https://rsshub.app/telegram/channel/reshet13news',language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
-  { id: 'tg-maariv',  name: 'מעריב (TG)',         url: 'https://rsshub.app/telegram/channel/maariv_online',language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
-  { id: 'tg-galatz',  name: 'גלץ חדשות (TG)',    url: 'https://rsshub.app/telegram/channel/glz_news',   language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
-  { id: 'tg-i24',     name: 'i24NEWS (TG)',       url: 'https://rsshub.app/telegram/channel/i24newsHE',  language: 'he', lensCategory: 'il-partisan',   country: 'IL' },
+  // ── Israeli Mainstream — additional sources via Google News ──
+  { id: 'maariv',  name: 'מעריב',      url: 'https://news.google.com/rss/search?q=site:maariv.co.il&hl=he&gl=IL&ceid=IL:he',   language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
+  { id: 'galatz',  name: 'גלץ',        url: 'https://news.google.com/rss/search?q=site:glz.co.il&hl=he&gl=IL&ceid=IL:he',      language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
+  { id: 'ynet-he', name: 'Ynet (Google)', url: 'https://news.google.com/rss/search?q=site:ynet.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
 
   // ── Left-leaning / Progressive ──
   { id: '972mag', name: '+972 Magazine', url: 'https://news.google.com/rss/search?q=site:972mag.com&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
