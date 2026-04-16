@@ -68,7 +68,7 @@ export async function GET() {
 
       return {
         slug: s.slug,
-        headline: typeof s.headline === 'string' ? s.headline : s.headline.en || s.headline.he || '',
+        headline: typeof s.headline === 'string' ? s.headline : s.headline.he || s.headline.en || '',
         likelihood: s.likelihood,
         category: typeof s.category === 'string' ? s.category : (s.category?.en ?? s.category?.he ?? ''),
         sourceCount: s.sources?.length || 3,

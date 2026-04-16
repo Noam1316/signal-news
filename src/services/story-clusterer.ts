@@ -914,8 +914,12 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
 
   const clusters = clusterByTopic(articles);
 
+  // ⓪ Filter out low-value topics entirely (General, Sports, Entertainment)
+  const EXCLUDED_TOPICS = new Set(['General', 'Sports', 'Entertainment']);
+  const filteredClusters = clusters.filter(c => !EXCLUDED_TOPICS.has(c.topic));
+
   // ① Score + sort clusters by importance BEFORE building stories
-  const rankedClusters = clusters
+  const rankedClusters = filteredClusters
     .map(c => ({ cluster: c, score: scoreCluster(c) }))
     .sort((a, b) => b.score - a.score)
     .map(({ cluster }) => cluster);
@@ -969,18 +973,21 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
     }
 
     // Contradiction Detector: same cluster, opposite sentiments from different sources
+    // Tightened: requires >=5 articles in cluster, >=2 positive AND >=2 negative articles,
+    // each side from >=2 different sources, and gapPct <= 60 (balanced coverage)
     let contradiction: { sourceA: string; headlineA: string; sourceB: string; headlineB: string; gapPct: number } | undefined;
     const hasUsableTitle = (t: string) => t.length >= 15;
-    const positiveArticles = cluster.articles.filter(a => a.analysis.sentiment === 'positive' && hasUsableTitle(a.article.title));
-    const negativeArticles = cluster.articles.filter(a => a.analysis.sentiment === 'negative' && hasUsableTitle(a.article.title));
-    if (positiveArticles.length >= 1 && negativeArticles.length >= 1) {
-      const posA = positiveArticles[0];
-      const negA = negativeArticles[0];
-      // Only flag if they're from different sources
-      if (posA.article.sourceName !== negA.article.sourceName) {
+    if (cluster.articles.length >= 5) {
+      const positiveArticles = cluster.articles.filter(a => a.analysis.sentiment === 'positive' && hasUsableTitle(a.article.title));
+      const negativeArticles = cluster.articles.filter(a => a.analysis.sentiment === 'negative' && hasUsableTitle(a.article.title));
+      const positiveSources = new Set(positiveArticles.map(a => a.article.sourceName));
+      const negativeSources = new Set(negativeArticles.map(a => a.article.sourceName));
+      if (positiveArticles.length >= 2 && negativeArticles.length >= 2 && positiveSources.size >= 2 && negativeSources.size >= 2) {
+        const posA = positiveArticles[0];
+        const negA = negativeArticles[0];
         const totalSentiment = positiveArticles.length + negativeArticles.length;
         const gapPct = Math.round(Math.abs(positiveArticles.length - negativeArticles.length) / totalSentiment * 100);
-        if (gapPct <= 80) { // not too lopsided — genuine split
+        if (gapPct <= 60) { // not too lopsided — genuine split
           contradiction = {
             sourceA: posA.article.sourceName,
             headlineA: posA.article.title,
