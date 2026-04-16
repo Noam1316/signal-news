@@ -588,13 +588,21 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
   // Reuse TOPIC_MUST_CONTAIN from the clustering phase (defined above in generateStories scope,
   // but we rebuild a local lookup here for summary filtering)
   const SUMMARY_MUST_CONTAIN: Record<string, RegExp> = {
-    'Ukraine/Russia':   /אוקראינ|רוסי|קייב|מוסקב|זלנסקי|פוטין|ukrain|russia|kyiv|moscow/i,
-    'Iran Nuclear':     /איראן|גרעין|ורמלת|פרדו|נתנז|iran|nuclear|enrichment/i,
-    'Gaza Conflict':    /עזה|חמאס|רפח|צבאי|הפסקת אש|gaza|hamas|rafah|ceasefire/i,
-    'Lebanon/Hezbollah':/לבנון|חיזבאללה|נסראלה|lebanon|hezbollah/i,
-    'West Bank':        /גדה|יהודה|שומרון|מתנחל|west bank|settler|ramallah/i,
-    'Elections':        /בחירות|הצבעה|קלפי|מצביעים|election|ballot|vote|polling|orban|אורבן/i,
-    'Iran Talks':       /משא.ומתן|הסכם|שיחות|talks|deal|agreement|nuclear/i,
+    'Ukraine/Russia':       /אוקראינ|רוסי|קייב|מוסקב|זלנסקי|פוטין|ukrain|russia|kyiv|moscow/i,
+    'Iran Nuclear':         /איראן|גרעין|ורמלת|פרדו|נתנז|iran|nuclear|enrichment/i,
+    'Gaza Conflict':        /עזה|חמאס|רפח|הפסקת אש|gaza|hamas|rafah|ceasefire/i,
+    'Lebanon/Hezbollah':    /לבנון|חיזבאללה|נסראלה|lebanon|hezbollah/i,
+    'West Bank':            /גדה|יהודה|שומרון|מתנחל|west bank|settler|ramallah/i,
+    'Elections':            /בחירות|הצבעה|קלפי|מצביעים|election|ballot|vote|polling|orban|אורבן/i,
+    'Iran Talks':           /איראן.*שיחות|שיחות.*איראן|משא.ומתן.*גרעין|iran.*talks|talks.*iran|nuclear.*deal/i,
+    'Saudi Normalization':  /סעודי|סעודית|ריאד|ממלכה|אברהם|מוחמד בן|נורמליזציה.*ישראל|saudi|riyadh|abraham accord|normali[sz]ation/i,
+    'US Politics':          /טראמפ|ביידן|וושינגטון|קונגרס|הבית הלבן|סנאט|trump|biden|washington|congress|white house|senate/i,
+    'Syria':                /סוריה|דמשק|אסד|מורדים|syria|damascus|assad|rebel/i,
+    'China':                /סין|טייוואן|בייג.ינג|שי ג.ינפינג|china|taiwan|beijing|xi jinping/i,
+    'Judicial Reform':      /רפורמה|בג.ץ|בית משפט עליון|חוקה|judicial|supreme court/i,
+    'Security':             /צה.ל|ביטחון|צבא|טיל|פיגוע|מתקפה|idf|military|attack|missile|terror/i,
+    'Diplomacy':            /דיפלומטי|שגריר|או.ם|האומות|diplomat|ambassador|un |united nations/i,
+    'Economy':              /כלכל|מכס|מניות|נאסד.ק|אינפלציה|ריבית|econom|tariff|stock|nasdaq|inflation|interest rate/i,
   };
 
   const findSummarySource = (lang: 'he' | 'en', topicHint: string): { source: ArticleWithAnalysis; desc: string } | null => {
