@@ -630,119 +630,98 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
     return { source: chosen.a, desc: chosen.desc };
   };
 
-  // ── Priority 0: use bestArticle directly — only if its title is actually on-topic ──
-  const bestDesc = cleanDescription(bestArticle.article.description);
-  const bestTitle = bestArticle.article.title || '';
-  const bestLang = bestArticle.article.language;
-  // Verify bestArticle is actually about this topic (not just high-signal from a different topic)
-  const topicHintCombined = topicHintHe + ' ' + topicHintEn;
-  const bestArticleOnTopic = isSameTopic(topicHintCombined, bestTitle, 2);
+  // ────────────────────────────────────────────────────────────
+  // NEW APPROACH: Title-First summaries
+  //
+  // RSS descriptions are unreliable (missing, boilerplate, or off-topic).
+  // Instead, we build summaries from VERIFIED article titles — they're
+  // always available, always about the article's actual topic, and we can
+  // validate them with TOPIC_MUST_CONTAIN.
+  //
+  // Priority: Groq > verified titles > metadata fallback
+  // ────────────────────────────────────────────────────────────
 
-  function buildFromArticle(article: ArticleWithAnalysis, validateTopic = true): string {
-    const desc = cleanDescription(article.article.description);
-    const title = article.article.title || '';
-    const mustRe = validateTopic ? SUMMARY_MUST_CONTAIN[cluster.topic] : undefined;
+  const mustReSummary = SUMMARY_MUST_CONTAIN[cluster.topic];
+  const mainHeadlineHe = TOPIC_HEADLINES[cluster.topic]?.he || '';
+  const mainHeadlineEn = TOPIC_HEADLINES[cluster.topic]?.en || '';
 
-    const groqHe = getGroqResult(article.article.id)?.summaryHe;
-    const groqEn = getGroqResult(article.article.id)?.summaryEn;
-    const groq = article.article.language === 'he' ? groqHe : groqEn;
-    if (groq && groq.length > 30) {
-      // Validate Groq summary is on-topic (check title, not groq text)
-      if (!mustRe || mustRe.test(title)) return deduplicateWithHeadline(groq, title);
-    }
-    if (!isJunkDesc(desc)) {
-      // Validate: description must share words with article title (not a different story injected by RSS)
-      // AND if topic has a must-contain rule, the title must satisfy it
-      const titleOnTopic = !mustRe || mustRe.test(title);
-      const descMatchesTitle = isSameTopic(title, desc, 1);
-      if (titleOnTopic && descMatchesTitle) {
-        const deduped = deduplicateWithHeadline(desc, title);
-        return sliceAtSentence(extractFirstSentence(deduped, 40), 240);
+  // Strip source names from end of titles
+  const stripSource = (t: string) => t.trim()
+    .replace(/\s*[–—\-|]\s*(הארץ|ינט|ynet|וואלה|כאן|גלובס|מעריב|ישראל היום|Jerusalem Post|Reuters|AP|BBC|CNN|i24NEWS|Times of Israel|Al-Monitor|Middle East Eye)\s*$/i, '')
+    .trim();
+
+  // Check if a title is too similar to the main headline (don't repeat it)
+  const normTitle = (t: string) => t.replace(/[^\u05D0-\u05FAa-zA-Z0-9\s]/g, '').trim().slice(0, 35).toLowerCase();
+
+  function getVerifiedTitles(lang: 'he' | 'en', mainHL: string): string[] {
+    const mainNorm = normTitle(mainHL);
+    return cluster.articles
+      .filter(a => {
+        if (a.article.language !== lang) return false;
+        if (isJunkTitle(a.article.title)) return false;
+        if (mustReSummary && !mustReSummary.test(a.article.title)) return false;
+        // Don't repeat the main headline
+        if (normTitle(a.article.title) === mainNorm) return false;
+        return true;
+      })
+      .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
+      .slice(0, 3)
+      .map(a => stripSource(a.article.title))
+      .filter(t => t.length > 12);
+  }
+
+  function getGroqSummary(lang: 'he' | 'en'): string {
+    // Try Groq summaries from articles (if Groq API is configured)
+    for (const a of cluster.articles) {
+      const groq = lang === 'he'
+        ? getGroqResult(a.article.id)?.summaryHe
+        : getGroqResult(a.article.id)?.summaryEn;
+      if (groq && groq.length > 30) {
+        // Verify Groq summary article is on-topic
+        if (!mustReSummary || mustReSummary.test(a.article.title)) {
+          return deduplicateWithHeadline(groq, a.article.title || '');
+        }
       }
     }
     return '';
   }
 
+  function metadataFallback(lang: 'he' | 'en'): string {
+    const srcNames = [...new Set(cluster.articles.map(a => a.article.sourceName))].slice(0, 3).join(', ');
+    const topic = lang === 'he'
+      ? (TOPIC_HEADLINES[cluster.topic]?.he || TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic)
+      : (TOPIC_HEADLINES[cluster.topic]?.en || cluster.topic);
+    return `${cluster.articles.length} ${lang === 'he' ? 'כתבות' : 'articles'} · ${srcNames}`;
+  }
+
   // ── Build Hebrew summary ──
-  let heSummary = '';
-
-  // 1. Try bestArticle if Hebrew AND on-topic
-  if (bestLang === 'he' && !isJunkDesc(bestDesc) && bestArticleOnTopic) {
-    heSummary = buildFromArticle(bestArticle);
-  }
-  // 2. Try findSummarySource (topic-filtered)
+  let heSummary = getGroqSummary('he');
   if (!heSummary) {
-    const heSource = findSummarySource('he', topicHintHe);
-    if (heSource) heSummary = buildFromArticle(heSource.source);
-  }
-  // 3. Any Hebrew article with non-junk description AND on-topic title
-  if (!heSummary) {
-    const mustRe2 = SUMMARY_MUST_CONTAIN[cluster.topic];
-    const anyHe = cluster.articles.find(a =>
-      a.article.language === 'he' &&
-      !isJunkDesc(cleanDescription(a.article.description)) &&
-      (!mustRe2 || mustRe2.test(a.article.title))
-    );
-    if (anyHe) heSummary = buildFromArticle(anyHe);
-  }
-
-  // 4. TITLE-BASED SYNTHESIS — RSS has no descriptions: join top article titles
-  const stripSource = (t: string) => t.trim()
-    .replace(/[–—\-]\s*(הארץ|ינט|ynet|וואלה|כאן|גלובס|מעריב|ישראל היום|Jerusalem Post|Reuters|AP|BBC)\s*$/i, '')
-    .trim();
-
-  if (!heSummary || heSummary.includes('כתבות על')) {
-    // Hebrew titles only — never fallback to English for Hebrew summary
-    const mustRe4 = SUMMARY_MUST_CONTAIN[cluster.topic];
-    const heTitles = cluster.articles
-      .filter(a => a.article.language === 'he' && !isJunkTitle(a.article.title) && (!mustRe4 || mustRe4.test(a.article.title)))
-      .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
-      .slice(0, 3)
-      .map(a => stripSource(a.article.title))
-      .filter(t => t.length > 10);
+    const heTitles = getVerifiedTitles('he', mainHeadlineHe);
     if (heTitles.length >= 2) heSummary = heTitles.slice(0, 2).join(' · ');
     else if (heTitles.length === 1) heSummary = heTitles[0];
   }
-  // Final fallback: topic template headline (always Hebrew, always relevant)
-  if (!heSummary || heSummary.includes('כתבות על')) {
-    const tmpl = TOPIC_HEADLINES[cluster.topic];
-    heSummary = tmpl ? `${cluster.articles.length} כתבות על ${tmpl.he}` : `${cluster.articles.length} כתבות על ${TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic}`;
-  }
+  if (!heSummary) heSummary = metadataFallback('he');
 
   // ── Build English summary ──
-  let enSummary = '';
-
-  // 1. Try bestArticle if English AND on-topic
-  if (bestLang === 'en' && !isJunkDesc(bestDesc) && bestArticleOnTopic) {
-    enSummary = buildFromArticle(bestArticle);
-  }
-  // 2. Try findSummarySource (topic-filtered)
+  let enSummary = getGroqSummary('en');
   if (!enSummary) {
-    const enSource = findSummarySource('en', topicHintEn);
-    if (enSource) enSummary = buildFromArticle(enSource.source);
+    const enTitles = getVerifiedTitles('en', mainHeadlineEn);
+    if (enTitles.length >= 2) enSummary = enTitles.slice(0, 2).join(' · ');
+    else if (enTitles.length === 1) enSummary = enTitles[0];
   }
-  // 3. Any English article with on-topic title
   if (!enSummary) {
-    const mustRe3 = SUMMARY_MUST_CONTAIN[cluster.topic];
-    const anyEn = cluster.articles.find(a =>
-      a.article.language === 'en' &&
-      !isJunkDesc(cleanDescription(a.article.description)) &&
-      (!mustRe3 || mustRe3.test(a.article.title))
-    );
-    if (anyEn) enSummary = buildFromArticle(anyEn);
-  }
-  // 4. TITLE-BASED SYNTHESIS for English
-  if (!enSummary || enSummary.includes('articles about')) {
+    // For English: also try unfiltered titles as last resort before metadata
     const enTitles = cluster.articles
       .filter(a => a.article.language === 'en' && !isJunkTitle(a.article.title))
       .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
       .slice(0, 3)
       .map(a => stripSource(a.article.title))
-      .filter(t => t.length > 10);
+      .filter(t => t.length > 12);
     if (enTitles.length >= 2) enSummary = enTitles.slice(0, 2).join(' · ');
     else if (enTitles.length === 1) enSummary = enTitles[0];
   }
-  if (!enSummary) enSummary = `${cluster.articles.length} articles about ${cluster.topic}`;
+  if (!enSummary) enSummary = metadataFallback('en');
 
   return { he: heSummary, en: enSummary };
 }
