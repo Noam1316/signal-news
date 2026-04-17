@@ -97,7 +97,7 @@ const TOPIC_KEYWORDS: Record<string, string[]> = {
     'iran diplomacy', 'us iran', 'america iran', 'iran negotiations', 'iran agreement',
     'iran framework', 'iran truce', 'iran talks', 'iran nuclear deal',
     // Hebrew — core
-    'איראן', 'גרעין', 'טהרן', 'חמינאי', 'משמרות המהפכה',
+    'איראן', 'גרעיני', 'גרעינית', 'מתקן גרעין', 'תוכנית גרעין', 'הגרעין האיראני', 'טהרן', 'חמינאי', 'משמרות המהפכה',
     // Hebrew — US-Israel-Iran ceasefire/deal
     'ישראל איראן', 'תקיפה באיראן', 'מלחמה עם איראן', 'הסכם עם איראן',
     'הפסקת אש עם איראן', 'הפסקת אש באיראן', 'מו"מ איראן', 'שיחות עם איראן',

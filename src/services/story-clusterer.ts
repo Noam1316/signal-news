@@ -409,7 +409,7 @@ function pickHeadline(cluster: Cluster): { headline: { he: string; en: string };
   // Must-contain terms per topic — headline MUST include at least one core term
   const TOPIC_MUST_CONTAIN: Record<string, RegExp> = {
     'Ukraine/Russia':       /אוקראינ|רוסי|קייב|מוסקב|זלנסקי|פוטין|ukrain|russia|kyiv|moscow/i,
-    'Iran Nuclear':         /גרעין|ורמלת|פרדו|נתנז|העשרה|תקיפה.*איראן|איראן.*תקיפה|nuclear|enrichment|natanz|fordow|strike.*iran|iran.*strike/i,
+    'Iran Nuclear':         /גרעין(?!\s+ה?קשה)|ורמלת|פרדו|נתנז|העשרה|תקיפה.*איראן|מתקפה.*איראן|איראן.*תקיפה|איראן.*מתקפה|nuclear|enrichment|natanz|fordow|strike.*iran|iran.*strike/i,
     'Gaza Conflict':        /עזה|חמאס|רפח|הפסקת אש|gaza|hamas|rafah|ceasefire/i,
     'Lebanon/Hezbollah':    /לבנון|חיזבאללה|נסראלה|lebanon|hezbollah/i,
     'West Bank':            /גדה|יהודה|שומרון|מתנחל|west bank|settler|ramallah/i,
@@ -595,7 +595,7 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis, chosen
   // but we rebuild a local lookup here for summary filtering)
   const SUMMARY_MUST_CONTAIN: Record<string, RegExp> = {
     'Ukraine/Russia':       /אוקראינ|רוסי|קייב|מוסקב|זלנסקי|פוטין|ukrain|russia|kyiv|moscow/i,
-    'Iran Nuclear':         /גרעין|ורמלת|פרדו|נתנז|העשרה|תקיפה.*איראן|איראן.*תקיפה|nuclear|enrichment|natanz|fordow|strike.*iran|iran.*strike/i,
+    'Iran Nuclear':         /גרעין(?!\s+ה?קשה)|ורמלת|פרדו|נתנז|העשרה|תקיפה.*איראן|מתקפה.*איראן|איראן.*תקיפה|איראן.*מתקפה|nuclear|enrichment|natanz|fordow|strike.*iran|iran.*strike/i,
     'Gaza Conflict':        /עזה|חמאס|רפח|הפסקת אש|gaza|hamas|rafah|ceasefire/i,
     'Lebanon/Hezbollah':    /לבנון|חיזבאללה|נסראלה|lebanon|hezbollah/i,
     'West Bank':            /גדה|יהודה|שומרון|מתנחל|west bank|settler|ramallah/i,
@@ -969,7 +969,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
   // Must-contain map — same as in pickHeadline, used here to validate final headline
   const HEADLINE_MUST_CONTAIN: Record<string, RegExp> = {
     'Ukraine/Russia':       /אוקראינ|רוסי|קייב|פוטין|ukrain|russia|kyiv|moscow/i,
-    'Iran Nuclear':         /איראן|גרעין|iran|nuclear/i,
+    'Iran Nuclear':         /איראן|גרעין(?!\s+ה?קשה)|iran|nuclear/i,
     'Gaza Conflict':        /עזה|חמאס|הפסקת אש|gaza|hamas|ceasefire/i,
     'Lebanon/Hezbollah':    /לבנון|חיזבאללה|lebanon|hezbollah/i,
     'West Bank':            /גדה|יהודה|שומרון|west bank|settler/i,
