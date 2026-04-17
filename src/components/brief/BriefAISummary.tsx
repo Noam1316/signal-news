@@ -84,11 +84,12 @@ export default function BriefAISummary() {
           const isSameAsHeadline = (t: string) => normStart(t) === normStart(headline);
 
           const subText = (() => {
-            // Skip English text when in Hebrew mode
             const isEnglish = (t: string) => /^[a-zA-Z]/.test(t.trim());
-            if (summary && summary.length >= 20 && !isSameAsHeadline(summary) && !(isHe && isEnglish(summary)))
+            const isMeta = (t: string) => /^\d+\s*כתבות/.test(t.trim()); // "8 כתבות ·..."
+            const isGood = (t: string) => t.length >= 20 && !isSameAsHeadline(t) && !isMeta(t) && !(isHe && isEnglish(t));
+            if (summary && isGood(summary))
               return summary.length > 180 ? summary.slice(0, 177).trimEnd() + '…' : summary;
-            if (why && why.length >= 20 && !isSameAsHeadline(why) && !(isHe && isEnglish(why)))
+            if (why && isGood(why))
               return why.length > 180 ? why.slice(0, 177).trimEnd() + '…' : why;
             return null;
           })();
