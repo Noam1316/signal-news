@@ -409,7 +409,7 @@ function pickHeadline(cluster: Cluster): { headline: { he: string; en: string };
   // Must-contain terms per topic — headline MUST include at least one core term
   const TOPIC_MUST_CONTAIN: Record<string, RegExp> = {
     'Ukraine/Russia':       /אוקראינ|רוסי|קייב|מוסקב|זלנסקי|פוטין|ukrain|russia|kyiv|moscow/i,
-    'Iran Nuclear':         /איראן|גרעין|ורמלת|פרדו|נתנז|iran|nuclear|enrichment/i,
+    'Iran Nuclear':         /גרעין|ורמלת|פרדו|נתנז|העשרה|תקיפה.*איראן|איראן.*תקיפה|nuclear|enrichment|natanz|fordow|strike.*iran|iran.*strike/i,
     'Gaza Conflict':        /עזה|חמאס|רפח|הפסקת אש|gaza|hamas|rafah|ceasefire/i,
     'Lebanon/Hezbollah':    /לבנון|חיזבאללה|נסראלה|lebanon|hezbollah/i,
     'West Bank':            /גדה|יהודה|שומרון|מתנחל|west bank|settler|ramallah/i,
@@ -595,7 +595,7 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
   // but we rebuild a local lookup here for summary filtering)
   const SUMMARY_MUST_CONTAIN: Record<string, RegExp> = {
     'Ukraine/Russia':       /אוקראינ|רוסי|קייב|מוסקב|זלנסקי|פוטין|ukrain|russia|kyiv|moscow/i,
-    'Iran Nuclear':         /איראן|גרעין|ורמלת|פרדו|נתנז|iran|nuclear|enrichment/i,
+    'Iran Nuclear':         /גרעין|ורמלת|פרדו|נתנז|העשרה|תקיפה.*איראן|איראן.*תקיפה|nuclear|enrichment|natanz|fordow|strike.*iran|iran.*strike/i,
     'Gaza Conflict':        /עזה|חמאס|רפח|הפסקת אש|gaza|hamas|rafah|ceasefire/i,
     'Lebanon/Hezbollah':    /לבנון|חיזבאללה|נסראלה|lebanon|hezbollah/i,
     'West Bank':            /גדה|יהודה|שומרון|מתנחל|west bank|settler|ramallah/i,
@@ -1069,7 +1069,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       firstMover,
       contradiction,
     };
-  }).filter((s): s is BriefStory => s !== null)
+  }).filter((s): s is NonNullable<typeof s> => s !== null)
     .sort((a, b) => {
       // Push resolved stories to the end
       if (a.resolved && !b.resolved) return 1;
