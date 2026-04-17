@@ -33,7 +33,11 @@ export default function BriefAISummary() {
     );
   }
 
-  if (!stories.length) return null;
+  if (!stories.length) return (
+    <div dir={dir} className="rounded-xl border border-yellow-400/20 bg-yellow-400/5 px-4 py-3 text-xs text-yellow-400/60">
+      {isHe ? 'טוען סיכום...' : 'Loading summary...'}
+    </div>
+  );
 
   const now = new Date();
   const timeStr = isHe
@@ -59,8 +63,14 @@ export default function BriefAISummary() {
       return true;
     });
 
+  if (!sorted.length) return (
+    <div dir={dir} className="rounded-xl border border-yellow-400/20 bg-yellow-400/5 px-4 py-3 text-xs text-yellow-400/60">
+      {isHe ? `${stories.length} סיפורים נטענו, אך כולם סוננו` : `${stories.length} stories loaded but all filtered`}
+    </div>
+  );
+
   return (
-    <div dir={dir} className="rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 space-y-2.5">
+    <div dir={dir} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 space-y-2.5">
       {/* Header */}
       <div className="flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse shrink-0" />
