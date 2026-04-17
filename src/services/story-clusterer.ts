@@ -571,7 +571,7 @@ function extractBestSentence(desc: string, isHe: boolean): string {
   return sentences.reduce((best, s) => scoreImpact(s, isHe) >= scoreImpact(best, isHe) ? s : best, sentences[0]);
 }
 
-function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he: string; en: string } {
+function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis, chosenHeadline?: { he: string; en: string }): { he: string; en: string } {
   const isJunkDesc = (d: string) =>
     !d || d.length < 20 ||
     /^\d+\s*כתבות/.test(d) ||
@@ -656,8 +656,23 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
   // ────────────────────────────────────────────────────────────
 
   const mustReSummary = SUMMARY_MUST_CONTAIN[cluster.topic];
-  const mainHeadlineHe = TOPIC_HEADLINES[cluster.topic]?.he || '';
-  const mainHeadlineEn = TOPIC_HEADLINES[cluster.topic]?.en || '';
+  const mainHeadlineHe = chosenHeadline?.he || TOPIC_HEADLINES[cluster.topic]?.he || '';
+  const mainHeadlineEn = chosenHeadline?.en || TOPIC_HEADLINES[cluster.topic]?.en || '';
+
+  // Derive per-headline keyword filter so summaries match the specific story, not just the broad topic.
+  // Extract the 3 most distinctive Hebrew/English words from the chosen headline (length > 3, skip stop words).
+  const STOP_WORDS = /^(של|על|אל|את|הם|הן|שה|כי|גם|אחד|אחת|זה|זו|לא|כן|אם|עם|בין|אחר|כל|יש|אין|עוד|כבר|רק|מה|איך|כך|אבל|אחרי|לפי|ולא|כדי|the|and|for|that|with|from|this|are|was|has|have|been|will|into|its|but|not|they|than|also|when|then|after|said|over|more)$/i;
+  function headlineAnchorRe(hl: string): RegExp | null {
+    const words = hl.split(/[\s,.:;!?·•\-–—"'()[\]/\\]+/)
+      .map(w => w.replace(/[^\u05D0-\u05FAa-zA-Z]/g, ''))
+      .filter(w => w.length > 3 && !STOP_WORDS.test(w))
+      .slice(0, 4);
+    if (words.length < 2) return null;
+    const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    return new RegExp(escaped.join('|'), 'i');
+  }
+  const heAnchorRe = headlineAnchorRe(mainHeadlineHe);
+  const enAnchorRe = headlineAnchorRe(mainHeadlineEn);
 
   // Strip source names from end of titles
   const stripSource = (t: string) => t.trim()
@@ -672,12 +687,30 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis): { he:
 
   function getVerifiedTitles(lang: 'he' | 'en', mainHL: string): string[] {
     const mainNorm = normTitle(mainHL);
+    const anchorRe = lang === 'he' ? heAnchorRe : enAnchorRe;
+    // First pass: must-contain + anchor (most specific)
+    const filtered = cluster.articles
+      .filter(a => {
+        if (a.article.language !== lang) return false;
+        if (isJunkTitle(a.article.title)) return false;
+        if (mustReSummary && !mustReSummary.test(a.article.title)) return false;
+        if (anchorRe && !anchorRe.test(a.article.title)) return false;
+        if (normTitle(a.article.title) === mainNorm) return false;
+        return true;
+      })
+      .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
+      .slice(0, 3)
+      .map(a => stripSource(a.article.title))
+      .filter(t => t.length > 12);
+
+    if (filtered.length > 0) return filtered;
+
+    // Second pass: must-contain only (no anchor) — fallback for when anchor is too tight
     return cluster.articles
       .filter(a => {
         if (a.article.language !== lang) return false;
         if (isJunkTitle(a.article.title)) return false;
         if (mustReSummary && !mustReSummary.test(a.article.title)) return false;
-        // Don't repeat the main headline
         if (normTitle(a.article.title) === mainNorm) return false;
         return true;
       })
@@ -961,7 +994,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       if (!mustRe.test(hl)) return null; // Off-topic headline — discard
     }
 
-    const summary = buildSummary(cluster, bestArticle);
+    const summary = buildSummary(cluster, bestArticle, headline);
     const { likelihood, delta, confidence } = calculateLikelihood(cluster);
     const lens = determineLens(cluster);
     const isSignal = cluster.articles.some((a) => a.analysis.isSignal);
