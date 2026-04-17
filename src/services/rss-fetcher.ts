@@ -48,7 +48,11 @@ function mapItems(
       sourceName: source.name,
       lensCategory: source.lensCategory,
       language: source.language,
-      title: item.title || '',
+      title: (item.title || '')
+        // Google News appends " - Source Name" or " - domain.co.il" to titles
+        .replace(/\s*[–—\-]\s*[\w\s]+(\.co\.il|\.com|\.net|\.org|\.il)\s*$/i, '')
+        .replace(/\s*[–—\-]\s*(הארץ|ינט|ynet|וואלה|כאן|גלובס|מעריב|ישראל היום|Jerusalem Post|Reuters|AP|BBC|CNN|i24NEWS|Times of Israel|Al-Monitor|Middle East Eye|The Guardian|France 24|Deutsche Welle|Sky News)\s*$/i, '')
+        .trim(),
       description: item.contentSnippet || item.content || item.summary || '',
       link: item.link!,
       pubDate: item.pubDate || item.isoDate || '',
