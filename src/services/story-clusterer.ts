@@ -706,7 +706,7 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis, chosen
     if (filtered.length > 0) return filtered;
 
     // Second pass: must-contain only (no anchor) — fallback for when anchor is too tight
-    return cluster.articles
+    const pass2 = cluster.articles
       .filter(a => {
         if (a.article.language !== lang) return false;
         if (isJunkTitle(a.article.title)) return false;
@@ -716,6 +716,20 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis, chosen
       })
       .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
       .slice(0, 3)
+      .map(a => stripSource(a.article.title))
+      .filter(t => t.length > 12);
+    if (pass2.length > 0) return pass2;
+
+    // Third pass: any article in this language, no topic filter — cluster membership already guarantees relevance
+    return cluster.articles
+      .filter(a => {
+        if (a.article.language !== lang) return false;
+        if (isJunkTitle(a.article.title)) return false;
+        if (normTitle(a.article.title) === mainNorm) return false;
+        return true;
+      })
+      .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
+      .slice(0, 2)
       .map(a => stripSource(a.article.title))
       .filter(t => t.length > 12);
   }
@@ -750,6 +764,12 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis, chosen
     const heTitles = getVerifiedTitles('he', mainHeadlineHe);
     if (heTitles.length >= 2) heSummary = heTitles.slice(0, 2).join(' · ');
     else if (heTitles.length === 1) heSummary = heTitles[0];
+  }
+  // Fallback: use English titles when no Hebrew articles exist in this cluster
+  if (!heSummary) {
+    const enTitles = getVerifiedTitles('en', mainHeadlineEn);
+    if (enTitles.length >= 2) heSummary = enTitles.slice(0, 2).join(' · ');
+    else if (enTitles.length === 1) heSummary = enTitles[0];
   }
   if (!heSummary) heSummary = metadataFallback('he');
 

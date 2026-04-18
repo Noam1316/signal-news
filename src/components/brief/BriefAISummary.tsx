@@ -94,12 +94,12 @@ export default function BriefAISummary() {
           const isSameAsHeadline = (t: string) => normStart(t) === normStart(headline);
 
           const subText = (() => {
-            const isEnglish = (t: string) => /^[a-zA-Z]/.test(t.trim());
             const isMeta = (t: string) =>
               /^\d+\s*כתבות/.test(t.trim()) ||     // "8 כתבות ·..."
+              /^\d+\s*articles/.test(t.trim()) ||   // "8 articles ·..."
               /^מכוסה ע"י/.test(t.trim()) ||        // "מכוסה ע"י Sources..."
               /^מכוסה על ידי/.test(t.trim());       // alt form
-            const isGood = (t: string) => t.length >= 20 && !isSameAsHeadline(t) && !isMeta(t) && !(isHe && isEnglish(t));
+            const isGood = (t: string) => t.length >= 20 && !isSameAsHeadline(t) && !isMeta(t);
             if (summary && isGood(summary))
               return summary.length > 180 ? summary.slice(0, 177).trimEnd() + '…' : summary;
             if (why && isGood(why))
