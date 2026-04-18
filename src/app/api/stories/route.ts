@@ -14,6 +14,47 @@ import type { BriefStory } from '@/lib/types';
 let cache: { stories: BriefStory[]; timestamp: number } | null = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+/** Returns true if text is predominantly Latin (English) */
+const isEnglish = (t: string) => /^[a-zA-Z]/.test(t.trim());
+
+/**
+ * Translate a single English string to Hebrew via MyMemory free API.
+ * No API key required. Falls back to original on any error.
+ */
+async function translateToHebrew(text: string): Promise<string> {
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|he`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) return text;
+    const data = await res.json() as { responseData?: { translatedText?: string }; responseStatus?: number };
+    const translated = data?.responseData?.translatedText;
+    if (translated && translated.length > 5 && data?.responseStatus === 200) return translated;
+    return text;
+  } catch {
+    return text; // fallback: show English as-is
+  }
+}
+
+/**
+ * Post-process stories: translate English summary.he to Hebrew.
+ * Only translates stories where summary.he is English text.
+ * Results baked into the 5-min cache — translation runs once per window.
+ */
+async function translateEnglishSummaries(stories: BriefStory[]): Promise<BriefStory[]> {
+  const toTranslate = stories.filter(s => s.summary?.he && isEnglish(s.summary.he));
+  if (toTranslate.length === 0) return stories;
+
+  const translated = await Promise.all(
+    toTranslate.map(s => translateToHebrew(s.summary.he))
+  );
+
+  return stories.map(story => {
+    const idx = toTranslate.indexOf(story);
+    if (idx === -1) return story;
+    return { ...story, summary: { ...story.summary, he: translated[idx] } };
+  });
+}
+
 export async function GET() {
   // Return cached if fresh
   if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
@@ -42,11 +83,14 @@ export async function GET() {
     }
 
     // Generate stories from clusters (uses Groq results if available)
-    const stories = generateStories(articles, 20);
+    const rawStories = generateStories(articles, 20);
 
-    if (stories.length === 0) {
+    if (rawStories.length === 0) {
       throw new Error('No clusters formed');
     }
+
+    // Translate English summaries to Hebrew using MyMemory free API (no key needed)
+    const stories = await translateEnglishSummaries(rawStories);
 
     cache = { stories, timestamp: Date.now() };
 
