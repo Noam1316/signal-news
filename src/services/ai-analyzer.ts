@@ -112,7 +112,7 @@ const TOPIC_KEYWORDS: Record<string, string[]> = {
   ],
   'Gaza Conflict': ['gaza', 'hamas', 'hostages', 'idf', 'humanitarian', 'rafah', 'khan younis', 'sinwar', 'unrwa', 'עזה', 'חמאס', 'חטופים', 'רפח', 'אונר"א', 'ceasefire gaza', 'הפסקת אש עזה', 'הפסקת אש בעזה'],
   'Lebanon/Hezbollah': ['lebanon', 'hezbollah', 'nasrallah', 'beirut', 'south lebanon', 'לבנון', 'חיזבאללה', 'ביירות', 'דרום לבנון'],
-  'Saudi Normalization': ['saudi', 'normalization', 'mbs', 'abraham accords', 'riyadh', 'arab states', 'סעודיה', 'נורמליזציה', 'אברהם', 'ריאד'],
+  'Saudi Normalization': ['saudi', 'normalization', 'mbs', 'abraham accords', 'riyadh', 'arab states', 'סעודיה', 'נורמליזציה', 'הסכמי אברהם', 'ריאד'],
   'US Politics': ['trump', 'biden', 'harris', 'congress', 'white house', 'washington', 'senate', 'republican', 'democrat', 'tariff', 'tariffs', 'election', 'oval office', 'state department', 'פה', 'מכס', 'טראמפ', 'ביידן'],
   'China': ['china', 'beijing', 'xi jinping', 'taiwan', 'chinese', 'prc', 'bri', 'huawei', 'סין', 'בייג\'ינג', 'שי ג\'ינפינג', 'טיוואן'],
   'West Bank': ['west bank', 'settlements', 'jenin', 'ramallah', 'nablus', 'palestinian authority', 'abu mazen', 'יהודה ושומרון', 'התנחלויות', 'ג\'נין', 'שכם', 'רמאללה'],
