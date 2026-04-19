@@ -410,19 +410,19 @@ export const stories: StoryDetail[] = [
     slug: 'northern-border-security',
     lens: 'israel',
     headline: {
-      he: 'ביטחון הגבול הצפוני: חיזבאללה מגביר פעילות',
-      en: 'Northern Border Security: Hezbollah Escalates Activity',
+      he: 'הגבול הצפוני לאחר הפסקת האש: חיזבאללה מתארגן מחדש',
+      en: 'Northern Border Post-Ceasefire: Hezbollah Reconstituting',
     },
     summary: {
-      he: 'פעילות חיזבאללה לאורך הגבול הצפוני עלתה ב-40% בחודש האחרון. צה"ל מזהה תנועות כוחות חריגות ומערך טילים מעודכן. חרף הרטוריקה, גורמי מודיעין מעריכים שנסראללה אינו מעוניין במלחמה מלאה כרגע.',
-      en: 'Hezbollah activity along the northern border has increased by 40% in the past month. The IDF identifies unusual force movements and an updated missile array. Despite the rhetoric, intelligence sources assess that Nasrallah is not interested in a full-scale war at this time.',
+      he: 'חיזבאללה מתארגן מחדש תחת מנהיגות נעים קאסם לאחר אובדן כ-4,000 לוחמים ומחסני נשק במבצע 2024. צה"ל מדווח על הברחות נשק מחדש דרך סוריה; הפסקת האש מחזיקה אך עתידה שברירי.',
+      en: 'Hezbollah is reconstituting under Naim Qassem\'s leadership after losing ~4,000 fighters and weapons depots in 2024. IDF reports renewed arms smuggling via Syria; the ceasefire holds but remains fragile.',
     },
     likelihood: 38,
     likelihoodLabel: 'low',
-    delta: 12,
+    delta: 5,
     why: {
-      he: 'זינוק חד בפעילות חיזבאללה לאחר חיסול בכיר בארגון. הערכת המודיעין גורסת שמדובר בהפגנת כוח ולא בכוונה למלחמה.',
-      en: 'Sharp spike in Hezbollah activity after the elimination of a senior operative. Intelligence assessment considers this a show of force rather than intent for war.',
+      he: 'הפסקת האש מנובמבר 2024 מחזיקה, אך איראן מנסה לאחסן מחדש את חיזבאללה. צה"ל שומר על חופש פעולה בסוריה ומכה בשיירות.',
+      en: 'The November 2024 ceasefire holds, but Iran is attempting to re-arm Hezbollah. The IDF maintains freedom of action in Syria and strikes convoys.',
     },
     isSignal: true,
     category: { he: 'ביטחון', en: 'Security' },
@@ -452,9 +452,9 @@ export const stories: StoryDetail[] = [
     narratives: [
       {
         id: 'north-n1',
-        thesis: { he: 'חיזבאללה מפגין כוח אך לא רוצה מלחמה', en: 'Hezbollah is showing force but doesn\'t want war' },
-        trend: 'growing',
-        keyFrame: { he: 'נסראללה בנאום: "לא נתחיל, אבל לא נברח"', en: 'Nasrallah in speech: "We won\'t start, but we won\'t run"' },
+        thesis: { he: 'חיזבאללה מוחלש ומתאושש לאט — אין כוונה לעימות בטווח הקרוב', en: 'Hezbollah is weakened and recovering slowly — no intent for confrontation near-term' },
+        trend: 'stable',
+        keyFrame: { he: 'נעים קאסם: "נשמור על הפסקת האש כל עוד ישראל תשמור"', en: 'Naim Qassem: "We will uphold the ceasefire as long as Israel does"' },
         sources: [{ name: 'Al Jazeera', url: '#' }, { name: 'Channel 13', url: '#' }],
       },
       {
@@ -501,18 +501,18 @@ export const stories: StoryDetail[] = [
       },
     },
     soWhat: [
-      { he: 'תושבי הצפון חוזרים למצב של חוסר ודאות ביטחונית', en: 'Northern residents return to a state of security uncertainty' },
-      { he: 'הסלמה בצפון עלולה לשבש את שיחות הגרעין עם איראן', en: 'Northern escalation could disrupt nuclear talks with Iran' },
-      { he: 'עלות הביטחון בצפון מוערכת ב-2 מיליארד ש"ח לשנה', en: 'Northern security costs estimated at 2 billion NIS per year' },
+      { he: 'תושבי הצפון חוזרים לבתיהם אך חוסר הוודאות על יציבות הפסקת האש נמשך', en: 'Northern residents return home but uncertainty about ceasefire stability persists' },
+      { he: 'הברחות נשק איראניות דרך סוריה מאיימות על שיקום ההרתעה', en: 'Iranian arms smuggling via Syria threatens the rebuilt deterrence' },
+      { he: 'לבנון בתהליך שיקום; חיזבאללה מאבד עמדות פוליטיות פנים-לבנוניות', en: 'Lebanon in reconstruction; Hezbollah losing internal political standing' },
     ],
     watchNext: [
       {
-        trigger: { he: 'שיגור טילים או רקטות לעבר שטח ישראל', en: 'Missile or rocket launch toward Israeli territory' },
-        implication: { he: 'הסלמה מיידית; תגובה ישראלית חזקה; סיכון למלחמה', en: 'Immediate escalation; strong Israeli response; risk of war' },
+        trigger: { he: 'הברחת נשק משמעותית שצה"ל מחטיא — חיזבאללה צובר טילים מחדש', en: 'Major arms shipment IDF misses — Hezbollah rebuilds missile stock' },
+        implication: { he: 'ירידה ביתרון האיכותי של ישראל; לחץ לפעולה מקדימה', en: 'Erosion of Israel\'s qualitative edge; pressure for preemptive action' },
       },
       {
-        trigger: { he: 'תיווך צרפתי מוביל להסכם הפרדת כוחות חדש', en: 'French mediation leads to a new force separation agreement' },
-        implication: { he: 'ירידה חדה בסיכון; חזרת תושבי הצפון', en: 'Sharp decrease in risk; return of northern residents' },
+        trigger: { he: 'הפרת הפסקת האש ע"י חיזבאללה — שיגור לעבר ישראל', en: 'Hezbollah ceasefire violation — launch toward Israel' },
+        implication: { he: 'מבצע ישראלי חדש; שאלת הסכמת ארה"ב וצרפת', en: 'New Israeli operation; question of US and French consent' },
       },
     ],
   },
