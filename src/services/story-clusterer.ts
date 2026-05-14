@@ -720,18 +720,10 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis, chosen
       .filter(t => t.length > 12);
     if (pass2.length > 0) return pass2;
 
-    // Third pass: any article in this language, no topic filter — cluster membership already guarantees relevance
-    return cluster.articles
-      .filter(a => {
-        if (a.article.language !== lang) return false;
-        if (isJunkTitle(a.article.title)) return false;
-        if (normTitle(a.article.title) === mainNorm) return false;
-        return true;
-      })
-      .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore)
-      .slice(0, 2)
-      .map(a => stripSource(a.article.title))
-      .filter(t => t.length > 12);
+    // No third pass — returning unfiltered articles caused off-topic summaries
+    // (e.g. Israeli military tech article in Ukraine cluster). Better to show
+    // metadata fallback than a wrong summary.
+    return [];
   }
 
   function getGroqSummary(lang: 'he' | 'en'): string {
