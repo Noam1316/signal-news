@@ -367,7 +367,7 @@ function clusterByTopic(articles: FetchedArticle[]): Cluster[] {
   return Array.from(topicMap.entries())
     .map(([topic, items]) => ({ topic, articles: items }))
     .filter((c) => {
-      if (c.articles.length < 2) return false;
+      if (c.articles.length < 3) return false;
       const uniqueSrc = new Set(c.articles.map(a => a.article.sourceId)).size;
       // High-priority topics: allow single source if 3+ articles (active breaking coverage)
       if (uniqueSrc < 2) {

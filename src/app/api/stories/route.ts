@@ -14,8 +14,10 @@ import type { BriefStory } from '@/lib/types';
 let cache: { stories: BriefStory[]; timestamp: number } | null = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-/** Returns true if text is predominantly Latin (English) */
-const isEnglish = (t: string) => /^[a-zA-Z]/.test(t.trim());
+/** Returns true if text contains significant English that needs translation */
+const isEnglish = (t: string) =>
+  /^['"""''`\s]*[a-zA-Z]/.test(t.trim()) ||     // starts with English (incl. after quotes)
+  /([a-zA-Z]+[ \t]){2,}[a-zA-Z]+/.test(t);      // 3+ consecutive English words anywhere
 
 /**
  * Translate a single English string to Hebrew via MyMemory free API.
