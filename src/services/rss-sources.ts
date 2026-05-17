@@ -20,11 +20,11 @@ export const rssSources: RssSource[] = [
   { id: 'globes', name: 'Globes', url: 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=2', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
 
   // ── Israeli Partisan / Opinion-leaning ──
-  { id: 'israelhayom', name: 'Israel Hayom', url: 'https://www.israelhayom.co.il/rss', language: 'he', lensCategory: 'il-partisan', country: 'IL' },
+  { id: 'israelhayom', name: 'Israel Hayom', url: 'https://news.google.com/rss/search?q=site:israelhayom.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-partisan', country: 'IL' },
   { id: 'haaretz', name: 'Haaretz', url: 'https://news.google.com/rss/search?q=site:haaretz.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-partisan', country: 'IL' },
   { id: 'haaretz-en', name: 'Haaretz (EN)', url: 'https://www.haaretz.com/srv/haaretz-latest-headlines', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
   { id: 'inn', name: 'Arutz Sheva', url: 'https://www.israelnationalnews.com/Rss.aspx', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
-  { id: 'timesofisrael', name: 'Times of Israel', url: 'https://www.timesofisrael.com/feed/', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
+  { id: 'timesofisrael', name: 'Times of Israel', url: 'https://news.google.com/rss/search?q=site:timesofisrael.com&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
   { id: 'jpost', name: 'Jerusalem Post', url: 'https://www.jpost.com/rss/rssfeedsfrontpage.aspx', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
   { id: 'i24news', name: 'i24NEWS', url: 'https://news.google.com/rss/search?q=site:i24news.tv&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
   { id: 'channel14', name: 'ערוץ 14', url: 'https://news.google.com/rss/search?q=site:now14.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-partisan', country: 'IL' },
