@@ -1132,5 +1132,25 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       return 0;
     });
 
-  return stories;
+  // Deduplicate: remove stories with the same normalized headline
+  // (can happen when cross-contribution puts same breaking news in two clusters)
+  const normHL = (s: BriefStory) =>
+    (s.headline.he || s.headline.en || '').replace(/[^א-׺a-zA-Z0-9]/g, '').slice(0, 30).toLowerCase();
+  const seenHL = new Map<string, number>(); // key → index of kept story
+  const deduped: typeof stories = [];
+  for (const story of stories) {
+    const key = normHL(story);
+    if (seenHL.has(key)) {
+      // Keep the one with more sources
+      const existingIdx = seenHL.get(key)!;
+      if ((story.sources?.length || 0) > (deduped[existingIdx]?.sources?.length || 0)) {
+        deduped[existingIdx] = story;
+      }
+    } else {
+      seenHL.set(key, deduped.length);
+      deduped.push(story);
+    }
+  }
+
+  return deduped;
 }
