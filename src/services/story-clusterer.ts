@@ -727,17 +727,27 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis, chosen
   }
 
   function getGroqSummary(lang: 'he' | 'en'): string {
-    // Try Groq summaries from articles (if Groq API is configured)
-    for (const a of cluster.articles) {
+    const anchorRe = lang === 'he' ? heAnchorRe : enAnchorRe;
+    const mainHL   = lang === 'he' ? mainHeadlineHe : mainHeadlineEn;
+
+    // Sort by signal score — prefer highest-signal article
+    const sorted = [...cluster.articles]
+      .sort((a, b) => b.analysis.signalScore - a.analysis.signalScore);
+
+    for (const a of sorted) {
       const groq = lang === 'he'
         ? getGroqResult(a.article.id)?.summaryHe
         : getGroqResult(a.article.id)?.summaryEn;
-      if (groq && groq.length > 30) {
-        // Verify Groq summary article is on-topic
-        if (!mustReSummary || mustReSummary.test(a.article.title)) {
-          return deduplicateWithHeadline(groq, a.article.title || '');
-        }
-      }
+      if (!groq || groq.length < 30) continue;
+
+      // 1. Article title must match topic pattern
+      if (mustReSummary && !mustReSummary.test(a.article.title)) continue;
+
+      // 2. Groq summary must contain headline anchor words
+      //    (prevents off-topic Groq summaries from bleeding across clusters)
+      if (anchorRe && !anchorRe.test(groq)) continue;
+
+      return deduplicateWithHeadline(groq, mainHL);
     }
     return '';
   }

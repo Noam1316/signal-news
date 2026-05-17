@@ -91,6 +91,11 @@ const TOPIC_DISPLAY: Record<string, LocalizedText> = {
   'Judicial Reform': { he: 'רפורמה משפטית', en: 'Judicial Reform' },
   'Security': { he: 'ביטחון', en: 'Security' },
   'Diplomacy': { he: 'דיפלומטיה', en: 'Diplomacy' },
+  'China': { he: 'סין/טייוואן', en: 'China/Taiwan' },
+  'Elections': { he: 'בחירות', en: 'Elections' },
+  'Iran Talks': { he: 'שיחות גרעין עם איראן', en: 'Iran Talks' },
+  'Turkey/Egypt': { he: 'טורקיה/מצרים', en: 'Turkey/Egypt' },
+  'General': { he: 'כללי', en: 'General' },
 };
 
 interface TopicStats {
