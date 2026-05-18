@@ -5,6 +5,59 @@ import { generateStories } from '@/services/story-clusterer';
 import { analyzeArticles } from '@/services/ai-analyzer';
 import { savePredictionSnapshots } from '@/services/prediction-tracker';
 import { computeEarlyMovers } from '@/services/signal-intelligence';
+import { isGroqEnabled } from '@/services/groq-analyzer';
+
+/**
+ * Use Groq to generate a specific, news-grounded explanation for a Signal vs Market gap.
+ * Returns null if Groq is unavailable or times out.
+ */
+async function groqWhyDifferent(
+  storyHeadline: string,
+  storySummary: string,
+  marketQuestion: string,
+  signalPct: number,
+  marketPct: number,
+  direction: 'signal-higher' | 'market-higher' | 'aligned',
+): Promise<string | null> {
+  if (!isGroqEnabled()) return null;
+  try {
+    const delta = Math.abs(signalPct - marketPct);
+    const dirHe = direction === 'signal-higher'
+      ? `Signal מעריך סיכוי גבוה יותר (${signalPct}%) מהשוק (${marketPct}%)`
+      : `השוק מעריך סיכוי גבוה יותר (${marketPct}%) מ-Signal (${signalPct}%)`;
+
+    const prompt = `אתה אנליסט מודיעין גיאופוליטי. הסבר בעברית, ב-2-3 משפטים תמציתיים, מדוע קיים פער של ${delta}% בין Signal לשוק הניבוי.
+
+נושא הסיפור: ${storyHeadline}
+תקציר: ${storySummary}
+שאלת השוק: ${marketQuestion}
+${dirHe}
+
+כתוב הסבר ספציפי הקושר בין תוכן הסיפור לפער. אל תשתמש בניסוחים גנריים. התחל ישירות עם התוכן.`;
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 180,
+        temperature: 0.4,
+      }),
+      signal: AbortSignal.timeout(6000),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
+    const text = data.choices?.[0]?.message?.content?.trim();
+    return text && text.length > 20 ? text : null;
+  } catch {
+    return null;
+  }
+}
 
 let cache: { data: any; ts: number } | null = null;
 const TTL = 3 * 60 * 1000; // 3 min
@@ -78,6 +131,38 @@ export async function GET() {
     });
 
     const matches = matchStoriesWithMarkets(storyData, markets, earlyMovers);
+
+    // Enrich top matches with Groq-generated explanations (non-aligned only, top 4 by alpha)
+    if (isGroqEnabled() && matches.length > 0) {
+      const storyMap = new Map(stories.map(s => [s.slug, s]));
+      const topToEnrich = [...matches]
+        .filter(m => m.alphaDirection !== 'aligned')
+        .sort((a, b) => b.alphaScore - a.alphaScore)
+        .slice(0, 4);
+
+      await Promise.allSettled(topToEnrich.map(async (match) => {
+        const story = storyMap.get(match.topic);
+        const headlineHe = story
+          ? (typeof story.headline === 'string' ? story.headline : story.headline.he || '')
+          : match.topic;
+        const summaryHe = story
+          ? (typeof story.summary === 'string' ? story.summary : story.summary?.he || '')
+          : '';
+
+        const groqExplanation = await groqWhyDifferent(
+          headlineHe,
+          summaryHe,
+          match.polymarketTitle,
+          match.signalLikelihood,
+          match.marketProbability,
+          match.alphaDirection,
+        );
+
+        if (groqExplanation) {
+          match.whyDifferent = groqExplanation;
+        }
+      }));
+    }
 
     // Save prediction snapshots for track record (non-blocking)
     savePredictionSnapshots(matches).catch(() => {});
