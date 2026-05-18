@@ -605,7 +605,7 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis, chosen
     'US Politics':          /טראמפ|ביידן|וושינגטון|קונגרס|הבית הלבן|סנאט|trump|biden|washington|congress|white house|senate/i,
     'Syria':                /סוריה|דמשק|אסד|מורדים|syria|damascus|assad|rebel/i,
     'China':                /סין|טייוואן|בייג.ינג|שי ג.ינפינג|china|taiwan|beijing|xi jinping/i,
-    'Judicial Reform':      /רפורמה|בג.ץ|בית משפט עליון|חוקה|judicial|supreme court/i,
+    'Judicial Reform':      /רפורמה|בג.ץ|בית המשפט|בית משפט|חוקה|כנסת|judicial|supreme court/i,
     'Security':             /צה.ל|ביטחון|צבא|טיל|פיגוע|מתקפה|idf|military|attack|missile|terror/i,
     'Diplomacy':            /דיפלומטי|שגריר|או.ם|האומות|diplomat|ambassador|un |united nations/i,
     'Economy':              /כלכל|מכס|מניות|נאסד.ק|אינפלציה|ריבית|econom|tariff|stock|nasdaq|inflation|interest rate/i,
@@ -705,12 +705,15 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis, chosen
 
     if (filtered.length > 0) return filtered;
 
-    // Second pass: must-contain only (no anchor) — fallback for when anchor is too tight
+    // Second pass: anchor required, must-contain relaxed — fallback for when both are too tight
+    // Anchor is ALWAYS required (it encodes the headline's key concepts).
+    // Without it, any Hebrew article in the cluster can bleed in (e.g. Virginia map → Knesset crisis).
     const pass2 = cluster.articles
       .filter(a => {
         if (a.article.language !== lang) return false;
         if (isJunkTitle(a.article.title)) return false;
         if (mustReSummary && !mustReSummary.test(a.article.title)) return false;
+        if (anchorRe && !anchorRe.test(a.article.title)) return false; // always enforce anchor
         if (normTitle(a.article.title) === mainNorm) return false;
         return true;
       })
