@@ -177,10 +177,9 @@ export function matchStoriesWithMarkets(
   const matches: SignalVsMarket[] = [];
 
   for (const story of stories) {
-    // Use headline only (not slug) — slug encodes cluster topic which can be wrong
-    // when a story mentions a geopolitical name in a non-geopolitical context
-    // (e.g. "'תחזור לרוסיה': אשדוד attack" gets ukraine-russia slug → false match)
-    const storyText = `${story.headline} ${story.category || ''}`.toLowerCase();
+    // Normalize slug: replace hyphens with spaces so "iran-nuclear" → "iran nuclear"
+    const slugNorm = (story.slug || '').replace(/-/g, ' ');
+    const storyText = `${story.headline} ${slugNorm} ${story.category || ''}`.toLowerCase();
 
     // Find matching topic keywords
     let bestMatch: PolymarketEvent | null = null;

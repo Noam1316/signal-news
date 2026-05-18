@@ -133,7 +133,7 @@ const TOPIC_KEYWORDS: Record<string, string[]> = {
     'בחירות מוקדמות', 'סקר בחירות', 'תוצאות בחירות', 'ניצחון בחירות', 'מנדטים',
     'אורבן', 'הונגריה', 'בחירות צרפת', 'בחירות גרמניה', 'בחירות בריטניה',
   ],
-  'Ukraine/Russia': ['ukraine', 'russia', 'putin', 'zelensky', 'nato', 'kyiv', 'moscow', 'donbas', 'אוקראינה', 'רוסיה', 'פוטין', 'נאטו'],
+  'Ukraine/Russia': ['ukraine', 'russia', 'putin', 'zelensky', 'nato', 'kyiv', 'moscow', 'donbas', 'אוקראינה', 'מלחמה ברוסיה', 'רוסיה ואוקראינה', 'פלישת רוסיה', 'פוטין', 'זלנסקי', 'נאטו', 'מוסקבה', 'קייב'],
   'Turkey/Egypt': ['turkey', 'erdogan', 'ankara', 'egypt', 'sisi', 'cairo', 'regional', 'טורקיה', 'ארדואן', 'מצרים', 'סיסי', 'קהיר'],
   'Judicial Reform': ['judicial', 'supreme court', 'democracy', 'protest', 'coalition', 'knesset', 'רפורמה', 'בג"צ', 'מחאה', 'קואליציה', 'כנסת'],
   'Security': ['terror attack', 'missile strike', 'rocket fire', 'drone strike', 'airstrike', 'naval blockade', 'warship', 'tanker attack', 'military operation', 'security threat', 'טרור', 'טיל', 'כטב"מ', 'תקיפה צבאית', 'פיגוע', 'ספינת מלחמה', 'חסימה ימית', 'מצר הורמוז', 'תקיפת מכלית', 'מבצע צבאי', 'איום ביטחוני', 'ביטחון לאומי'],
