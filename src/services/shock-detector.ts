@@ -517,10 +517,10 @@ function detectFragmentationShocks(topicStats: Map<string, TopicStats>): ShockEv
 
     // Split by lens: Israeli vs International
     const israeliArticles = stats.articles.filter((a) =>
-      a.article.lensCategory.startsWith('il-')
+      a.article.lensCategory?.startsWith('il-')
     );
     const internationalArticles = stats.articles.filter((a) =>
-      a.article.lensCategory.startsWith('int-')
+      a.article.lensCategory?.startsWith('int-')
     );
 
     if (israeliArticles.length < 2 || internationalArticles.length < 2) continue;

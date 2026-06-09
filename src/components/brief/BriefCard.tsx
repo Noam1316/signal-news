@@ -12,6 +12,16 @@ import { getStoryLean, LEAN_LABEL, getSourceLeanBreakdown } from '@/utils/politi
 import { computeGrade, GRADE_STYLE } from '@/utils/credibility-grade';
 import { getSparklineData, getRealDelta } from '@/hooks/useLikelihoodHistory';
 import SparkLine from '@/components/shared/SparkLine';
+
+function getAgeLabel(updatedAt: string | undefined, lang: string): string {
+  if (!updatedAt) return '';
+  const ms = Date.now() - new Date(updatedAt).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 60) return lang === 'he' ? `${mins}ד` : `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return lang === 'he' ? `${hrs}ש` : `${hrs}h`;
+  return lang === 'he' ? `${Math.floor(hrs / 24)}י` : `${Math.floor(hrs / 24)}d`;
+}
 import LikelihoodMeter from '@/components/shared/LikelihoodMeter';
 import LikelihoodTooltip from '@/components/shared/LikelihoodTooltip';
 import DeltaIndicator from '@/components/shared/DeltaIndicator';
@@ -160,6 +170,19 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Age + momentum badge */}
+          {(() => {
+            const age = getAgeLabel(story.updatedAt, lang);
+            const momentum = displayDelta > 3 ? '↑' : displayDelta < -3 ? '↓' : null;
+            const momentumColor = displayDelta > 3 ? 'text-emerald-400' : 'text-red-400';
+            if (!age) return null;
+            return (
+              <span className="text-[10px] font-mono text-gray-500 flex items-center gap-0.5">
+                {age}
+                {momentum && <span className={momentumColor}>{momentum}</span>}
+              </span>
+            );
+          })()}
           {story.resolved ? (
             <span className="text-[11px] px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400 border border-gray-600/30 font-medium">
               {lang === 'he' ? '✓ הושלם' : '✓ Resolved'}
@@ -193,6 +216,28 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
       {/* Headline */}
       <h2 className="text-xl font-bold leading-snug tracking-tight">{t(story.headline)}</h2>
 
+      {/* Narrative split — promoted above summary, 2-column split view */}
+      {story.narrativeSplit && (
+        <div className="rounded-lg overflow-hidden border border-gray-700/60 text-[11px]">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/60 border-b border-gray-700/50">
+            <span className="font-bold uppercase tracking-widest text-[9px] text-gray-500">
+              {lang === 'he' ? 'ניגוד נרטיבים' : 'Narrative Split'}
+            </span>
+            <span className="ms-auto font-mono text-orange-400/80">{story.narrativeSplit.gapPct}% gap</span>
+          </div>
+          <div className="grid grid-cols-2 divide-x divide-gray-700/50">
+            <div className="px-3 py-2 space-y-0.5 border-s-2 border-blue-500/60">
+              <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wide truncate">{story.narrativeSplit.leftSource}</p>
+              <p className="text-gray-300 leading-snug line-clamp-2">{story.narrativeSplit.leftHeadline}</p>
+            </div>
+            <div className="px-3 py-2 space-y-0.5 border-s-2 border-red-500/60">
+              <p className="text-[9px] font-bold text-red-400 uppercase tracking-wide truncate">{story.narrativeSplit.rightSource}</p>
+              <p className="text-gray-300 leading-snug line-clamp-2">{story.narrativeSplit.rightHeadline}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Summary */}
       <p className={`text-sm text-gray-300 leading-relaxed ${expanded ? '' : 'line-clamp-3'}`}>{t(story.summary)}</p>
 
@@ -218,6 +263,13 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
         <DeltaIndicator delta={displayDelta} />
         {sparkData.length >= 2 && <SparkLine data={sparkData} />}
       </div>
+
+      {/* Timeline — always visible on watched stories (builds from localStorage over visits) */}
+      {isWatched && sparkData.length >= 2 && (
+        <div className="pt-1">
+          <StoryTimeline slug={story.slug} currentLikelihood={story.likelihood} />
+        </div>
+      )}
 
       {/* First-Mover badge */}
       {story.firstMover && story.firstMover.minsAhead >= 10 && (
@@ -262,31 +314,6 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
         </div>
       )}
 
-      {/* Narrative split: right vs left headline */}
-      {story.narrativeSplit && (
-        <div className="rounded-lg border border-gray-700/50 bg-gray-800/30 px-3 py-2 space-y-1.5">
-          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-gray-500">
-            <span>📰</span>
-            <span>{lang === 'he' ? `ניגוד נרטיבים — פער ${story.narrativeSplit.gapPct}%` : `Narrative split — ${story.narrativeSplit.gapPct}% gap`}</span>
-          </div>
-          <div className="grid grid-cols-1 gap-1">
-            <div className="flex items-start gap-1.5">
-              <span className="shrink-0 mt-0.5 w-2 h-2 rounded-full bg-violet-500" />
-              <div className="min-w-0">
-                <span className="text-[9px] text-violet-400 font-semibold">{story.narrativeSplit.rightSource} </span>
-                <span className="text-[10px] text-gray-300 line-clamp-1">{story.narrativeSplit.rightHeadline}</span>
-              </div>
-            </div>
-            <div className="flex items-start gap-1.5">
-              <span className="shrink-0 mt-0.5 w-2 h-2 rounded-full bg-red-500" />
-              <div className="min-w-0">
-                <span className="text-[9px] text-red-400 font-semibold">{story.narrativeSplit.leftSource} </span>
-                <span className="text-[10px] text-gray-300 line-clamp-1">{story.narrativeSplit.leftHeadline}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Always-visible compact impact badges (top 3) */}
       {story.impacts && story.impacts.length > 0 && (

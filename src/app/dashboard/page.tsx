@@ -10,9 +10,7 @@ import BriefList from '@/components/brief/BriefList';
 import DateHeader from '@/components/brief/DateHeader';
 import HeroBar from '@/components/brief/HeroBar';
 import TrackRecord from '@/components/brief/TrackRecord';
-import StoryOfTheDay from '@/components/brief/StoryOfTheDay';
-import BriefAISummary from '@/components/brief/BriefAISummary';
-import SignalVsTraditional from '@/components/brief/SignalVsTraditional';
+import AnalystBriefing from '@/components/brief/AnalystBriefing';
 import ScrollToTop from '@/components/shared/ScrollToTop';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import EmailSubscribe from '@/components/alerts/EmailSubscribe';
@@ -132,9 +130,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-4 space-y-4">
-              <BriefAISummary />
-              <StoryOfTheDay />
-              <SignalVsTraditional />
+              <AnalystBriefing />
               {/* 2-column on large screens: news feed left, track record right */}
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
                 <BriefList compactMode={prefs.compactMode} />

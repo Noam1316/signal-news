@@ -47,7 +47,7 @@ ${dirHe}
         max_tokens: 180,
         temperature: 0.4,
       }),
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(3500),
     });
 
     if (!res.ok) return null;

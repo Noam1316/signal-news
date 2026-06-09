@@ -28,6 +28,7 @@ export interface AlphaBreakdown {
 
 export interface SignalVsMarket {
   topic: string;
+  storySlug: string;              // slug of the matched BriefStory (for watchlist cross-reference)
   topicCategory: string;          // which TOPIC_KEYWORDS category matched best (e.g. 'iran', 'ukraine')
   signalLikelihood: number;       // our score 0-100
   marketProbability: number;      // polymarket 0-100
@@ -94,11 +95,16 @@ function parseEvents(events: any[]): PolymarketEvent[] {
     .filter((e: any) => e.markets && e.markets.length > 0)
     .map((e: any) => {
       const market = e.markets[0];
-      const prices = market.outcomePrices
-        ? (typeof market.outcomePrices === 'string'
-          ? JSON.parse(market.outcomePrices)
-          : market.outcomePrices)
-        : [0.5, 0.5];
+      let prices: number[];
+      try {
+        prices = market.outcomePrices
+          ? (typeof market.outcomePrices === 'string'
+            ? JSON.parse(market.outcomePrices)
+            : market.outcomePrices)
+          : [0.5, 0.5];
+      } catch {
+        prices = [0.5, 0.5];
+      }
       return {
         id: e.id || market.id,
         title: e.title || market.question,
@@ -260,6 +266,7 @@ export function matchStoriesWithMarkets(
 
       matches.push({
         topic: story.headline,
+        storySlug: story.slug,
         topicCategory: bestCategory,
         signalLikelihood: story.likelihood,
         marketProbability: marketProb,

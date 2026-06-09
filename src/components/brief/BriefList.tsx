@@ -15,6 +15,8 @@ import { useRecordStories } from '@/hooks/useLikelihoodHistory';
 import { usePersonalization } from '@/hooks/usePersonalization';
 import { useIntelScore } from '@/hooks/useIntelScore';
 import BreakingBanner from './BreakingBanner';
+import { useKeyboardNav } from '@/hooks/useKeyboardNav';
+import WatchlistMarketAlert from './WatchlistMarketAlert';
 
 type SortKey = 'default' | 'likelihood' | 'delta' | 'sources' | 'newest';
 
@@ -167,6 +169,17 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
     if (totalClicks < 5) return [];
     return sorted.filter(s => isOutsideLane(s.category.en) && isOutsideLane(s.category.he)).slice(0, 2);
   }, [sorted, totalClicks, isOutsideLane]);
+
+  const { focusedIdx, setFocusedIdx } = useKeyboardNav({
+    count: sorted.length,
+    onExpand: () => { /* BriefCard manages its own expanded state via click */ },
+    onWatch: (idx) => { const s = sorted[idx]; if (s) toggle(s.slug); },
+    onOpenSource: (idx) => {
+      const s = sorted[idx];
+      const url = s?.sources?.[0]?.url;
+      if (url) window.open(url, '_blank', 'noopener');
+    },
+  });
 
   const watchlistCount = watchlist.size;
   const activeFilterCount = (lens !== 'all' ? 1 : 0) + (leanFilter !== 'all' ? 1 : 0) + (showWatchlistOnly ? 1 : 0) + (search.trim() ? 1 : 0) + (topicFilter.length > 0 ? 1 : 0);
@@ -360,6 +373,12 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
 
       {/* Analyst mode toggle + Export */}
       <div className="flex items-center justify-end gap-2">
+        <span
+          title={lang === 'he' ? 'ניווט מקלדת: J/K — הבא/קודם · Enter — פתח · W — מעקב · O — פתח מקור' : 'Keyboard: J/K next/prev · Enter expand · W watch · O open source'}
+          className="hidden sm:flex items-center gap-1 text-[10px] text-gray-600 border border-gray-800 rounded px-1.5 py-0.5 cursor-default hover:text-gray-400 hover:border-gray-700 transition-colors"
+        >
+          <kbd className="font-mono">J</kbd><kbd className="font-mono">/</kbd><kbd className="font-mono">K</kbd>
+        </span>
         <a
           href="/brief/print"
           target="_blank"
@@ -383,6 +402,9 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
           <span>{lang === 'he' ? 'מצב מנתח' : 'Analyst'}</span>
         </button>
       </div>
+
+      {/* Watchlist Market Alerts */}
+      {watchlist.size > 0 && <WatchlistMarketAlert />}
 
       {/* Breaking News Banner */}
       {!loading && stories.length > 0 && <BreakingBanner stories={stories} />}
@@ -413,9 +435,13 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
         <AnalystTable stories={sorted} shockBySlug={shockBySlug} />
       ) : (
         sorted.map((story, i) => (
-          <div key={story.slug} className="animate-slide-up"
+          <div key={story.slug}
+               data-card-idx={i}
+               className={`animate-slide-up transition-shadow ${focusedIdx === i ? 'ring-1 ring-yellow-400/40 rounded-xl' : ''}`}
                style={{ animationDelay: `${Math.min(i * 30, 300)}ms`, animationFillMode: 'both' }}
+               onMouseEnter={() => setFocusedIdx(i)}
                onClick={() => {
+                 setFocusedIdx(i);
                  recordClick(story.category.en || story.category.he);
                  recordStoryView();
                }}>

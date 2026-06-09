@@ -365,7 +365,7 @@ function detectSignal(text: string): { isSignal: boolean; score: number } {
 }
 
 function detectRegion(article: FetchedArticle): 'israel' | 'middle-east' | 'global' {
-  if (article.lensCategory.startsWith('il-')) return 'israel';
+  if (article.lensCategory?.startsWith('il-')) return 'israel';
   const text = `${article.title} ${article.description}`.toLowerCase();
   const meMentions = ['israel', 'iran', 'gaza', 'lebanon', 'syria', 'saudi', 'egypt', 'jordan', 'iraq']
     .filter((w) => text.includes(w)).length;
