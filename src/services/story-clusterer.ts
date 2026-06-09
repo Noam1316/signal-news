@@ -756,11 +756,71 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis, chosen
   }
 
   function metadataFallback(lang: 'he' | 'en'): string {
-    const srcNames = [...new Set(cluster.articles.map(a => a.article.sourceName))].slice(0, 3).join(', ');
-    const topic = lang === 'he'
-      ? (TOPIC_HEADLINES[cluster.topic]?.he || TOPIC_CATEGORIES[cluster.topic]?.he || cluster.topic)
-      : (TOPIC_HEADLINES[cluster.topic]?.en || cluster.topic);
-    return `${cluster.articles.length} ${lang === 'he' ? 'כתבות' : 'articles'} · ${srcNames}`;
+    const isHe = lang === 'he';
+
+    // 1. Try article descriptions — often richer than titles
+    const descCandidates = cluster.articles
+      .map(a => {
+        if (a.article.language !== lang && lang === 'he' && a.article.language === 'en') return '';
+        const raw = a.article.description || '';
+        const cleaned = cleanDescription(raw);
+        if (cleaned.length < 35 || isJunkTitle(cleaned)) return '';
+        return cleaned.slice(0, 140);
+      })
+      .filter(Boolean);
+
+    if (descCandidates.length >= 2) {
+      return descCandidates.slice(0, 2).join(' · ');
+    }
+    if (descCandidates.length === 1) {
+      return descCandidates[0];
+    }
+
+    // For Hebrew, also try English descriptions as fallback
+    if (isHe) {
+      const enDesc = cluster.articles
+        .map(a => {
+          const cleaned = cleanDescription(a.article.description || '');
+          return cleaned.length >= 35 && !isJunkTitle(cleaned) ? cleaned.slice(0, 140) : '';
+        })
+        .filter(Boolean);
+      if (enDesc.length >= 1) return enDesc[0];
+    }
+
+    // 2. Template sentence from available metadata
+    const srcNames = [...new Set(cluster.articles.map(a => a.article.sourceName))];
+    const topSrc = srcNames.slice(0, 2);
+    const extraCount = srcNames.length - 2;
+
+    // Dominant sentiment across articles
+    const sentCounts: Record<string, number> = {};
+    for (const a of cluster.articles) {
+      const s = a.analysis.sentiment;
+      sentCounts[s] = (sentCounts[s] || 0) + 1;
+    }
+    const dominant = Object.entries(sentCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'neutral';
+
+    const sentHe = dominant === 'negative' ? 'הסיקור נוטה לטון ביקורתי'
+      : dominant === 'positive' ? 'הסיקור מדגיש התפתחויות חיוביות'
+      : dominant === 'mixed' ? 'התמונה מורכבת — מקורות שונים מדגישים היבטים שונים'
+      : 'מספר מקורות עוקבים אחרי ההתפתחויות';
+
+    const sentEn = dominant === 'negative' ? 'Coverage leans critical'
+      : dominant === 'positive' ? 'Coverage highlights positive developments'
+      : dominant === 'mixed' ? 'Mixed picture — sources emphasize different angles'
+      : 'Multiple sources tracking developments';
+
+    if (isHe) {
+      const srcStr = topSrc.length >= 2
+        ? `${topSrc[0]} ו-${topSrc[1]}${extraCount > 0 ? ` ועוד ${extraCount}` : ''}`
+        : topSrc[0] || `${srcNames.length} מקורות`;
+      return `${srcStr} מדווחים. ${sentHe}.`;
+    } else {
+      const srcStr = topSrc.length >= 2
+        ? `${topSrc[0]} and ${topSrc[1]}${extraCount > 0 ? ` (+${extraCount})` : ''}`
+        : topSrc[0] || `${srcNames.length} sources`;
+      return `${srcStr} reporting. ${sentEn}.`;
+    }
   }
 
   // ── Build Hebrew summary ──
