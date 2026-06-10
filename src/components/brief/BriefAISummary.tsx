@@ -4,10 +4,13 @@ import { useEffect, useState } from 'react';
 import { useLanguage } from '@/i18n/context';
 import type { BriefStory } from '@/lib/types';
 
+const INITIAL_COUNT = 5;
+
 export default function BriefAISummary() {
   const { lang, dir } = useLanguage();
   const [stories, setStories] = useState<BriefStory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
   const isHe = lang === 'he';
 
   useEffect(() => {
@@ -82,7 +85,7 @@ export default function BriefAISummary() {
 
       {/* Digest items */}
       <div className="space-y-3">
-        {sorted.map((story, i) => {
+        {(showAll ? sorted : sorted.slice(0, INITIAL_COUNT)).map((story, i) => {
           const headline = isHe ? story.headline?.he : story.headline?.en;
           const summary  = isHe ? story.summary?.he  : story.summary?.en;
           const why      = isHe ? story.why?.he       : story.why?.en;
@@ -134,6 +137,18 @@ export default function BriefAISummary() {
           );
         })}
       </div>
+
+      {/* Show more / less */}
+      {sorted.length > INITIAL_COUNT && (
+        <button
+          onClick={() => setShowAll(v => !v)}
+          className="w-full text-[11px] text-gray-500 hover:text-gray-300 transition-colors pt-1 border-t border-white/5"
+        >
+          {showAll
+            ? (isHe ? '▲ פחות' : '▲ Show less')
+            : (isHe ? `▼ עוד ${sorted.length - INITIAL_COUNT} סיפורים` : `▼ ${sorted.length - INITIAL_COUNT} more stories`)}
+        </button>
+      )}
     </div>
   );
 }
