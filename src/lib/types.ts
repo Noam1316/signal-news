@@ -49,6 +49,12 @@ export interface BriefStory {
     sourceUrl: string;
     minsAhead: number;          // how many minutes before the median publication time
   };
+  crossMediaEcho?: {            // did indie media publish before mainstream (or vice versa)?
+    direction: 'indie-first' | 'mainstream-first';
+    delayMinutes: number;       // how many minutes the "first" side led
+    firstSourceName: string;    // name of the earliest source
+    crossedAt?: string;         // ISO pubDate when the second side picked it up
+  };
   contradiction?: {             // contradictory coverage detected
     sourceA: string;
     headlineA: string;

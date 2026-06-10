@@ -1125,6 +1125,34 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       }
     }
 
+    // Cross-Media Echo: did indie media publish before mainstream (or vice versa)?
+    let crossMediaEcho: BriefStory['crossMediaEcho'];
+    const indieArticles = datedArticles.filter(a => a.article.lensCategory === 'il-independent');
+    const mainstreamArticles = datedArticles.filter(a => a.article.lensCategory === 'il-mainstream');
+    if (indieArticles.length >= 1 && mainstreamArticles.length >= 1) {
+      const firstIndie = new Date(indieArticles[0].article.pubDate).getTime();
+      const firstMainstream = new Date(mainstreamArticles[0].article.pubDate).getTime();
+      const delayMs = Math.abs(firstIndie - firstMainstream);
+      const delayMinutes = Math.round(delayMs / 60000);
+      if (delayMinutes >= 30) { // meaningful lead — at least 30 mins
+        if (firstIndie < firstMainstream) {
+          crossMediaEcho = {
+            direction: 'indie-first',
+            delayMinutes,
+            firstSourceName: indieArticles[0].article.sourceName,
+            crossedAt: mainstreamArticles[0].article.pubDate,
+          };
+        } else {
+          crossMediaEcho = {
+            direction: 'mainstream-first',
+            delayMinutes,
+            firstSourceName: mainstreamArticles[0].article.sourceName,
+            crossedAt: indieArticles[0].article.pubDate,
+          };
+        }
+      }
+    }
+
     // Contradiction Detector: same cluster, opposite sentiments from different sources
     // Tightened: requires >=5 articles in cluster, >=2 positive AND >=2 negative articles,
     // each side from >=2 different sources, and gapPct <= 60 (balanced coverage)
@@ -1186,6 +1214,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       resolved: resolved || undefined,
       firstMover,
       contradiction,
+      crossMediaEcho,
     };
   }).filter((s): s is NonNullable<typeof s> => s !== null)
     .sort((a, b) => {

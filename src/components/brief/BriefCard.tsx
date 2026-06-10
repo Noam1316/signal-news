@@ -282,6 +282,40 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
         </div>
       )}
 
+      {/* Cross-Media Echo badge */}
+      {story.crossMediaEcho && (
+        <div className="flex items-center gap-1.5 text-[11px]">
+          <span>🔁</span>
+          {story.crossMediaEcho.direction === 'indie-first' ? (
+            <span className="text-orange-400/90">
+              <span className="font-semibold">{story.crossMediaEcho.firstSourceName}</span>
+              {' '}
+              <span className="text-gray-400">
+                {lang === 'he'
+                  ? `(עצמאי) פרסם ${story.crossMediaEcho.delayMinutes >= 60
+                      ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}ש'`
+                      : `${story.crossMediaEcho.delayMinutes}ד'`} לפני הממסד`
+                  : `(indie) broke ${story.crossMediaEcho.delayMinutes >= 60
+                      ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}h`
+                      : `${story.crossMediaEcho.delayMinutes}m`} before mainstream`}
+              </span>
+            </span>
+          ) : (
+            <span className="text-blue-400/80">
+              <span className="text-gray-400">
+                {lang === 'he'
+                  ? `ממסד ↗ עצמאי — אחרי ${story.crossMediaEcho.delayMinutes >= 60
+                      ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}ש'`
+                      : `${story.crossMediaEcho.delayMinutes}ד'`}`
+                  : `mainstream → indie — ${story.crossMediaEcho.delayMinutes >= 60
+                      ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}h`
+                      : `${story.crossMediaEcho.delayMinutes}m`} later`}
+              </span>
+            </span>
+          )}
+        </div>
+      )}
+
       {/* First-Mover badge */}
       {story.firstMover && story.firstMover.minsAhead >= 10 && (
         <div className="flex items-center gap-1.5 text-[11px] text-amber-400/80">
