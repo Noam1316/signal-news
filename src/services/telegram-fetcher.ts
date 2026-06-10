@@ -12,14 +12,32 @@ interface TelegramSource {
   name: string;
   channel: string; // Telegram @username without @
   language: 'he' | 'en';
+  lensCategory: 'il-mainstream' | 'il-independent';
+  // 'il-mainstream' = official news brand channels (Ynet, N12, Kan...)
+  // 'il-independent' = journalists, analysts, non-institutional channels
 }
 
-// Popular Israeli Telegram news channels — all publicly readable
+// ── Mainstream news brand channels on Telegram ──
+// These are the official Telegram presence of established outlets
+const TELEGRAM_MAINSTREAM: TelegramSource[] = [
+  { id: 'tg-ynet',     name: 'Ynet Telegram',    channel: 'ynetnews',      language: 'he', lensCategory: 'il-mainstream' },
+  { id: 'tg-n12',      name: 'N12 Telegram',      channel: 'N12news',       language: 'he', lensCategory: 'il-mainstream' },
+  { id: 'tg-kan',      name: 'כאן Telegram',      channel: 'kann_news',     language: 'he', lensCategory: 'il-mainstream' },
+  { id: 'tg-walla',    name: 'Walla Telegram',    channel: 'wallanews',     language: 'he', lensCategory: 'il-mainstream' },
+];
+
+// ── Independent journalists & analysts on Telegram ──
+// Opinionated, non-institutional, often break stories before mainstream
+const TELEGRAM_INDEPENDENT: TelegramSource[] = [
+  { id: 'tg-abuali',         name: 'אבו עלי אקספרס', channel: 'AbuAliExpress',   language: 'he', lensCategory: 'il-independent' },
+  { id: 'tg-amitsegal',      name: 'עמית סגל',        channel: 'amitsegal',       language: 'he', lensCategory: 'il-independent' },
+  { id: 'tg-politicalarena', name: 'זירה פוליטית',    channel: 'Political_arena', language: 'he', lensCategory: 'il-independent' },
+  { id: 'tg-iltoday',        name: 'Israel Today TG', channel: 'ILtoday',         language: 'en', lensCategory: 'il-independent' },
+];
+
 export const TELEGRAM_SOURCES: TelegramSource[] = [
-  { id: 'tg-abuali',        name: 'אבו עלי אקספרס',    channel: 'AbuAliExpress',   language: 'he' },
-  { id: 'tg-amitsegal',     name: 'עמית סגל',           channel: 'amitsegal',       language: 'he' },
-  { id: 'tg-politicalarena',name: 'זירה פוליטית',       channel: 'Political_arena', language: 'he' },
-  { id: 'tg-iltoday',       name: 'Israel Today TG',    channel: 'ILtoday',         language: 'en' },
+  ...TELEGRAM_MAINSTREAM,
+  ...TELEGRAM_INDEPENDENT,
 ];
 
 function hashStr(s: string): string {
@@ -99,7 +117,7 @@ export async function fetchTelegramChannel(src: TelegramSource): Promise<Fetched
       id,
       sourceId: src.id,
       sourceName: src.name,
-      lensCategory: 'il-independent',
+      lensCategory: src.lensCategory,
       language: src.language,
       title,
       description,

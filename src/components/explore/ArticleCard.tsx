@@ -26,6 +26,11 @@ const LENS_STYLES: Record<string, { border: string; badge: string; label: { en: 
     badge: 'bg-purple-500/15 text-purple-400',
     label: { en: 'IL Partisan', he: 'מפלגתי' },
   },
+  'il-independent': {
+    border: 'border-s-orange-500/60',
+    badge: 'bg-orange-500/15 text-orange-400',
+    label: { en: 'Independent', he: 'עצמאי' },
+  },
   international: {
     border: 'border-s-emerald-500/60',
     badge: 'bg-emerald-500/15 text-emerald-400',

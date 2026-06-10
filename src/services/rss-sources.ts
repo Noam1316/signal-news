@@ -64,12 +64,17 @@ export const rssSources: RssSource[] = [
   { id: 'galatz',  name: 'גלץ',        url: 'https://news.google.com/rss/search?q=site:glz.co.il&hl=he&gl=IL&ceid=IL:he',      language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
   { id: 'ynet-he', name: 'Ynet (Google)', url: 'https://news.google.com/rss/search?q=site:ynet.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
 
-  // ── Israeli Independent / Telegram Channels ──
-  // Scraped via custom Telegram fetcher (see telegram-fetcher.ts)
-  // These IDs are picked up by fetchTelegramSources(), not the regular RSS fetcher
+  // ── Israeli Independent Media (RSS) ──
+  // Non-institutional investigative / alternative outlets with real RSS feeds
+  { id: '972mag',      name: '+972 Magazine',  url: 'https://news.google.com/rss/search?q=site:972mag.com&hl=en&gl=IL&ceid=IL:en',          language: 'en', lensCategory: 'il-independent', country: 'IL' },
+  { id: 'localcall',   name: 'Local Call (סיכה מקומית)', url: 'https://news.google.com/rss/search?q=site:local-call.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-independent', country: 'IL' },
+  { id: 'the7eye',     name: 'העין השביעית', url: 'https://news.google.com/rss/search?q=site:the7eye.org.il&hl=he&gl=IL&ceid=IL:he',         language: 'he', lensCategory: 'il-independent', country: 'IL' },
 
-  // ── Left-leaning / Progressive ──
-  { id: '972mag', name: '+972 Magazine', url: 'https://news.google.com/rss/search?q=site:972mag.com&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'il-partisan', country: 'IL' },
+  // ── Telegram channels are fetched separately via telegram-fetcher.ts ──
+  // Mainstream Telegram: Ynet, N12, Kan, Walla → lensCategory: il-mainstream
+  // Independent Telegram: אבו עלי, עמית סגל, זירה פוליטית → lensCategory: il-independent
+
+  // ── Left-leaning / Progressive (international) ──
   { id: 'intercept', name: 'The Intercept', url: 'https://theintercept.com/feed/?rss', language: 'en', lensCategory: 'international', country: 'US' },
   { id: 'thenation', name: 'The Nation', url: 'https://www.thenation.com/feed/?post_type=article', language: 'en', lensCategory: 'international', country: 'US' },
   { id: 'huffpost', name: 'HuffPost World', url: 'https://www.huffpost.com/section/world-news/feed', language: 'en', lensCategory: 'international', country: 'US' },
