@@ -68,6 +68,46 @@ export interface SignalVsMarket {
   intelSummary: string;           // one-line summary of intelligence enhancements
   signalRaw?: number;             // original uncalibrated Signal score
   calibrationNote?: string;       // why/how the score was adjusted
+  questionDirection?: string;     // detected question direction (for display)
+  coverageVelocity?: number | null; // >1 accelerating, <1 decelerating
+  velocityDelta?: number;         // pts added/removed due to velocity
+}
+
+/**
+ * Source quality tiers — weights applied when computing weighted source count.
+ *
+ * Tier 1 (2.0): top-tier newswires / major outlets with strong fact-checking
+ * Tier 2 (1.0): standard reliable outlets (default)
+ * Tier 3 (0.5): blogs, partisan outlets, aggregators, Telegram channels
+ */
+const SOURCE_QUALITY: Array<{ pattern: RegExp; weight: number }> = [
+  // Tier 1 — major wires & globals
+  { pattern: /reuters|associated press|\bap\b|bbc|nyt|new york times|guardian|bloomberg|financial times|\bft\b|al.jazeera|npr/, weight: 2.0 },
+  // Tier 1 — major Israeli establishment
+  { pattern: /haaretz|ynet|maariv|calcalist|globes|kan\b|walla|n12|channel.?12|channel.?13|i24|jerusalem.?post|times.?of.?israel/, weight: 1.8 },
+  // Tier 3 — partisan / Telegram / aggregators
+  { pattern: /telegram|t\.me|channel|blog|srugim|kikar|hamodia|behadrei|kipa|arutz.?7|inn\b|7.?online/, weight: 0.5 },
+];
+
+/**
+ * Get quality weight for a source name (1.0 = default/neutral)
+ */
+function getSourceWeight(sourceName: string): number {
+  const n = sourceName.toLowerCase();
+  for (const { pattern, weight } of SOURCE_QUALITY) {
+    if (pattern.test(n)) return weight;
+  }
+  return 1.0;
+}
+
+/**
+ * Compute weighted source count: sum of quality weights across unique sources.
+ * e.g. 2×Tier1 + 1×Tier3 = 2.0+2.0+0.5 = 4.5
+ */
+function computeWeightedSourceCount(sources: Array<{ name: string }>): number {
+  if (!sources.length) return 0;
+  const total = sources.reduce((sum, s) => sum + getSourceWeight(s.name), 0);
+  return parseFloat(total.toFixed(1));
 }
 
 // Keywords to match our topics with Polymarket events (English + Hebrew)
@@ -201,8 +241,9 @@ export function matchStoriesWithMarkets(
     narrativeSplit?: { rightSource: string; leftSource: string; gapPct: number };
     crossMediaEcho?: { direction: string; delayMinutes: number; firstSourceName: string };
     firstMover?: { sourceName: string; minsAhead: number };
-    negativeRatio?: number; // 0-1
-    topHeadlines?: string[]; // up to 3 driving headlines
+    negativeRatio?: number;       // 0-1
+    topHeadlines?: string[];      // up to 3 driving headlines
+    coverageVelocity?: number | null; // recent/prev ratio: >1 = accelerating
   }>,
   markets: PolymarketEvent[],
   earlyMovers?: EarlyMover[],
@@ -266,10 +307,25 @@ export function matchStoriesWithMarkets(
     if (bestMatch && bestScore >= 2) {
       const marketProb = Math.round(bestMatch.outcomePrices[0] * 100);
 
-      // ── Calibration: Signal likelihood measures topic intensity, NOT outcome probability.
-      // When the Polymarket question asks about an extreme/specific outcome, discount
-      // Signal to avoid misleading Alpha gaps (e.g. "Gaza conflict hot" ≠ "annexation likely").
-      const calibration = calibrateSignalLikelihood(story.likelihood, bestMatch.title, marketProb);
+      // ── Step 1: Detect question direction — does negative sentiment push prob UP or DOWN?
+      const qDir = detectQuestionDirection(bestMatch.title);
+
+      // ── Step 2: Convert topic intensity → direction-aware probability
+      const sentimentAdjusted = applySentimentDirection(
+        story.likelihood,
+        story.sentiment || 'neutral',
+        story.negativeRatio ?? 0.5,
+        qDir,
+      );
+
+      // ── Step 2b: Velocity boost/dampener
+      // Accelerating story (velocity > 1.5) → +5 pts. Decelerating (<0.5) → -8 pts.
+      const vel = story.coverageVelocity;
+      const velocityDelta = vel == null ? 0 : vel >= 2 ? 8 : vel >= 1.5 ? 5 : vel <= 0.3 ? -10 : vel <= 0.5 ? -6 : 0;
+      const velocityAdjusted = Math.round(Math.max(5, Math.min(95, sentimentAdjusted + velocityDelta)));
+
+      // ── Step 3: Calibrate for extreme/specific outcomes
+      const calibration = calibrateSignalLikelihood(velocityAdjusted, bestMatch.title, marketProb);
       const calibratedLikelihood = calibration.calibrated;
 
       const delta = calibratedLikelihood - marketProb;
@@ -278,7 +334,11 @@ export function matchStoriesWithMarkets(
 
       // --- New Alpha Score formula (4 named components + intel boost, max 100) ---
       const srcCount = story.sourceCount || 3;
-      const breakdown = computeAlphaBreakdown(absDelta, bestMatch.volume, srcCount, bestScore);
+      // Weighted source count: Tier-1 sources (Reuters, Haaretz…) count 2x, partisan/blogs 0.5x
+      const weightedSrcCount = story.sources?.length
+        ? computeWeightedSourceCount(story.sources)
+        : srcCount;
+      const breakdown = computeAlphaBreakdown(absDelta, bestMatch.volume, weightedSrcCount, bestScore);
       const baseAlpha = breakdown.deltaScore + breakdown.volumeScore + breakdown.sourceScore + breakdown.matchScore;
 
       // Intel enhancement: bias-adjusted signal + early mover boost
@@ -309,6 +369,9 @@ export function matchStoriesWithMarkets(
         signalLikelihood: calibratedLikelihood,
         signalRaw: story.likelihood,
         calibrationNote: calibration.note,
+        questionDirection: qDir !== 'neutral' ? qDir : undefined,
+        coverageVelocity: story.coverageVelocity ?? null,
+        velocityDelta: velocityDelta !== 0 ? velocityDelta : undefined,
         marketProbability: marketProb,
         delta,
         alphaDirection: direction,
@@ -373,6 +436,95 @@ function computeAlphaBreakdown(
 }
 
 /**
+/**
+ * Detect question direction: does negative sentiment raise or lower probability?
+ *
+ * "Will ceasefire happen?"  → negative news (fighting) = LOWER probability → 'negative-bearish'
+ * "Will conflict escalate?" → negative news (fighting) = HIGHER probability → 'negative-bullish'
+ * "Will deal be signed?"    → positive news (talks)    = HIGHER probability → 'positive-bullish'
+ */
+type QuestionDirection = 'negative-bullish' | 'negative-bearish' | 'positive-bullish' | 'neutral';
+
+function detectQuestionDirection(title: string): QuestionDirection {
+  const t = title.toLowerCase();
+
+  // Questions where BAD news → higher probability
+  const NEGATIVE_BULLISH = [
+    'war', 'conflict', 'attack', 'strike', 'invade', 'escalat', 'collapse',
+    'crisis', 'fail', 'break down', 'breakdown', 'default', 'recession',
+    'sanction', 'protest', 'riot', 'coup', 'assassin',
+    'מלחמה', 'קריסה', 'משבר', 'תקיפה', 'הסלמה', 'כישלון', 'מחאה',
+  ];
+
+  // Questions where GOOD news → higher probability
+  const POSITIVE_BULLISH = [
+    'ceasefire', 'deal', 'agreement', 'peace', 'accord', 'sign', 'normalize',
+    'release', 'free', 'hostage', 'resolve', 'settle', 'negotiate',
+    'הפסקת אש', 'עסקה', 'הסכם', 'שלום', 'נורמליזציה', 'שחרור', 'חטוף',
+  ];
+
+  // Questions where negative news → lower probability (ceasefire less likely if fighting)
+  const NEGATIVE_BEARISH = [
+    'ceasefire', 'deal', 'agreement', 'peace', 'settle', 'resolve',
+    'הפסקת אש', 'עסקה', 'הסכם', 'שלום',
+  ];
+
+  const isNegBullish  = NEGATIVE_BULLISH.some(kw => t.includes(kw));
+  const isPosBullish  = POSITIVE_BULLISH.some(kw => t.includes(kw));
+  const isNegBearish  = NEGATIVE_BEARISH.some(kw => t.includes(kw));
+
+  // If question is about a peace/deal: negative news (no deal progress) → bearish
+  if (isNegBearish && !isNegBullish) return 'negative-bearish';
+  // If question is about conflict/crisis: negative news (fighting) → bullish
+  if (isNegBullish && !isPosBullish) return 'negative-bullish';
+  // If question is about positive outcome: positive news → bullish
+  if (isPosBullish && !isNegBullish) return 'positive-bullish';
+
+  return 'neutral';
+}
+
+/**
+ * Adjust Signal likelihood based on sentiment direction.
+ *
+ * Raw Signal likelihood = topic intensity (50–80% for hot topics).
+ * We transform it into a directional probability based on the question type.
+ */
+function applySentimentDirection(
+  rawLikelihood: number,
+  sentiment: string,
+  negativeRatio: number,
+  direction: QuestionDirection,
+): number {
+  if (direction === 'neutral') return rawLikelihood;
+
+  // Sentiment pressure: how negative is the news? (0 = all positive, 1 = all negative)
+  const negPressure = negativeRatio;   // 0–1
+  const posPressure = 1 - negPressure;
+
+  // Base: topic intensity as a 0–1 scale, centered around 50
+  const intensity = rawLikelihood / 100;
+
+  let adjusted: number;
+
+  if (direction === 'negative-bullish') {
+    // Bad news = more likely. Combine intensity + negative pressure.
+    // e.g. "Will conflict escalate?" + 80% negative news = high probability
+    adjusted = (intensity * 0.4 + negPressure * 0.6) * 100;
+
+  } else if (direction === 'negative-bearish') {
+    // Bad news = LESS likely. Positive news → deal more likely.
+    // e.g. "Will ceasefire happen?" + 80% negative news = low probability
+    adjusted = (intensity * 0.4 + posPressure * 0.6) * 100;
+
+  } else {
+    // positive-bullish: positive news = more likely
+    adjusted = (intensity * 0.4 + posPressure * 0.6) * 100;
+  }
+
+  // Clamp to 5–95 (never certain)
+  return Math.round(Math.max(5, Math.min(95, adjusted)));
+}
+
 /**
  * Calibrate Signal likelihood against the specific Polymarket question.
  *
@@ -462,6 +614,16 @@ function buildSignalThesis(
   const lb = story.leanBreakdown;
   const srcCount = story.sourceCount || 0;
 
+  // Source quality label
+  const sources = story.sources || [];
+  const weightedCount = sources.length ? computeWeightedSourceCount(sources) : srcCount;
+  const tier1Count = sources.filter(s => getSourceWeight(s.name) >= 1.8).length;
+  const tier3Count = sources.filter(s => getSourceWeight(s.name) <= 0.5).length;
+  const qualityNote =
+    tier1Count >= 2 ? ` · ${tier1Count} מקורות מוסמכים` :
+    tier3Count > 0 && tier3Count >= srcCount / 2 ? ` · אזהרה: רוב המקורות דרגה 3` :
+    weightedCount > srcCount * 1.3 ? ' · מקורות איכותיים' : '';
+
   // Source spread label
   let sourceSpread: string;
   if (lb && (lb.left + lb.center + lb.right) > 0) {
@@ -471,9 +633,9 @@ function buildSignalThesis(
     if (lb.right  > 0) parts.push(`${lb.right}י`);
     const total = lb.left + lb.center + lb.right;
     const isCrossSpectrum = lb.left > 0 && lb.right > 0;
-    sourceSpread = parts.join(' ') + (isCrossSpectrum ? ' — חוצה קווים פוליטיים' : ` — ${total} מקורות`);
+    sourceSpread = parts.join(' ') + (isCrossSpectrum ? ' — חוצה קווים פוליטיים' : ` — ${total} מקורות`) + qualityNote;
   } else {
-    sourceSpread = `${srcCount} מקורות`;
+    sourceSpread = `${srcCount} מקורות${qualityNote}`;
   }
 
   // Sentiment label

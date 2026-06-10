@@ -131,8 +131,16 @@ export async function GET() {
       const negCount = storySentiments.filter(x => x === 'negative').length;
       const negativeRatio = storySentiments.length > 0 ? negCount / storySentiments.length : 0;
 
-      // Top headlines from matched articles
+      // Top headlines + velocity from matched articles
       const storyArticles = storyArticleMap.get(s.slug) || [];
+
+      // Coverage velocity: articles in last 6h vs previous 6h window
+      const now = Date.now();
+      const SIX_H = 6 * 60 * 60 * 1000;
+      const recent  = storyArticles.filter((a: any) => a.pubDate && (now - new Date(a.pubDate).getTime()) < SIX_H).length;
+      const prev6h  = storyArticles.filter((a: any) => a.pubDate && (now - new Date(a.pubDate).getTime()) >= SIX_H && (now - new Date(a.pubDate).getTime()) < SIX_H * 2).length;
+      // velocity > 1 = accelerating, < 1 = decelerating, null = not enough data
+      const coverageVelocity = (recent > 0 && prev6h > 0) ? parseFloat((recent / prev6h).toFixed(2)) : (recent > 0 ? 2.0 : null);
       const topHeadlines = storyArticles
         .filter((a: any) => a.title && a.title.length > 15)
         .slice(0, 3)
@@ -149,6 +157,7 @@ export async function GET() {
         leanBreakdown,
         negativeRatio,
         topHeadlines,
+        coverageVelocity,
         narrativeSplit: s.narrativeSplit ? {
           rightSource: s.narrativeSplit.rightSource,
           leftSource:  s.narrativeSplit.leftSource,

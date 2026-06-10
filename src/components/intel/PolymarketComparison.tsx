@@ -30,6 +30,7 @@ interface SignalVsMarket {
   intelSummary: string;
   signalRaw?: number;
   calibrationNote?: string;
+  questionDirection?: string;
 }
 
 interface PolyData {
@@ -831,6 +832,14 @@ export default function PolymarketComparison() {
                     {match.intelBoost > 0 && match.intelSummary && (
                       <div className="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium bg-purple-500/10 border-purple-500/30 text-purple-400">
                         🧠 +{match.intelBoost} {lang === 'he' ? 'מודיעין' : 'intel'}: {match.intelSummary}
+                      </div>
+                    )}
+                    {/* Question direction badge */}
+                    {match.questionDirection && (
+                      <div className="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium bg-blue-500/10 border-blue-500/25 text-blue-400">
+                        {match.questionDirection === 'negative-bullish'  && (lang === 'he' ? '📰 חדשות רעות = סבירות גבוהה' : '📰 Bad news → higher prob')}
+                        {match.questionDirection === 'negative-bearish'  && (lang === 'he' ? '📰 חדשות רעות = סבירות נמוכה' : '📰 Bad news → lower prob')}
+                        {match.questionDirection === 'positive-bullish'  && (lang === 'he' ? '📰 חדשות טובות = סבירות גבוהה' : '📰 Good news → higher prob')}
                       </div>
                     )}
                     {/* Calibration badge — shown when Signal score was adjusted */}
