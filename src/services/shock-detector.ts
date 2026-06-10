@@ -577,10 +577,19 @@ function detectFragmentationShocks(topicStats: Map<string, TopicStats>): ShockEv
 }
 
 /**
- * Detect INDEPENDENT vs MAINSTREAM MEDIA SHOCKS
- * When Israeli independent (Telegram) sources diverge significantly from
- * mainstream/partisan Israeli media on the same topic.
- * This surfaces stories the establishment isn't covering — or is framing very differently.
+ * Detect INDEPENDENT vs MAINSTREAM MEDIA SHOCKS — Coverage Gap approach
+ *
+ * Two signal types:
+ *  A) "Independent Exclusive" — ≥2 independent sources cover a topic, mainstream has ≤1
+ *     → Story the establishment is ignoring
+ *  B) "Coverage Divergence" — both sides cover, but independent coverage ratio >> mainstream
+ *     AND sentiment diverges ≥30% (combined signal, lower bar than old pure-sentiment check)
+ *
+ * Improvements over v1:
+ *  - Coverage ratio is primary signal (not sentiment) → fewer false positives on sparse data
+ *  - Floor raised to 2 independent articles minimum
+ *  - Top independent headline surfaced in shock text
+ *  - Source names listed explicitly so user knows who's saying what
  */
 function detectIndependentVsMainstreamShocks(topicStats: Map<string, TopicStats>): ShockEvent[] {
   const shocks: ShockEvent[] = [];
@@ -588,78 +597,136 @@ function detectIndependentVsMainstreamShocks(topicStats: Map<string, TopicStats>
   for (const [topic, stats] of topicStats) {
     if (topic === 'General' || stats.articles.length < 3) continue;
 
-    const independentArticles = stats.articles.filter((a) =>
-      a.article.lensCategory === 'il-independent'
-    );
-    const mainstreamArticles = stats.articles.filter((a) =>
+    const indArticles  = stats.articles.filter((a) => a.article.lensCategory === 'il-independent');
+    const mainArticles = stats.articles.filter((a) =>
       a.article.lensCategory === 'il-mainstream' || a.article.lensCategory === 'il-partisan'
     );
 
-    if (independentArticles.length < 1 || mainstreamArticles.length < 2) continue;
+    if (indArticles.length < 2) continue; // need at least 2 independent articles
 
-    const indNeg  = independentArticles.filter((a) => a.analysis.sentiment === 'negative').length;
-    const mainNeg = mainstreamArticles.filter((a) => a.analysis.sentiment === 'negative').length;
+    const indSources  = new Set(indArticles.map((a) => a.article.sourceId));
+    const mainSources = new Set(mainArticles.map((a) => a.article.sourceId));
 
-    const indNegRatio  = indNeg  / independentArticles.length;
-    const mainNegRatio = mainNeg / mainstreamArticles.length;
+    const totalSources = indSources.size + mainSources.size;
+    if (totalSources < 3) continue;
 
-    const gap = Math.abs(indNegRatio - mainNegRatio);
-    if (gap < 0.35) continue;
+    const indCoverageRatio  = indSources.size  / totalSources;
+    const mainCoverageRatio = mainSources.size / totalSources;
+    const coverageGap = indCoverageRatio - mainCoverageRatio; // positive = ind covers more
 
-    const gapPct = Math.round(gap * 100);
-    const indMoreNeg = indNegRatio > mainNegRatio;
+    // Sentiment gap (secondary signal)
+    const indNegRatio  = indArticles.filter((a) => a.analysis.sentiment === 'negative').length / indArticles.length;
+    const mainNegRatio = mainArticles.length > 0
+      ? mainArticles.filter((a) => a.analysis.sentiment === 'negative').length / mainArticles.length
+      : 0;
+    const sentimentGap = Math.abs(indNegRatio - mainNegRatio);
+
+    // ── Type A: Independent Exclusive ──────────────────────────────────────
+    // Independent sources covering, mainstream largely ignoring
+    const isExclusive = indSources.size >= 2 && mainSources.size <= 1;
+
+    // ── Type B: Coverage + Sentiment divergence ────────────────────────────
+    // Both cover, but independent disproportionate AND sentiment differs
+    const isDivergent = !isExclusive
+      && mainSources.size >= 2
+      && coverageGap >= 0.25
+      && sentimentGap >= 0.30;
+
+    if (!isExclusive && !isDivergent) continue;
+
     const topicDisplay = TOPIC_DISPLAY[topic] || { he: topic, en: topic };
-    const entities = extractEntities(stats.articles.map((a) => a.article));
+    const entities     = extractEntities(stats.articles.map((a) => a.article));
 
-    const topSources = [
-      ...independentArticles.slice(0, 2),
-      ...mainstreamArticles.slice(0, 2),
-    ].map((a) => ({ name: a.article.sourceName, url: a.article.link }));
+    // Best independent headline — most recent, longest title
+    const topIndArticle = [...indArticles]
+      .sort((a, b) => new Date(b.article.pubDate || 0).getTime() - new Date(a.article.pubDate || 0).getTime())
+      .find((a) => a.article.title.length > 20);
+    const topIndHeadline = topIndArticle?.article.title ?? '';
+    const topIndSource   = topIndArticle?.article.sourceName ?? '';
+
+    const indSourceNames  = Array.from(indSources).map((sid) =>
+      indArticles.find((a) => a.article.sourceId === sid)?.article.sourceName ?? sid
+    ).slice(0, 3).join(', ');
+    const mainSourceNames = Array.from(mainSources).map((sid) =>
+      mainArticles.find((a) => a.article.sourceId === sid)?.article.sourceName ?? sid
+    ).slice(0, 2).join(', ');
 
     const latestTs = stats.articles
       .map((a) => a.article.pubDate).filter(Boolean)
       .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
-      || new Date().toISOString();
+      ?? new Date().toISOString();
 
-    const confidence: Confidence = gap >= 0.55 ? 'high' : 'medium';
+    const confidence: Confidence = isExclusive ? 'high' : (sentimentGap >= 0.5 ? 'high' : 'medium');
 
-    shocks.push({
-      id: `auto-indvsmain-${topic.toLowerCase().replace(/\W+/g, '-')}`,
-      type: 'fragmentation',
-      headline: {
-        he: `תקשורת עצמאית ${indMoreNeg ? 'שלילית יותר' : 'חיובית יותר'} מהממסדית ב-${gapPct}% — ${topicDisplay.he}`,
-        en: `Independent Media ${indMoreNeg ? 'More Critical' : 'More Positive'} Than Mainstream by ${gapPct}% — ${topicDisplay.en}`,
-      },
-      whatMoved: {
-        he: indMoreNeg
-          ? `ערוצי טלגרם ותקשורת עצמאית מציגים תמונה שלילית משמעותית מהתקשורת הממסדית בנושא ${topicDisplay.he}. פער של ${gapPct}% בסנטימנט.`
-          : `ערוצי טלגרם ותקשורת עצמאית אופטימיים יותר מהתקשורת הממסדית בנושא ${topicDisplay.he}. פער של ${gapPct}% בסנטימנט.`,
-        en: indMoreNeg
-          ? `Telegram channels and independent media paint a significantly more negative picture than mainstream outlets on ${topicDisplay.en}. A ${gapPct}% sentiment gap.`
-          : `Telegram channels and independent media are more optimistic than mainstream outlets on ${topicDisplay.en}. A ${gapPct}% sentiment gap.`,
-      },
-      delta: indMoreNeg ? gapPct : -gapPct,
-      timeWindow: { he: 'שעות אחרונות', en: 'Last few hours' },
-      confidence,
-      whyNow: {
-        he: indMoreNeg
-          ? `התקשורת הממסדית (${mainstreamArticles.map(a => a.article.sourceName).slice(0, 2).join(', ')}) ממתנת את הטון; ערוצי הטלגרם מדווחים בחדות. זה יכול להצביע על מידע שהתקשורת הרשמית עדיין לא שיקפה.`
-          : `ערוצי טלגרם מבשרים נרטיב חיובי שהתקשורת הממסדית טרם אימצה — פוטנציאל ל-signal מוקדם.`,
-        en: indMoreNeg
-          ? `Mainstream outlets (${mainstreamArticles.map(a => a.article.sourceName).slice(0, 2).join(', ')}) are moderating tone; Telegram channels report sharply. This may indicate information the official press hasn't yet reflected.`
-          : `Telegram channels herald a positive narrative that mainstream media hasn't adopted yet — potential early signal.`,
-      },
-      whoDriving: {
-        he: entities.length > 0
-          ? `נושאים: ${entities.map((e) => e.he).join(', ')}`
-          : `פער בין תקשורת עצמאית לממסדית`,
-        en: entities.length > 0
-          ? `Key actors: ${entities.map((e) => e.en).join(', ')}`
-          : `Independent vs establishment media gap`,
-      },
-      sources: topSources.slice(0, 4),
-      timestamp: latestTs,
-    });
+    if (isExclusive) {
+      // ── Type A shock ──
+      shocks.push({
+        id: `auto-ind-excl-${topic.toLowerCase().replace(/\W+/g, '-')}`,
+        type: 'fragmentation',
+        headline: {
+          he: `בלעדי עצמאי: ${indSourceNames} מכסים נושא שהממסד מתעלם ממנו — ${topicDisplay.he}`,
+          en: `Independent Exclusive: ${indSourceNames} covering topic mainstream ignores — ${topicDisplay.en}`,
+        },
+        whatMoved: {
+          he: `${indArticles.length} כתבות מ-${indSources.size} מקורות עצמאיים (${indSourceNames}) על ${topicDisplay.he}${mainSources.size === 0 ? ' — ללא סיקור ממסדי כלל' : ` — בעוד הממסד (${mainSourceNames}) מכסה בקושי`}.`,
+          en: `${indArticles.length} articles from ${indSources.size} independent sources (${indSourceNames}) on ${topicDisplay.en}${mainSources.size === 0 ? ' — with zero mainstream coverage' : ` — while mainstream (${mainSourceNames}) barely covers it`}.`,
+        },
+        delta: 0,
+        timeWindow: { he: '24 שעות אחרונות', en: 'Last 24 hours' },
+        confidence,
+        whyNow: {
+          he: topIndHeadline
+            ? `הכתבה המובילה: "${topIndHeadline}" (${topIndSource}). כאשר מקורות עצמאיים מרובים מכסים נושא שהממסד מתעלם ממנו — זה לעתים קרובות signal מוקדם.`
+            : `מספר מקורות עצמאיים מכסים נושא שהתקשורת הממסדית טרם אימצה — בדוק אם זה signal מוקדם.`,
+          en: topIndHeadline
+            ? `Top story: "${topIndHeadline}" (${topIndSource}). When multiple independent sources cover a topic mainstream ignores — it's often an early signal.`
+            : `Multiple independent sources cover a topic mainstream hasn't picked up — check if this is an early signal.`,
+        },
+        whoDriving: {
+          he: entities.length > 0 ? `מעורבים: ${entities.map((e) => e.he).join(', ')}` : `תקשורת עצמאית vs ממסד`,
+          en: entities.length > 0 ? `Involved: ${entities.map((e) => e.en).join(', ')}` : `Independent vs establishment`,
+        },
+        sources: indArticles.slice(0, 4).map((a) => ({ name: a.article.sourceName, url: a.article.link })),
+        timestamp: latestTs,
+      });
+    } else {
+      // ── Type B shock ──
+      const indMoreNeg = indNegRatio > mainNegRatio;
+      const sentPct    = Math.round(sentimentGap * 100);
+
+      shocks.push({
+        id: `auto-ind-div-${topic.toLowerCase().replace(/\W+/g, '-')}`,
+        type: 'fragmentation',
+        headline: {
+          he: `פער כיסוי: עצמאיים ${indMoreNeg ? 'ביקורתיים' : 'אופטימיים'} מהממסד ב-${sentPct}% — ${topicDisplay.he}`,
+          en: `Coverage Divergence: Independents ${indMoreNeg ? 'more critical' : 'more positive'} than mainstream by ${sentPct}% — ${topicDisplay.en}`,
+        },
+        whatMoved: {
+          he: `${indSourceNames} מכסים ${Math.round(indCoverageRatio * 100)}% מהנושא; ${mainSourceNames || 'הממסד'} רק ${Math.round(mainCoverageRatio * 100)}% — ועם ${indMoreNeg ? 'טון שלילי' : 'טון חיובי'} שונה ב-${sentPct}%.`,
+          en: `${indSourceNames} account for ${Math.round(indCoverageRatio * 100)}% of coverage; ${mainSourceNames || 'mainstream'} only ${Math.round(mainCoverageRatio * 100)}% — with a ${sentPct}% sentiment difference.`,
+        },
+        delta: indMoreNeg ? sentPct : -sentPct,
+        timeWindow: { he: 'שעות אחרונות', en: 'Last few hours' },
+        confidence,
+        whyNow: {
+          he: topIndHeadline
+            ? `כתבה מובילה מהצד העצמאי: "${topIndHeadline}" (${topIndSource}).`
+            : `פער בכיסוי ובטון בין עצמאיים לממסד — בדוק אם יש מידע שהממסד ממתן.`,
+          en: topIndHeadline
+            ? `Leading independent story: "${topIndHeadline}" (${topIndSource}).`
+            : `Coverage and tone gap between independents and mainstream — check if establishment is softening the story.`,
+        },
+        whoDriving: {
+          he: entities.length > 0 ? `מעורבים: ${entities.map((e) => e.he).join(', ')}` : `פער נרטיבי עצמאי/ממסד`,
+          en: entities.length > 0 ? `Involved: ${entities.map((e) => e.en).join(', ')}` : `Independent/establishment narrative gap`,
+        },
+        sources: [
+          ...indArticles.slice(0, 2).map((a) => ({ name: a.article.sourceName, url: a.article.link })),
+          ...mainArticles.slice(0, 2).map((a) => ({ name: a.article.sourceName, url: a.article.link })),
+        ],
+        timestamp: latestTs,
+      });
+    }
   }
 
   return shocks;
