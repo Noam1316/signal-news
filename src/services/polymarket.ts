@@ -26,6 +26,22 @@ export interface AlphaBreakdown {
   matchScore: number;    // 0-10: keyword match quality between story and market
 }
 
+export interface SignalThesis {
+  headline: string;           // top driving headline (he or en)
+  sentiment: string;          // 'שלילי רוב' / 'חיובי רוב' / 'מעורב'
+  sourceSpread: string;       // e.g. '3ש 2מ 1י — חוצה קווים' or '5 מקורות ימין בלבד'
+  echoNote?: string;          // cross-media echo if present
+  narrativeNote?: string;     // narrative split if present
+  keyFactors: string[];       // 2-3 specific bullet points driving Signal's view
+}
+
+export interface MarketThesis {
+  impliedView: string;        // what the market's price implies ("השוק מאמין ש...")
+  volumeLabel: string;        // e.g. '$2.3M נפח'
+  commitment: string;         // 'שוק מחויב / דל / בינוני'
+  counterArgument: string;    // what the market might know that RSS doesn't
+}
+
 export interface SignalVsMarket {
   topic: string;
   storySlug: string;              // slug of the matched BriefStory (for watchlist cross-reference)
@@ -37,6 +53,8 @@ export interface SignalVsMarket {
   alphaScore: number;             // 0-100 — how significant is the divergence
   alphaBreakdown: AlphaBreakdown; // component breakdown of the alpha score
   whyDifferent: string;           // auto-generated explanation (paragraphs separated by \n\n)
+  signalThesis?: SignalThesis;    // structured Signal argument
+  marketThesis?: MarketThesis;    // structured Market argument
   polymarketTitle: string;
   polymarketSlug: string;
   polymarketUrl: string;          // direct link to the market
@@ -176,6 +194,13 @@ export function matchStoriesWithMarkets(
     sourceCount?: number;
     sources?: Array<{ name: string }>;
     sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
+    // Rich story data for thesis generation
+    leanBreakdown?: { left: number; center: number; right: number };
+    narrativeSplit?: { rightSource: string; leftSource: string; gapPct: number };
+    crossMediaEcho?: { direction: string; delayMinutes: number; firstSourceName: string };
+    firstMover?: { sourceName: string; minsAhead: number };
+    negativeRatio?: number; // 0-1
+    topHeadlines?: string[]; // up to 3 driving headlines
   }>,
   markets: PolymarketEvent[],
   earlyMovers?: EarlyMover[],
@@ -259,6 +284,10 @@ export function matchStoriesWithMarkets(
       // Generate structured explanation for why Signal differs from Market
       const whyDifferent = generateWhyDifferent(direction, absDelta, story.likelihood, marketProb, bestMatch, srcCount);
 
+      // Build structured thesis objects for the "Signal vs Market" card
+      const signalThesis = buildSignalThesis(story, direction);
+      const marketThesis = buildMarketThesis(bestMatch, marketProb, direction, absDelta);
+
       // Confidence: asymptotic scale — requires 3+ keywords + penalises thin markets
       const rawConf = Math.round((bestScore / (bestScore + 4)) * 100);
       const thinPenalty = bestMatch.volume < 50_000 ? 15 : 0;
@@ -275,6 +304,8 @@ export function matchStoriesWithMarkets(
         alphaScore,
         alphaBreakdown: breakdown,
         whyDifferent,
+        signalThesis,
+        marketThesis,
         polymarketTitle: bestMatch.title,
         polymarketSlug: bestMatch.slug,
         polymarketUrl: bestMatch.slug
@@ -328,6 +359,125 @@ function computeAlphaBreakdown(
     sourceScore,
     matchScore,
   };
+}
+
+/**
+/**
+ * Build the Signal thesis — what our RSS analysis actually sees.
+ */
+function buildSignalThesis(
+  story: Parameters<typeof matchStoriesWithMarkets>[0][number],
+  direction: SignalVsMarket['alphaDirection'],
+): SignalThesis {
+  const lb = story.leanBreakdown;
+  const srcCount = story.sourceCount || 0;
+
+  // Source spread label
+  let sourceSpread: string;
+  if (lb && (lb.left + lb.center + lb.right) > 0) {
+    const parts: string[] = [];
+    if (lb.left   > 0) parts.push(`${lb.left}ש`);
+    if (lb.center > 0) parts.push(`${lb.center}מ`);
+    if (lb.right  > 0) parts.push(`${lb.right}י`);
+    const total = lb.left + lb.center + lb.right;
+    const isCrossSpectrum = lb.left > 0 && lb.right > 0;
+    sourceSpread = parts.join(' ') + (isCrossSpectrum ? ' — חוצה קווים פוליטיים' : ` — ${total} מקורות`);
+  } else {
+    sourceSpread = `${srcCount} מקורות`;
+  }
+
+  // Sentiment label
+  const sent = story.sentiment || 'neutral';
+  const sentimentLabel =
+    sent === 'negative' ? 'סנטימנט שלילי רוב' :
+    sent === 'positive' ? 'סנטימנט חיובי רוב' :
+    sent === 'mixed'    ? 'סנטימנט מעורב' : 'סנטימנט נייטרלי';
+
+  // Key factors driving Signal's view
+  const keyFactors: string[] = [];
+
+  if (direction === 'signal-higher') {
+    if (srcCount >= 6) keyFactors.push(`כיסוי רחב — ${srcCount} מקורות עצמאיים מדווחים`);
+    else if (srcCount >= 3) keyFactors.push(`${srcCount} מקורות מאשרים את ההתפתחות`);
+    else keyFactors.push(`${srcCount} מקורות בלבד — סיגנל מוקדם אפשרי`);
+
+    if (story.crossMediaEcho?.direction === 'indie-first') {
+      keyFactors.push(`תקשורת עצמאית הקדימה ב-${story.crossMediaEcho.delayMinutes >= 60 ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}ש'` : `${story.crossMediaEcho.delayMinutes}ד'`} — מנגנון חדירה לממסד`);
+    }
+    if (lb && lb.left > 0 && lb.right > 0) {
+      keyFactors.push('כיסוי חוצה שמאל ו-ימין — אינדיקטור אמינות גבוה');
+    }
+    if (story.narrativeSplit) {
+      keyFactors.push(`פיצול נרטיבי ${story.narrativeSplit.gapPct}% בין ${story.narrativeSplit.rightSource} ל-${story.narrativeSplit.leftSource}`);
+    }
+  } else if (direction === 'market-higher') {
+    keyFactors.push(`כיסוי תקשורתי ${srcCount <= 2 ? 'חלש — ייתכן מידע מחוץ לRSS' : 'בינוני'}`);
+    if (sent === 'negative') keyFactors.push('סנטימנט שלילי — מנגד לציפיות השוק');
+    keyFactors.push('שוק עשוי לתמחר מידע דיפלומטי שלא פורסם');
+  } else {
+    keyFactors.push('Signal והשוק מסכימים — אין הזדמנות Alpha');
+  }
+
+  // Echo note
+  const echoNote = story.crossMediaEcho
+    ? `🔁 ${story.crossMediaEcho.direction === 'indie-first' ? 'עצמאי → ממסד' : 'ממסד → עצמאי'} (${story.crossMediaEcho.delayMinutes}ד')`
+    : undefined;
+
+  const narrativeNote = story.narrativeSplit
+    ? `פיצול ${story.narrativeSplit.gapPct}% בין ${story.narrativeSplit.rightSource} ל-${story.narrativeSplit.leftSource}`
+    : undefined;
+
+  return {
+    headline: story.topHeadlines?.[0] || story.headline,
+    sentiment: sentimentLabel,
+    sourceSpread,
+    echoNote,
+    narrativeNote,
+    keyFactors: keyFactors.slice(0, 3),
+  };
+}
+
+/**
+ * Build the Market thesis — what the prediction market is pricing in.
+ */
+function buildMarketThesis(
+  market: PolymarketEvent,
+  marketProb: number,
+  direction: SignalVsMarket['alphaDirection'],
+  absDelta: number,
+): MarketThesis {
+  const vol = market.volume;
+  const volumeLabel =
+    vol > 10_000_000 ? `$${(vol / 1_000_000).toFixed(1)}M נפח` :
+    vol >  1_000_000 ? `$${(vol / 1_000_000).toFixed(1)}M נפח` :
+    vol >    100_000 ? `$${(vol / 1_000).toFixed(0)}K נפח` :
+    vol >     10_000 ? `$${(vol / 1_000).toFixed(0)}K נפח` : `<$10K נפח`;
+
+  const commitment =
+    vol > 5_000_000 ? 'שוק עמוק — מחויבות גבוהה' :
+    vol > 500_000   ? 'שוק בינוני' :
+    vol > 50_000    ? 'שוק קטן' : 'שוק דל — מחויבות נמוכה';
+
+  // What the market implies
+  const impliedView = marketProb >= 70
+    ? `השוק בטוח (${marketProb}%) שהאירוע יתרחש`
+    : marketProb >= 40
+    ? `השוק ניטרלי (${marketProb}%) — לא משוכנע לכאן או לכאן`
+    : `השוק ספקן (${marketProb}%) שהאירוע יתרחש`;
+
+  // Counter-argument
+  let counterArgument: string;
+  if (direction === 'signal-higher') {
+    counterArgument = vol > 2_000_000
+      ? `שוק עמוק עם $${(vol / 1_000_000).toFixed(1)}M — הסוחרים עלולים לדעת יותר ממה שה-RSS מכסה`
+      : `ייתכן שהשוק מתמחר מידע מאחורי הקלעים שלא הגיע עדיין לכותרות`;
+  } else if (direction === 'market-higher') {
+    counterArgument = `RSS שלנו עלול לפגר אחרי ציפיות השוק — בדוק אם יש פיתוח ש-${Math.round(absDelta)}% מהשוק כבר יודע`;
+  } else {
+    counterArgument = 'שניהם מסכימים — קונסנסוס חזק';
+  }
+
+  return { impliedView, volumeLabel, commitment, counterArgument };
 }
 
 /**

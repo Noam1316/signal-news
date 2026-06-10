@@ -119,6 +119,25 @@ export async function GET() {
       const dominantSentiment = (Object.entries(sentimentCounts)
         .sort((a, b) => b[1] - a[1])[0]?.[0] || 'neutral') as 'positive' | 'negative' | 'neutral' | 'mixed';
 
+      // Source political breakdown for thesis
+      const leanBreakdown = { left: 0, center: 0, right: 0 };
+      for (const src of (s.sources || [])) {
+        const n = src.name?.toLowerCase() || '';
+        if (/haaretz|972|local.call|yesh.atid|meretz/.test(n)) leanBreakdown.left++;
+        else if (/hayom|makor|srugim|kikar|arutz/.test(n)) leanBreakdown.right++;
+        else leanBreakdown.center++;
+      }
+
+      const negCount = storySentiments.filter(x => x === 'negative').length;
+      const negativeRatio = storySentiments.length > 0 ? negCount / storySentiments.length : 0;
+
+      // Top headlines from matched articles
+      const storyArticles = storyArticleMap.get(s.slug) || [];
+      const topHeadlines = storyArticles
+        .filter((a: any) => a.title && a.title.length > 15)
+        .slice(0, 3)
+        .map((a: any) => a.title as string);
+
       return {
         slug: s.slug,
         headline: typeof s.headline === 'string' ? s.headline : s.headline.he || s.headline.en || '',
@@ -127,6 +146,23 @@ export async function GET() {
         sourceCount: s.sources?.length || 3,
         sources: s.sources.map(src => ({ name: src.name })),
         sentiment: dominantSentiment,
+        leanBreakdown,
+        negativeRatio,
+        topHeadlines,
+        narrativeSplit: s.narrativeSplit ? {
+          rightSource: s.narrativeSplit.rightSource,
+          leftSource:  s.narrativeSplit.leftSource,
+          gapPct:      s.narrativeSplit.gapPct,
+        } : undefined,
+        crossMediaEcho: s.crossMediaEcho ? {
+          direction:       s.crossMediaEcho.direction,
+          delayMinutes:    s.crossMediaEcho.delayMinutes,
+          firstSourceName: s.crossMediaEcho.firstSourceName,
+        } : undefined,
+        firstMover: s.firstMover ? {
+          sourceName: s.firstMover.sourceName,
+          minsAhead:  s.firstMover.minsAhead,
+        } : undefined,
       };
     });
 

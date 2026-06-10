@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/i18n/context';
 import MarketPulse from './MarketPulse';
-import type { AlphaBreakdown } from '@/services/polymarket';
+import type { AlphaBreakdown, SignalThesis, MarketThesis } from '@/services/polymarket';
 
 interface SignalVsMarket {
   topic: string;
@@ -15,6 +15,8 @@ interface SignalVsMarket {
   alphaScore: number;
   alphaBreakdown: AlphaBreakdown;
   whyDifferent: string;
+  signalThesis?: SignalThesis;
+  marketThesis?: MarketThesis;
   polymarketTitle: string;
   polymarketSlug: string;
   polymarketUrl: string;
@@ -467,6 +469,101 @@ function AlphaBreakdownBars({ breakdown, total, lang }: { breakdown: AlphaBreakd
   );
 }
 
+/** Thesis vs Thesis — Signal argument vs Market argument side by side */
+function ThesisCard({
+  signal, market, direction, delta, lang,
+}: {
+  signal: { headline: string; sentiment: string; sourceSpread: string; echoNote?: string; narrativeNote?: string; keyFactors: string[] };
+  market: { impliedView: string; volumeLabel: string; commitment: string; counterArgument: string };
+  direction: 'signal-higher' | 'market-higher' | 'aligned';
+  delta: number;
+  lang: string;
+}) {
+  const isHe = lang === 'he';
+  const signalColor = direction === 'signal-higher' ? 'border-emerald-500/30 bg-emerald-500/[0.04]'
+                    : direction === 'market-higher'  ? 'border-red-500/30 bg-red-500/[0.04]'
+                    : 'border-gray-700/40 bg-gray-800/20';
+  const marketColor = direction === 'market-higher'  ? 'border-emerald-500/30 bg-emerald-500/[0.04]'
+                    : direction === 'signal-higher'   ? 'border-orange-500/20 bg-orange-500/[0.03]'
+                    : 'border-gray-700/40 bg-gray-800/20';
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-yellow-400">
+        {isHe ? 'תזה מול תזה' : 'Signal vs Market Thesis'}
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {/* Signal thesis */}
+        <div className={`rounded-lg border p-3 space-y-2 ${signalColor}`}>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide">📡 Signal</span>
+            {direction === 'signal-higher' && (
+              <span className="text-[9px] px-1 rounded bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 font-bold">↑ גבוה יותר</span>
+            )}
+          </div>
+          {/* Driving headline */}
+          <p className="text-xs text-gray-200 leading-snug line-clamp-2 font-medium">
+            "{signal.headline}"
+          </p>
+          {/* Source spread */}
+          <p className="text-[10px] text-gray-400">{signal.sourceSpread}</p>
+          {/* Key factors */}
+          <ul className="space-y-1">
+            {signal.keyFactors.map((f, i) => (
+              <li key={i} className="flex items-start gap-1 text-[10px] text-gray-300">
+                <span className="text-emerald-500/70 shrink-0 mt-px">·</span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+          {/* Echo / narrative notes */}
+          {signal.echoNote && (
+            <p className="text-[10px] text-orange-400/80">{signal.echoNote}</p>
+          )}
+          {signal.narrativeNote && (
+            <p className="text-[10px] text-blue-400/70">⚡ {signal.narrativeNote}</p>
+          )}
+        </div>
+
+        {/* Market thesis */}
+        <div className={`rounded-lg border p-3 space-y-2 ${marketColor}`}>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wide">💰 {isHe ? 'שוק' : 'Market'}</span>
+            {direction === 'market-higher' && (
+              <span className="text-[9px] px-1 rounded bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 font-bold">↑ גבוה יותר</span>
+            )}
+          </div>
+          <p className="text-xs text-gray-200 leading-snug font-medium">{market.impliedView}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] text-gray-400">{market.volumeLabel}</span>
+            <span className="text-[10px] text-gray-600">·</span>
+            <span className="text-[10px] text-gray-400">{market.commitment}</span>
+          </div>
+          <p className="text-[10px] text-gray-400 leading-snug border-t border-white/5 pt-2">
+            {isHe ? '🤔 טיעון נגד: ' : '🤔 Counter: '}{market.counterArgument}
+          </p>
+        </div>
+      </div>
+
+      {/* Gap summary */}
+      {direction !== 'aligned' && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/5">
+          <span className="text-[10px] text-gray-500">{isHe ? 'הפרש:' : 'Gap:'}</span>
+          <span className={`text-sm font-bold tabular-nums ${direction === 'signal-higher' ? 'text-emerald-400' : 'text-orange-400'}`}>
+            {direction === 'signal-higher' ? '+' : '-'}{delta}%
+          </span>
+          <span className="text-[10px] text-gray-600 ms-auto">
+            {direction === 'signal-higher'
+              ? (isHe ? 'Signal רואה יותר מהשוק' : 'Signal bullish vs Market')
+              : (isHe ? 'השוק רואה יותר מ-Signal' : 'Market bullish vs Signal')}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Structured explanation — splits whyDifferent by \n\n and renders paragraphs */
 function StructuredExplanation({ text, lang }: { text: string; lang: string }) {
   const paragraphs = text.split('\n\n').filter(Boolean);
@@ -786,12 +883,20 @@ export default function PolymarketComparison() {
                 {isExpanded && (
                   <div className="pt-3 border-t border-gray-800 space-y-4 animate-in fade-in duration-200">
 
-                    {/* Structured explanation */}
-                    {match.whyDifferent && (
+                    {/* Thesis vs Thesis — Signal argument vs Market argument */}
+                    {match.signalThesis && match.marketThesis ? (
+                      <ThesisCard
+                        signal={match.signalThesis}
+                        market={match.marketThesis}
+                        direction={match.alphaDirection}
+                        delta={absDelta}
+                        lang={lang}
+                      />
+                    ) : match.whyDifferent ? (
                       <div className="p-3 rounded-lg bg-gray-800/40 border border-gray-700/40">
                         <StructuredExplanation text={match.whyDifferent} lang={lang} />
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Alpha breakdown */}
                     <div className="p-3 rounded-lg bg-gray-800/40 border border-gray-700/40">
