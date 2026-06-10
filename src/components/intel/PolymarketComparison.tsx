@@ -879,6 +879,29 @@ export default function PolymarketComparison() {
                   </a>
                 </div>
 
+                {/* Thesis preview — visible even when collapsed */}
+                {!isExpanded && match.signalThesis && !isAligned && (
+                  <div className="flex items-start gap-2 pt-1">
+                    <span className="text-[10px] text-emerald-500/70 shrink-0 mt-px">📡</span>
+                    <p className="text-[11px] text-gray-400 line-clamp-1 leading-snug">
+                      "{match.signalThesis.headline}"
+                    </p>
+                  </div>
+                )}
+                {!isExpanded && match.signalThesis?.keyFactors?.[0] && !isAligned && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {match.signalThesis.keyFactors.slice(0, 2).map((f, fi) => (
+                      <span key={fi} className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.03] border border-white/[0.06] text-gray-500">
+                        {f}
+                      </span>
+                    ))}
+                    {match.signalThesis.echoNote && (
+                      <span className="text-[10px] text-orange-400/70">{match.signalThesis.echoNote}</span>
+                    )}
+                    <span className="text-[10px] text-gray-600 ms-auto">▼ {lang === 'he' ? 'לחץ לניתוח מלא' : 'expand for analysis'}</span>
+                  </div>
+                )}
+
                 {/* Expanded section */}
                 {isExpanded && (
                   <div className="pt-3 border-t border-gray-800 space-y-4 animate-in fade-in duration-200">
