@@ -15,6 +15,7 @@ import { useRecordStories } from '@/hooks/useLikelihoodHistory';
 import { usePersonalization } from '@/hooks/usePersonalization';
 import { useIntelScore } from '@/hooks/useIntelScore';
 import BreakingBanner from './BreakingBanner';
+import ReturnBrief from './ReturnBrief';
 import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import WatchlistMarketAlert from './WatchlistMarketAlert';
 
@@ -468,6 +469,7 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
       {watchlist.size > 0 && <WatchlistMarketAlert />}
 
       {/* Breaking News Banner */}
+      {!loading && stories.length > 0 && <ReturnBrief stories={stories} />}
       {!loading && stories.length > 0 && <BreakingBanner stories={stories} />}
 
       {/* Daily Intelligence Summary */}
