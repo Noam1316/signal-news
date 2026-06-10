@@ -36,6 +36,7 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
   const [search, setSearch] = useState('');
   const [showWatchlistOnly, setShowWatchlistOnly] = useState(false);
   const [showIndependentOnly, setShowIndependentOnly] = useState(false);
+  const [showUnverifiedOnly, setShowUnverifiedOnly] = useState(false);
   const [leanFilter, setLeanFilter] = useState<Lean | 'all'>('all');
   const [sortKey, setSortKey] = useState<SortKey>('default');
   const { toggle, isWatched, watchlist } = useWatchlist();
@@ -132,6 +133,7 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
     .filter(s => !showIndependentOnly || independentCategories.has(
       (s.category.en || s.category.he || '').toLowerCase().replace(/\W+/g, '-')
     ))
+    .filter(s => !showUnverifiedOnly || (s.sources?.length ?? 0) <= 1)
     .filter(s => leanFilter === 'all' || getStoryLean(s) === leanFilter)
     .filter(s => {
       if (!search.trim()) return true;
@@ -199,7 +201,8 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
   });
 
   const watchlistCount = watchlist.size;
-  const activeFilterCount = (lens !== 'all' ? 1 : 0) + (leanFilter !== 'all' ? 1 : 0) + (showWatchlistOnly ? 1 : 0) + (showIndependentOnly ? 1 : 0) + (search.trim() ? 1 : 0) + (topicFilter.length > 0 ? 1 : 0);
+  const unverifiedCount = stories.filter(s => (s.sources?.length ?? 0) <= 1).length;
+  const activeFilterCount = (lens !== 'all' ? 1 : 0) + (leanFilter !== 'all' ? 1 : 0) + (showWatchlistOnly ? 1 : 0) + (showIndependentOnly ? 1 : 0) + (showUnverifiedOnly ? 1 : 0) + (search.trim() ? 1 : 0) + (topicFilter.length > 0 ? 1 : 0);
 
   const SORT_OPTIONS: { key: SortKey; he: string; en: string }[] = [
     { key: 'default',    he: 'ברירת מחדל', en: 'Default' },
@@ -283,6 +286,25 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
               <span className={`text-[10px] px-1 rounded-full font-bold
                                 ${showIndependentOnly ? 'bg-orange-400/30 text-orange-300' : 'bg-gray-700 text-gray-400'}`}>
                 {independentCategories.size}
+              </span>
+            </button>
+          )}
+
+          {/* Unverified filter — single-source stories */}
+          {unverifiedCount > 0 && (
+            <button
+              onClick={() => setShowUnverifiedOnly(p => !p)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors
+                          ${showUnverifiedOnly
+                            ? 'bg-amber-500/15 border-amber-500/40 text-amber-400'
+                            : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-300'
+                          }`}
+            >
+              <span>⚠</span>
+              <span>{lang === 'he' ? 'לא מאומת' : 'Unverified'}</span>
+              <span className={`text-[10px] px-1 rounded-full font-bold
+                                ${showUnverifiedOnly ? 'bg-amber-400/30 text-amber-300' : 'bg-gray-700 text-gray-400'}`}>
+                {unverifiedCount}
               </span>
             </button>
           )}

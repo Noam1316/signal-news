@@ -134,22 +134,31 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
             {t(story.category)}
           </Link>
 
-          {/* Source count badge with political breakdown tooltip */}
-          {sourceCount > 0 && (
-            <span
-              title={breakdownTitle || undefined}
-              className="text-[11px] px-1.5 py-0.5 rounded-full bg-gray-800 border border-gray-700 text-gray-400 font-medium shrink-0 cursor-default"
-            >
-              {sourceCount} {lang === 'he' ? 'מקורות' : 'src'}
-              {sourceCount >= 3 && breakdownTitle && (
-                <span className="ms-1 opacity-60">
-                  {leanBreakdown.left > 0 && <span className="text-blue-400">{leanBreakdown.left}ש</span>}
-                  {leanBreakdown.center > 0 && <span className="text-gray-400">{leanBreakdown.center}מ</span>}
-                  {leanBreakdown.right > 0 && <span className="text-red-400">{leanBreakdown.right}י</span>}
-                </span>
-              )}
-            </span>
-          )}
+          {/* Source count badge — color indicates veracity level */}
+          {sourceCount > 0 && (() => {
+            const veracityStyle = sourceCount === 1
+              ? { bg: 'bg-amber-500/10', border: 'border-amber-500/30', text: 'text-amber-400', icon: '⚠', tip: lang === 'he' ? 'מקור יחיד — לא מאומת' : 'Single source — unverified' }
+              : sourceCount === 2
+              ? { bg: 'bg-gray-800',     border: 'border-gray-700',     text: 'text-gray-400',  icon: null, tip: lang === 'he' ? '2 מקורות — אימות חלקי' : '2 sources — partial verification' }
+              : { bg: 'bg-emerald-500/10', border: 'border-emerald-500/25', text: 'text-emerald-400', icon: '✓', tip: lang === 'he' ? `${sourceCount} מקורות — מאומת` : `${sourceCount} sources — verified` };
+            const fullTip = breakdownTitle ? `${veracityStyle.tip}\n${breakdownTitle}` : veracityStyle.tip;
+            return (
+              <span
+                title={fullTip}
+                className={`text-[11px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 cursor-default ${veracityStyle.bg} ${veracityStyle.border} ${veracityStyle.text}`}
+              >
+                {veracityStyle.icon && <span className="me-0.5">{veracityStyle.icon}</span>}
+                {sourceCount} {lang === 'he' ? 'מקורות' : 'src'}
+                {sourceCount >= 3 && breakdownTitle && (
+                  <span className="ms-1 opacity-60">
+                    {leanBreakdown.left > 0 && <span className="text-blue-400">{leanBreakdown.left}ש</span>}
+                    {leanBreakdown.center > 0 && <span className="text-gray-400">{leanBreakdown.center}מ</span>}
+                    {leanBreakdown.right > 0 && <span className="text-red-400">{leanBreakdown.right}י</span>}
+                  </span>
+                )}
+              </span>
+            );
+          })()}
 
           {/* Credibility grade */}
           <span
