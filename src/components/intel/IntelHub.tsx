@@ -10,9 +10,11 @@ import GroupedFeed from './GroupedFeed';
 import CredibilityDashboard from '@/components/credibility/CredibilityDashboard';
 import GeoCalendar from './GeoCalendar';
 import IntelSynthesis from './IntelSynthesis';
+import SocialBuzz from './SocialBuzz';
 
 const TABS = [
   { id: 'polymarket', icon: '📈', en: 'Signal vs Market', he: 'סיגנל vs שוק' },
+  { id: 'social',     icon: '🌐', en: 'Social',           he: 'רשתות' },
   { id: 'calendar',   icon: '📅', en: 'Calendar',         he: 'לוח אירועים' },
   { id: 'overview',   icon: '📊', en: 'Overview',         he: 'סקירה' },
   { id: 'bias',       icon: '🏛️', en: 'Media Bias',       he: 'הטיה תקשורתית' },
@@ -79,6 +81,7 @@ export default function IntelHub() {
 
       {/* Tab content */}
       <div role="tabpanel" aria-label={lang === 'he' ? TABS.find(t => t.id === activeTab)?.he : TABS.find(t => t.id === activeTab)?.en} className="min-h-[300px]">
+        {activeTab === 'social' && <SocialBuzz />}
         {activeTab === 'calendar' && <GeoCalendar />}
         {activeTab === 'overview' && <IntelDashboard />}
         {activeTab === 'polymarket' && <PolymarketComparison />}
