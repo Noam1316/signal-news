@@ -170,7 +170,7 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
     return sorted.filter(s => isOutsideLane(s.category.en) && isOutsideLane(s.category.he)).slice(0, 2);
   }, [sorted, totalClicks, isOutsideLane]);
 
-  const { focusedIdx, setFocusedIdx } = useKeyboardNav({
+  const { focusedIdx, setFocusedIdx, searchRef } = useKeyboardNav({
     count: sorted.length,
     onExpand: () => { /* BriefCard manages its own expanded state via click */ },
     onWatch: (idx) => { const s = sorted[idx]; if (s) toggle(s.slug); },
@@ -297,8 +297,8 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
             </svg>
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder={lang === 'he' ? 'חפש סיפור...' : 'Search stories...'}
+            <input ref={searchRef} type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder={lang === 'he' ? 'חפש סיפור... (/)' : 'Search stories... (/)'}
               dir={lang === 'he' ? 'rtl' : 'ltr'}
               className="w-full ps-8 pe-3 py-1.5 rounded-lg bg-gray-800/60 border border-gray-700/50 text-sm
                          text-gray-200 placeholder-gray-600 focus:outline-none focus:border-yellow-400/40 transition-colors" />
@@ -374,10 +374,12 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
       {/* Analyst mode toggle + Export */}
       <div className="flex items-center justify-end gap-2">
         <span
-          title={lang === 'he' ? 'ניווט מקלדת: J/K — הבא/קודם · Enter — פתח · W — מעקב · O — פתח מקור' : 'Keyboard: J/K next/prev · Enter expand · W watch · O open source'}
+          title={lang === 'he' ? 'ניווט מקלדת: J/K — הבא/קודם · / — חיפוש · Enter — פתח · W — מעקב · O — פתח מקור' : 'Keyboard: J/K next/prev · / search · Enter expand · W watch · O open source'}
           className="hidden sm:flex items-center gap-1 text-[10px] text-gray-600 border border-gray-800 rounded px-1.5 py-0.5 cursor-default hover:text-gray-400 hover:border-gray-700 transition-colors"
         >
           <kbd className="font-mono">J</kbd><kbd className="font-mono">/</kbd><kbd className="font-mono">K</kbd>
+          <span className="text-gray-700 mx-0.5">·</span>
+          <kbd className="font-mono">/</kbd>
         </span>
         <a
           href="/brief/print"

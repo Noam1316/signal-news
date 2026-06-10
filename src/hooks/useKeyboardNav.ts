@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 
 interface UseKeyboardNavOptions {
   count: number;
@@ -18,6 +18,7 @@ export function useKeyboardNav({
   enabled = true,
 }: UseKeyboardNavOptions) {
   const [focusedIdx, setFocusedIdx] = useState<number>(-1);
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
   const scrollToCard = useCallback((idx: number) => {
     const el = document.querySelector(`[data-card-idx="${idx}"]`);
@@ -62,8 +63,19 @@ export function useKeyboardNav({
         case 'O':
           if (focusedIdx >= 0) { e.preventDefault(); onOpenSource?.(focusedIdx); }
           break;
+        case '/':
+          e.preventDefault();
+          if (searchRef.current) {
+            searchRef.current.focus();
+            searchRef.current.select();
+          }
+          break;
         case 'Escape':
-          setFocusedIdx(-1);
+          if (document.activeElement === searchRef.current) {
+            searchRef.current?.blur();
+          } else {
+            setFocusedIdx(-1);
+          }
           break;
       }
     };
@@ -72,5 +84,5 @@ export function useKeyboardNav({
     return () => window.removeEventListener('keydown', handler);
   }, [enabled, count, focusedIdx, onExpand, onWatch, onOpenSource, scrollToCard]);
 
-  return { focusedIdx, setFocusedIdx };
+  return { focusedIdx, setFocusedIdx, searchRef };
 }
