@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/i18n/context';
 import type { SocialData, RedditPost, TrendItem, StoryBuzz } from '@/app/api/social/route';
+import type { BriefStory } from '@/lib/types';
 
 const SUBREDDIT_COLORS: Record<string, string> = {
   worldnews:   'bg-blue-500/15 text-blue-300 border-blue-500/30',
@@ -106,6 +107,218 @@ function timeAgoStr(dateStr: string, isHe: boolean): string {
   return isHe ? `${Math.floor(diff / 86400)}י` : `${Math.floor(diff / 86400)}d`;
 }
 
+// ─── Framing category labels ─────────────────────────────────────────────────
+
+const FRAMING_META: Record<string, { he: string; en: string; color: string }> = {
+  assertive:     { he: 'סמכותי', en: 'Assertive',     color: 'bg-blue-500/15 border-blue-500/30 text-blue-300' },
+  skeptical:     { he: 'ספקני',  en: 'Skeptical',     color: 'bg-amber-500/15 border-amber-500/30 text-amber-300' },
+  alarming:      { he: 'מדאיג',  en: 'Alarming',      color: 'bg-red-500/15 border-red-500/30 text-red-300' },
+  investigative: { he: 'חוקר',   en: 'Investigative', color: 'bg-violet-500/15 border-violet-500/30 text-violet-300' },
+  editorial:     { he: 'דעתי',   en: 'Editorial',     color: 'bg-rose-500/15 border-rose-500/30 text-rose-300' },
+};
+
+const SENTIMENT_META: Record<string, { icon: string; color: string }> = {
+  negative: { icon: '🔴', color: 'text-red-400' },
+  positive: { icon: '🟢', color: 'text-emerald-400' },
+  neutral:  { icon: '⚪', color: 'text-gray-400' },
+};
+
+/** Divergence score bar */
+function DivergenceBar({ score, isHe }: { score: number; isHe: boolean }) {
+  const color = score >= 60 ? 'bg-red-400' : score >= 35 ? 'bg-amber-400' : 'bg-emerald-400';
+  const label = score >= 60
+    ? (isHe ? 'פיצול גבוה' : 'High divergence')
+    : score >= 35
+    ? (isHe ? 'פיצול בינוני' : 'Moderate divergence')
+    : (isHe ? 'כיסוי דומה' : 'Similar coverage');
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-700 ${color}`} style={{ width: `${score}%` }} />
+      </div>
+      <span className="text-[10px] text-gray-500 w-20 shrink-0">{label}</span>
+      <span className="text-[10px] font-mono text-gray-500 tabular-nums">{score}%</span>
+    </div>
+  );
+}
+
+/** Single story narrative card — indie vs mainstream */
+function NarrativeCard({ story, isHe }: { story: BriefStory; isHe: boolean }) {
+  const [open, setOpen] = useState(false);
+  const ivm = story.indieVsMainstream!;
+  const headline = isHe ? story.headline.he : story.headline.en;
+
+  const indieSent  = SENTIMENT_META[ivm.indieSentiment]  ?? SENTIMENT_META.neutral;
+  const msSent     = SENTIMENT_META[ivm.mainstreamSentiment] ?? SENTIMENT_META.neutral;
+
+  return (
+    <div
+      className="rounded-xl border border-orange-500/15 bg-orange-500/[0.03] overflow-hidden cursor-pointer"
+      onClick={() => setOpen(p => !p)}
+    >
+      {/* Header row */}
+      <div className="px-4 py-3 flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-200 leading-snug line-clamp-1">{headline}</p>
+          {/* Divergence note */}
+          {ivm.divergenceNote && (
+            <p className="text-[11px] text-orange-400/80 mt-0.5">{ivm.divergenceNote}</p>
+          )}
+        </div>
+        {/* Divergence score badge */}
+        <div className={`shrink-0 px-2 py-1 rounded-lg border text-center ${
+          ivm.divergenceScore >= 60 ? 'bg-red-500/10 border-red-500/25 text-red-400' :
+          ivm.divergenceScore >= 35 ? 'bg-amber-500/10 border-amber-500/25 text-amber-400' :
+          'bg-gray-800 border-gray-700 text-gray-400'
+        }`}>
+          <div className="text-sm font-bold tabular-nums">{ivm.divergenceScore}</div>
+          <div className="text-[8px] uppercase tracking-wide">{isHe ? 'פיצול' : 'split'}</div>
+        </div>
+      </div>
+
+      {/* Collapsed preview: sentiment comparison + framing chips */}
+      {!open && (
+        <div className="px-4 pb-3 space-y-2">
+          {/* Sentiment comparison */}
+          <div className="flex items-center gap-3 text-[11px]">
+            <span className="text-gray-500">{isHe ? 'עצמאי:' : 'Indie:'}</span>
+            <span className={`font-semibold ${indieSent.color}`}>{indieSent.icon} {isHe ? ({ positive: 'חיובי', negative: 'שלילי', neutral: 'נייטרלי' }[ivm.indieSentiment]) : ivm.indieSentiment}</span>
+            <span className="text-gray-600 mx-1">|</span>
+            <span className="text-gray-500">{isHe ? 'ממסד:' : 'Mainstream:'}</span>
+            <span className={`font-semibold ${msSent.color}`}>{msSent.icon} {isHe ? ({ positive: 'חיובי', negative: 'שלילי', neutral: 'נייטרלי' }[ivm.mainstreamSentiment]) : ivm.mainstreamSentiment}</span>
+          </div>
+          {/* Top exclusive keyword chips */}
+          <div className="flex flex-wrap gap-1">
+            {ivm.indieExclusive.slice(0, 3).map((w, i) => (
+              <span key={i} className="text-[10px] px-1.5 py-0.5 rounded border bg-orange-500/10 border-orange-500/25 text-orange-300">🟠 {w}</span>
+            ))}
+            {ivm.mainstreamExclusive.slice(0, 3).map((w, i) => (
+              <span key={i} className="text-[10px] px-1.5 py-0.5 rounded border bg-blue-500/10 border-blue-500/25 text-blue-300">🔵 {w}</span>
+            ))}
+          </div>
+          <p className="text-[9px] text-gray-700">{isHe ? '▾ לחץ לניתוח מלא' : '▾ expand for full analysis'}</p>
+        </div>
+      )}
+
+      {/* Expanded: full narrative analysis */}
+      {open && (
+        <div className="px-4 pb-4 space-y-4 border-t border-orange-500/10 pt-3">
+          {/* Divergence bar */}
+          <div>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">{isHe ? 'מדד פיצול נרטיב' : 'Narrative Divergence'}</p>
+            <DivergenceBar score={ivm.divergenceScore} isHe={isHe} />
+          </div>
+
+          {/* Side-by-side: indie | mainstream */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Indie side */}
+            <div className="rounded-lg border border-orange-500/20 bg-orange-500/[0.04] p-3 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wide">🟠 {isHe ? 'תקשורת עצמאית' : 'Independent'}</span>
+                <span className="text-[10px] text-gray-500">{ivm.indieCount} {isHe ? 'כתבות' : 'articles'}</span>
+              </div>
+              {/* Exclusive topics */}
+              {ivm.indieExclusive.length > 0 && (
+                <div>
+                  <p className="text-[9px] text-orange-400/60 uppercase mb-1">{isHe ? 'נושאים בלעדיים' : 'Exclusive topics'}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {ivm.indieExclusive.map((w, i) => (
+                      <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-orange-200">{w}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Framing */}
+              {ivm.framingIndie.length > 0 && (
+                <div>
+                  <p className="text-[9px] text-orange-400/60 uppercase mb-1">{isHe ? 'סגנון סיקור' : 'Framing style'}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {ivm.framingIndie.map((f, i) => {
+                      const meta = FRAMING_META[f.category] ?? { he: f.category, en: f.category, color: 'bg-gray-700 border-gray-600 text-gray-300' };
+                      return (
+                        <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${meta.color}`} title={f.word}>
+                          {isHe ? meta.he : meta.en}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {/* Entities */}
+              {ivm.entitiesIndie.length > 0 && (
+                <div>
+                  <p className="text-[9px] text-orange-400/60 uppercase mb-1">{isHe ? 'ישויות בלעדיות' : 'Exclusive entities'}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {ivm.entitiesIndie.map((e, i) => (
+                      <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/10 text-gray-300">{e}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Sentiment */}
+              <div className="flex items-center gap-1.5 text-[11px] pt-1 border-t border-orange-500/10">
+                <span className="text-gray-500">{isHe ? 'טון:' : 'Tone:'}</span>
+                <span className={`font-semibold ${indieSent.color}`}>{indieSent.icon} {isHe ? ({ positive: 'חיובי', negative: 'שלילי', neutral: 'נייטרלי' }[ivm.indieSentiment]) : ivm.indieSentiment}</span>
+              </div>
+            </div>
+
+            {/* Mainstream side */}
+            <div className="rounded-lg border border-blue-500/20 bg-blue-500/[0.04] p-3 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wide">🔵 {isHe ? 'תקשורת ממסדית' : 'Mainstream'}</span>
+                <span className="text-[10px] text-gray-500">{ivm.mainstreamCount} {isHe ? 'כתבות' : 'articles'}</span>
+              </div>
+              {/* Exclusive topics */}
+              {ivm.mainstreamExclusive.length > 0 && (
+                <div>
+                  <p className="text-[9px] text-blue-400/60 uppercase mb-1">{isHe ? 'נושאים בלעדיים' : 'Exclusive topics'}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {ivm.mainstreamExclusive.map((w, i) => (
+                      <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-200">{w}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Framing */}
+              {ivm.framingMainstream.length > 0 && (
+                <div>
+                  <p className="text-[9px] text-blue-400/60 uppercase mb-1">{isHe ? 'סגנון סיקור' : 'Framing style'}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {ivm.framingMainstream.map((f, i) => {
+                      const meta = FRAMING_META[f.category] ?? { he: f.category, en: f.category, color: 'bg-gray-700 border-gray-600 text-gray-300' };
+                      return (
+                        <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${meta.color}`} title={f.word}>
+                          {isHe ? meta.he : meta.en}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {/* Entities */}
+              {ivm.entitiesMainstream.length > 0 && (
+                <div>
+                  <p className="text-[9px] text-blue-400/60 uppercase mb-1">{isHe ? 'ישויות בלעדיות' : 'Exclusive entities'}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {ivm.entitiesMainstream.map((e, i) => (
+                      <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/10 text-gray-300">{e}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Sentiment */}
+              <div className="flex items-center gap-1.5 text-[11px] pt-1 border-t border-blue-500/10">
+                <span className="text-gray-500">{isHe ? 'טון:' : 'Tone:'}</span>
+                <span className={`font-semibold ${msSent.color}`}>{msSent.icon} {isHe ? ({ positive: 'חיובי', negative: 'שלילי', neutral: 'נייטרלי' }[ivm.mainstreamSentiment]) : ivm.mainstreamSentiment}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SocialBuzz() {
   const { lang, dir } = useLanguage();
   const isHe = lang === 'he';
@@ -115,6 +328,8 @@ export default function SocialBuzz() {
   const [subFilter, setSubFilter] = useState<string>('all');
   const [indieArticles, setIndieArticles] = useState<IndieArticle[]>([]);
   const [indieLoading, setIndieLoading] = useState(false);
+  const [narrativeStories, setNarrativeStories] = useState<BriefStory[]>([]);
+  const [narrativeTab, setNarrativeTab] = useState<'analysis' | 'articles'>('analysis');
 
   useEffect(() => {
     fetch('/api/social')
@@ -127,11 +342,15 @@ export default function SocialBuzz() {
   useEffect(() => {
     if (innerTab !== 'indie') return;
     setIndieLoading(true);
-    fetch('/api/articles?lens=il-independent&limit=40')
-      .then(r => r.ok ? r.json() : { articles: [] })
-      .then(d => setIndieArticles(d.articles ?? []))
-      .catch(() => {})
-      .finally(() => setIndieLoading(false));
+    // Fetch both indie articles and stories (for narrative analysis)
+    Promise.all([
+      fetch('/api/articles?lens=il-independent&limit=40').then(r => r.ok ? r.json() : { articles: [] }),
+      fetch('/api/stories?limit=30').then(r => r.ok ? r.json() : { stories: [] }),
+    ]).then(([articlesData, storiesData]) => {
+      setIndieArticles(articlesData.articles ?? []);
+      const withAnalysis = (storiesData.stories ?? []).filter((s: BriefStory) => s.indieVsMainstream);
+      setNarrativeStories(withAnalysis);
+    }).catch(() => {}).finally(() => setIndieLoading(false));
   }, [innerTab]);
 
   if (loading) {
@@ -264,46 +483,105 @@ export default function SocialBuzz() {
       {/* Independent media tab */}
       {innerTab === 'indie' && (
         <div className="space-y-3">
-          <p className="text-xs text-gray-500">
-            {isHe
-              ? 'כתבות אחרונות מתקשורת עצמאית — 972, סיכה מקומית, העין השביעית ועוד'
-              : 'Latest from independent Israeli media — +972, Local Call, The Seventh Eye and more'}
-          </p>
+          {/* Sub-tabs: analysis vs raw articles */}
+          <div className="flex gap-1 bg-gray-900/40 rounded-lg p-1 border border-gray-800">
+            <button
+              onClick={() => setNarrativeTab('analysis')}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                narrativeTab === 'analysis' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {isHe ? '🔍 ניתוח נרטיב' : '🔍 Narrative Analysis'}
+              {narrativeStories.length > 0 && (
+                <span className="ms-1.5 text-[10px] px-1 rounded-full bg-orange-500/20 text-orange-400">
+                  {narrativeStories.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setNarrativeTab('articles')}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                narrativeTab === 'articles' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {isHe ? `📰 כתבות (${indieArticles.length})` : `📰 Articles (${indieArticles.length})`}
+            </button>
+          </div>
+
           {indieLoading ? (
             <div className="space-y-2 animate-pulse">
               {[1,2,3,4].map(i => <div key={i} className="h-14 bg-gray-800/50 rounded-lg" />)}
             </div>
-          ) : indieArticles.length === 0 ? (
-            <p className="text-center text-sm text-gray-500 py-8">
-              {isHe ? 'אין כתבות עצמאיות כרגע' : 'No independent articles yet'}
-            </p>
+          ) : narrativeTab === 'analysis' ? (
+            /* ── Narrative analysis view ── */
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">
+                {isHe
+                  ? 'ניתוח טקסטואלי: מה עצמאי מכסה בלי הממסד, ואיך כל צד מסגר את אותו הסיפור'
+                  : 'Text analysis: exclusive topics, framing differences and entity divergence per story'}
+              </p>
+              {narrativeStories.length === 0 ? (
+                <div className="text-center py-10 space-y-2">
+                  <p className="text-sm text-gray-500">
+                    {isHe ? 'אין סיפורים עם כיסוי משני הצדדים כרגע' : 'No stories with both indie and mainstream coverage yet'}
+                  </p>
+                  <p className="text-[11px] text-gray-600">
+                    {isHe ? 'הניתוח מופיע כשסיפור מכוסה גם בעצמאי וגם בממסד' : 'Analysis appears when a story is covered by both sides'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[580px] overflow-y-auto pe-1">
+                  {/* Sort by divergence score — most divergent first */}
+                  {[...narrativeStories]
+                    .sort((a, b) => (b.indieVsMainstream?.divergenceScore ?? 0) - (a.indieVsMainstream?.divergenceScore ?? 0))
+                    .map(story => (
+                      <NarrativeCard key={story.slug} story={story} isHe={isHe} />
+                    ))
+                  }
+                </div>
+              )}
+            </div>
           ) : (
-            <div className="space-y-2 max-h-[520px] overflow-y-auto pe-1">
-              {indieArticles.map(a => (
-                <a
-                  key={a.id}
-                  href={a.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-start gap-3 p-3 rounded-lg bg-orange-500/[0.04] hover:bg-orange-500/[0.08] border border-orange-500/10 hover:border-orange-500/20 transition-all group"
-                >
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <p className="text-sm text-gray-200 group-hover:text-white leading-snug line-clamp-2 transition-colors">
-                      {a.title}
-                    </p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-orange-500/15 border-orange-500/30 text-orange-400">
-                        🟠 {a.sourceName}
-                      </span>
-                      {a.pubDate && (
-                        <span className="text-[10px] text-gray-600 ms-auto">
-                          {timeAgoStr(a.pubDate, isHe)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </a>
-              ))}
+            /* ── Raw articles view ── */
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500">
+                {isHe
+                  ? 'כתבות אחרונות מתקשורת עצמאית — 972, סיכה מקומית, העין השביעית ועוד'
+                  : 'Latest from independent Israeli media — +972, Local Call, The Seventh Eye and more'}
+              </p>
+              {indieArticles.length === 0 ? (
+                <p className="text-center text-sm text-gray-500 py-8">
+                  {isHe ? 'אין כתבות עצמאיות כרגע' : 'No independent articles yet'}
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-[520px] overflow-y-auto pe-1">
+                  {indieArticles.map(a => (
+                    <a
+                      key={a.id}
+                      href={a.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-start gap-3 p-3 rounded-lg bg-orange-500/[0.04] hover:bg-orange-500/[0.08] border border-orange-500/10 hover:border-orange-500/20 transition-all group"
+                    >
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <p className="text-sm text-gray-200 group-hover:text-white leading-snug line-clamp-2 transition-colors">
+                          {a.title}
+                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-orange-500/15 border-orange-500/30 text-orange-400">
+                            🟠 {a.sourceName}
+                          </span>
+                          {a.pubDate && (
+                            <span className="text-[10px] text-gray-600 ms-auto">
+                              {timeAgoStr(a.pubDate, isHe)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

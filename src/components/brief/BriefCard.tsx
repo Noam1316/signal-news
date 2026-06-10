@@ -187,6 +187,19 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
               🟠 {lang === 'he' ? 'עצמאי' : 'Indie'}
             </span>
           )}
+          {/* Narrative divergence badge — only when divergence is significant */}
+          {story.indieVsMainstream && story.indieVsMainstream.divergenceScore >= 35 && (
+            <span
+              title={story.indieVsMainstream.divergenceNote ?? (lang === 'he' ? 'נרטיב שונה בין עצמאי לממסד' : 'Indie and mainstream frame this story differently')}
+              className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 cursor-default ${
+                story.indieVsMainstream.divergenceScore >= 60
+                  ? 'bg-red-500/10 border-red-500/25 text-red-400'
+                  : 'bg-amber-500/10 border-amber-500/25 text-amber-400'
+              }`}
+            >
+              ⚡ {lang === 'he' ? `פיצול ${story.indieVsMainstream.divergenceScore}%` : `Split ${story.indieVsMainstream.divergenceScore}%`}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">

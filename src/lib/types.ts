@@ -62,6 +62,20 @@ export interface BriefStory {
     headlineB: string;
     gapPct: number;             // sentiment divergence 0-100
   };
+  indieVsMainstream?: {         // narrative analysis: indie vs mainstream text differences
+    indieExclusive: string[];
+    mainstreamExclusive: string[];
+    framingIndie: Array<{ word: string; category: string }>;
+    framingMainstream: Array<{ word: string; category: string }>;
+    entitiesIndie: string[];
+    entitiesMainstream: string[];
+    indieSentiment: 'positive' | 'negative' | 'neutral';
+    mainstreamSentiment: 'positive' | 'negative' | 'neutral';
+    indieCount: number;
+    mainstreamCount: number;
+    divergenceScore: number;
+    divergenceNote?: string;
+  };
 }
 
 export type ShockStatus = 'fresh' | 'active' | 'fading';

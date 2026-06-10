@@ -8,6 +8,7 @@ import type { FetchedArticle } from './rss-fetcher';
 import type { BriefStory, Confidence, ImpactItem, NarrativeSplit } from '@/lib/types';
 import { analyzeArticle, type ArticleAnalysis } from './ai-analyzer';
 import { getGroqResult } from './groq-analyzer';
+import { computeIndieVsMainstream } from './indie-vs-mainstream';
 
 interface ArticleWithAnalysis {
   article: FetchedArticle;
@@ -1153,6 +1154,12 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       }
     }
 
+    // Indie vs Mainstream narrative analysis
+    const indieVsMainstream = computeIndieVsMainstream(
+      indieArticles.map(a => ({ title: a.article.title, sentiment: a.analysis.sentiment })),
+      mainstreamArticles.map(a => ({ title: a.article.title, sentiment: a.analysis.sentiment })),
+    );
+
     // Contradiction Detector: same cluster, opposite sentiments from different sources
     // Tightened: requires >=5 articles in cluster, >=2 positive AND >=2 negative articles,
     // each side from >=2 different sources, and gapPct <= 60 (balanced coverage)
@@ -1215,6 +1222,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       firstMover,
       contradiction,
       crossMediaEcho,
+      indieVsMainstream: indieVsMainstream ?? undefined,
     };
   }).filter((s): s is NonNullable<typeof s> => s !== null)
     .sort((a, b) => {
