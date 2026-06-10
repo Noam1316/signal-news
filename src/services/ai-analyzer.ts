@@ -221,35 +221,51 @@ function isEntertainmentContent(text: string): boolean {
 // ── Political Leaning Keyword Dictionaries (for content-based classification) ──
 
 const RIGHT_KEYWORDS = [
-  // Hebrew
-  'ריבונות', 'בטחון לאומי', 'התנחלויות', 'ארץ ישראל', 'הרתעה', 'תגובה נחרצת',
+  // Hebrew — security/nationalist framing
+  'ריבונות', 'בטחון לאומי', 'ביטחון לאומי', 'התנחלויות', 'ארץ ישראל', 'הרתעה', 'תגובה נחרצת',
   'ציונות', 'יהודית', 'גוש אמונים', 'נאמנות', 'כוח צבאי', 'מבצע צבאי',
-  'טרור', 'חיסול', 'הגנה עצמית', 'זכות קיום', 'מדינה יהודית',
+  'טרור', 'מחבלים', 'מחבל', 'חיסול', 'הגנה עצמית', 'זכות קיום', 'מדינה יהודית',
+  'יד קשה', 'הכרעה', 'ניצחון מוחלט', 'אויב', 'הסתה', 'איום קיומי',
+  'התיישבות', 'מאחזים', 'בית המקדש', 'הר הבית', 'גירוש', 'הגליה', 'משילות',
+  'חוסן', 'עוצמה', 'גאווה לאומית', 'מורשת', 'מסורת', 'דגל', 'צה"ל גאה',
   // English
   'sovereignty', 'national security', 'settlements', 'land of israel', 'deterrence',
   'decisive response', 'zionism', 'military operation', 'self-defense', 'jewish state',
   'strong response', 'zero tolerance', 'iron fist', 'preemptive', 'right to exist',
+  'terrorists', 'total victory', 'crushing', 'eliminate', 'existential threat',
+  'law and order', 'border security', 'illegal migrants', 'patriotic', 'homeland',
+  'traditional values', 'national pride', 'strength', 'enemy', 'incitement',
 ];
 
 const LEFT_KEYWORDS = [
-  // Hebrew
+  // Hebrew — rights/humanitarian/protest framing
   'כיבוש', 'זכויות אדם', 'שתי מדינות', 'מחאה חברתית', 'צדק חברתי',
   'דמוקרטיה', 'חופש ביטוי', 'שוויון', 'מיעוטים', 'הומניטרי',
   'פליטים', 'עוני', 'אי-שוויון', 'חברה אזרחית', 'זכויות', 'דו-קיום',
+  'כיבוש', 'אפרטהייד', 'הפרת זכויות', 'אסון הומניטרי', 'נפגעים אזרחים',
+  'הרס בתים', 'עצורים מנהליים', 'אלימות מתנחלים', 'גזענות', 'הדרה',
+  'שקיפות', 'ביקורת', 'זכויות נשים', 'להטב', 'קהילת הלהט"ב', 'סביבה',
+  'אקלים', 'עובדים זרים', 'מבקשי מקלט', 'דיכוי', 'חירות', 'פלסטינים',
+  'משבר הומניטרי', 'הקצנה', 'דמוקרטית', 'זכויות אזרח',
   // English
   'occupation', 'human rights', 'two-state', 'social justice', 'democracy',
   'freedom of speech', 'equality', 'minorities', 'humanitarian', 'refugees',
   'poverty', 'inequality', 'civil society', 'coexistence', 'proportional',
   'disproportionate', 'civilian casualties', 'international law', 'war crimes',
+  'apartheid', 'home demolitions', 'settler violence', 'racism', 'oppression',
+  'asylum seekers', 'climate', 'lgbtq', 'women rights', 'transparency',
+  'humanitarian crisis', 'displacement', 'ceasefire now', 'civil rights',
 ];
 
 const CENTER_KEYWORDS = [
   // Hebrew
   'פשרה', 'דיאלוג', 'משא ומתן', 'איזון', 'מתינות', 'שיתוף פעולה',
-  'הסכמה', 'גישור', 'מו"מ', 'ביטחון ושלום',
+  'הסכמה', 'גישור', 'מו"מ', 'ביטחון ושלום', 'אחדות', 'ממלכתיות',
+  'הסדר', 'הידברות', 'פרגמטי', 'מרכז', 'הסכמה רחבה', 'גשר',
   // English
   'compromise', 'dialogue', 'negotiation', 'balance', 'moderation', 'bipartisan',
-  'cooperation', 'consensus', 'mediation', 'pragmatic',
+  'cooperation', 'consensus', 'mediation', 'pragmatic', 'unity', 'centrist',
+  'de-escalation', 'diplomacy', 'common ground', 'middle ground',
 ];
 
 /**
@@ -269,8 +285,10 @@ export function classifyPoliticalLeaning(
 
   const totalHits = rightScore + leftScore + centerScore;
 
-  // If very few keyword hits, content analysis is unreliable → use source-based
-  if (totalHits < 3) return sourceLeaning;
+  // If very few keyword hits, content analysis is unreliable → use source-based.
+  // Threshold of 2 works for short RSS text (title + description); full-text
+  // enrichment naturally clears it easily.
+  if (totalHits < 2) return sourceLeaning;
 
   // Determine content-based leaning
   let contentLeaning: PoliticalLeaning;
@@ -407,9 +425,10 @@ export function analyzeArticle(article: FetchedArticle): ArticleAnalysis {
     : detectSignal(analysisText);
   const region = detectRegion(article);
   const sourceLeaning = detectPoliticalLeaning(article);
-  const politicalLeaning = enrichment
-    ? classifyPoliticalLeaning(enrichment.fullText, sourceLeaning)
-    : sourceLeaning;
+  // Always run content-based classification on the text we have (title + description,
+  // plus full text when enrichment is available). Previously this was gated behind
+  // enrichment that never runs in production, so every article fell back to source-based.
+  const politicalLeaning = classifyPoliticalLeaning(analysisText, sourceLeaning);
 
   // ── Groq enhancement (if pre-analysis ran for this article) ──
   const groq = getGroqResult(article.id);
