@@ -92,15 +92,29 @@ function BuzzBar({ buzz, isHe }: { buzz: StoryBuzz; isHe: boolean }) {
 
 // ── Tabs inside SocialBuzz ────────────────────────────────────────────────────
 
-type InnerTab = 'posts' | 'buzz' | 'trends';
+type InnerTab = 'posts' | 'buzz' | 'trends' | 'indie';
+
+interface IndieArticle {
+  id: string; sourceName: string; lensCategory: string;
+  title: string; description: string; link: string; pubDate: string;
+}
+
+function timeAgoStr(dateStr: string, isHe: boolean): string {
+  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+  if (diff < 3600) return isHe ? `${Math.floor(diff / 60)}ד` : `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return isHe ? `${Math.floor(diff / 3600)}ש` : `${Math.floor(diff / 3600)}h`;
+  return isHe ? `${Math.floor(diff / 86400)}י` : `${Math.floor(diff / 86400)}d`;
+}
 
 export default function SocialBuzz() {
   const { lang, dir } = useLanguage();
   const isHe = lang === 'he';
   const [data, setData] = useState<SocialData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [innerTab, setInnerTab] = useState<InnerTab>('posts');
+  const [innerTab, setInnerTab] = useState<InnerTab>('indie');
   const [subFilter, setSubFilter] = useState<string>('all');
+  const [indieArticles, setIndieArticles] = useState<IndieArticle[]>([]);
+  const [indieLoading, setIndieLoading] = useState(false);
 
   useEffect(() => {
     fetch('/api/social')
@@ -109,6 +123,16 @@ export default function SocialBuzz() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (innerTab !== 'indie') return;
+    setIndieLoading(true);
+    fetch('/api/articles?lens=il-independent&limit=40')
+      .then(r => r.ok ? r.json() : { articles: [] })
+      .then(d => setIndieArticles(d.articles ?? []))
+      .catch(() => {})
+      .finally(() => setIndieLoading(false));
+  }, [innerTab]);
 
   if (loading) {
     return (
@@ -137,9 +161,10 @@ export default function SocialBuzz() {
     : data.posts.filter(p => p.subreddit.toLowerCase() === subFilter);
 
   const INNER_TABS: { id: InnerTab; icon: string; he: string; en: string }[] = [
-    { id: 'posts',  icon: '🔴', he: `פוסטים (${data.posts.length})`,  en: `Posts (${data.posts.length})` },
-    { id: 'buzz',   icon: '🔥', he: `באז לסיפורים (${data.storyBuzz.length})`, en: `Story Buzz (${data.storyBuzz.length})` },
-    { id: 'trends', icon: '📈', he: `טרנדים ישראל (${data.trends.length})`, en: `IL Trends (${data.trends.length})` },
+    { id: 'indie',  icon: '🟠', he: 'עצמאי', en: 'Independent' },
+    { id: 'posts',  icon: '🔴', he: `Reddit (${data.posts.length})`,  en: `Reddit (${data.posts.length})` },
+    { id: 'buzz',   icon: '🔥', he: `באז (${data.storyBuzz.length})`, en: `Buzz (${data.storyBuzz.length})` },
+    { id: 'trends', icon: '📈', he: `טרנדים (${data.trends.length})`, en: `IL Trends (${data.trends.length})` },
   ];
 
   return (
@@ -230,6 +255,54 @@ export default function SocialBuzz() {
                     <BuzzBar buzz={buzz} isHe={isHe} />
                   </div>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Independent media tab */}
+      {innerTab === 'indie' && (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-500">
+            {isHe
+              ? 'כתבות אחרונות מתקשורת עצמאית — 972, סיכה מקומית, העין השביעית ועוד'
+              : 'Latest from independent Israeli media — +972, Local Call, The Seventh Eye and more'}
+          </p>
+          {indieLoading ? (
+            <div className="space-y-2 animate-pulse">
+              {[1,2,3,4].map(i => <div key={i} className="h-14 bg-gray-800/50 rounded-lg" />)}
+            </div>
+          ) : indieArticles.length === 0 ? (
+            <p className="text-center text-sm text-gray-500 py-8">
+              {isHe ? 'אין כתבות עצמאיות כרגע' : 'No independent articles yet'}
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-[520px] overflow-y-auto pe-1">
+              {indieArticles.map(a => (
+                <a
+                  key={a.id}
+                  href={a.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-3 p-3 rounded-lg bg-orange-500/[0.04] hover:bg-orange-500/[0.08] border border-orange-500/10 hover:border-orange-500/20 transition-all group"
+                >
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <p className="text-sm text-gray-200 group-hover:text-white leading-snug line-clamp-2 transition-colors">
+                      {a.title}
+                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded border font-medium bg-orange-500/15 border-orange-500/30 text-orange-400">
+                        🟠 {a.sourceName}
+                      </span>
+                      {a.pubDate && (
+                        <span className="text-[10px] text-gray-600 ms-auto">
+                          {timeAgoStr(a.pubDate, isHe)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </a>
               ))}
             </div>
           )}

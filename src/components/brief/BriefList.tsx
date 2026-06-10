@@ -35,6 +35,7 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
   const [source, setSource] = useState<string>('');
   const [search, setSearch] = useState('');
   const [showWatchlistOnly, setShowWatchlistOnly] = useState(false);
+  const [showIndependentOnly, setShowIndependentOnly] = useState(false);
   const [leanFilter, setLeanFilter] = useState<Lean | 'all'>('all');
   const [sortKey, setSortKey] = useState<SortKey>('default');
   const { toggle, isWatched, watchlist } = useWatchlist();
@@ -128,6 +129,9 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
   const filtered = useMemo(() => stories
     .filter(s => lens === 'all' || s.lens === lens)
     .filter(s => !showWatchlistOnly || isWatched(s.slug))
+    .filter(s => !showIndependentOnly || independentCategories.has(
+      (s.category.en || s.category.he || '').toLowerCase().replace(/\W+/g, '-')
+    ))
     .filter(s => leanFilter === 'all' || getStoryLean(s) === leanFilter)
     .filter(s => {
       if (!search.trim()) return true;
@@ -195,7 +199,7 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
   });
 
   const watchlistCount = watchlist.size;
-  const activeFilterCount = (lens !== 'all' ? 1 : 0) + (leanFilter !== 'all' ? 1 : 0) + (showWatchlistOnly ? 1 : 0) + (search.trim() ? 1 : 0) + (topicFilter.length > 0 ? 1 : 0);
+  const activeFilterCount = (lens !== 'all' ? 1 : 0) + (leanFilter !== 'all' ? 1 : 0) + (showWatchlistOnly ? 1 : 0) + (showIndependentOnly ? 1 : 0) + (search.trim() ? 1 : 0) + (topicFilter.length > 0 ? 1 : 0);
 
   const SORT_OPTIONS: { key: SortKey; he: string; en: string }[] = [
     { key: 'default',    he: 'ברירת מחדל', en: 'Default' },
@@ -262,6 +266,26 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
               </span>
             )}
           </button>
+
+          {/* Independent media filter */}
+          {independentCategories.size > 0 && (
+            <button
+              onClick={() => setShowIndependentOnly(p => !p)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors
+                          ${showIndependentOnly
+                            ? 'bg-orange-500/15 border-orange-500/40 text-orange-400'
+                            : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-300'
+                          }`}
+              title={lang === 'he' ? 'הצג רק סיפורים עם כיסוי עצמאי ייחודי' : 'Show only stories with independent exclusive coverage'}
+            >
+              <span>🟠</span>
+              <span>{lang === 'he' ? 'עצמאי' : 'Indie'}</span>
+              <span className={`text-[10px] px-1 rounded-full font-bold
+                                ${showIndependentOnly ? 'bg-orange-400/30 text-orange-300' : 'bg-gray-700 text-gray-400'}`}>
+                {independentCategories.size}
+              </span>
+            </button>
+          )}
 
           {/* Political lean filter */}
           <div className="flex items-center gap-1">
