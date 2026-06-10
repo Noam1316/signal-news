@@ -70,6 +70,19 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
     [shocks]
   );
 
+  // Categories with independent exclusive / divergence coverage
+  const independentCategories = useMemo(() => {
+    const cats = new Set<string>();
+    for (const sh of shocks) {
+      if (!sh.id) continue;
+      if (sh.id.startsWith('auto-ind-excl-') || sh.id.startsWith('auto-ind-div-')) {
+        const slug = sh.id.replace('auto-ind-excl-', '').replace('auto-ind-div-', '');
+        cats.add(slug);
+      }
+    }
+    return cats;
+  }, [shocks]);
+
   const fetchStories = useCallback(async () => {
     setLoading(true);
     try {
@@ -452,6 +465,9 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
               isWatched={isWatched(story.slug)}
               onWatchToggle={() => toggle(story.slug)}
               relatedShock={shockBySlug[story.slug]}
+              hasIndependentCoverage={independentCategories.has(
+                (story.category.en || story.category.he || '').toLowerCase().replace(/\W+/g, '-')
+              )}
             />
           </div>
         ))
@@ -481,6 +497,9 @@ export default function BriefList({ compactMode: _compactMode }: BriefListProps 
                 isWatched={isWatched(story.slug)}
                 onWatchToggle={() => toggle(story.slug)}
                 relatedShock={shockBySlug[story.slug]}
+                hasIndependentCoverage={independentCategories.has(
+                  (story.category.en || story.category.he || '').toLowerCase().replace(/\W+/g, '-')
+                )}
               />
             </div>
           ))}

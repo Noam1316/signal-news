@@ -38,9 +38,10 @@ interface BriefCardProps {
   isWatched?: boolean;
   onWatchToggle?: () => void;
   relatedShock?: ShockEvent;
+  hasIndependentCoverage?: boolean;
 }
 
-export default function BriefCard({ story, isWatched = false, onWatchToggle, relatedShock }: BriefCardProps) {
+export default function BriefCard({ story, isWatched = false, onWatchToggle, relatedShock, hasIndependentCoverage }: BriefCardProps) {
   const { t, dir, lang } = useLanguage();
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
@@ -167,6 +168,16 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
 
           {/* Blindspot indicator */}
           <BlindspotBadge sources={story.sources} />
+
+          {/* Independent exclusive badge */}
+          {hasIndependentCoverage && (
+            <span
+              title={lang === 'he' ? 'תקשורת עצמאית מכסה נושא זה — בדוק פיד זעזועים' : 'Independent media covering this topic — check shocks feed'}
+              className="text-[10px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 bg-orange-500/15 border-orange-500/40 text-orange-400 cursor-default"
+            >
+              🟠 {lang === 'he' ? 'עצמאי' : 'Indie'}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
