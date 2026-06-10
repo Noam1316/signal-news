@@ -66,6 +66,8 @@ export interface SignalVsMarket {
   sourceCount: number;            // how many RSS sources back our Signal
   intelBoost: number;             // 0-15 boost from bias-adjusted + early mover signals
   intelSummary: string;           // one-line summary of intelligence enhancements
+  signalRaw?: number;             // original uncalibrated Signal score
+  calibrationNote?: string;       // why/how the score was adjusted
 }
 
 // Keywords to match our topics with Polymarket events (English + Hebrew)
@@ -263,7 +265,14 @@ export function matchStoriesWithMarkets(
     // Lowered threshold from 4 → 2: one strong keyword match is sufficient
     if (bestMatch && bestScore >= 2) {
       const marketProb = Math.round(bestMatch.outcomePrices[0] * 100);
-      const delta = story.likelihood - marketProb;
+
+      // ── Calibration: Signal likelihood measures topic intensity, NOT outcome probability.
+      // When the Polymarket question asks about an extreme/specific outcome, discount
+      // Signal to avoid misleading Alpha gaps (e.g. "Gaza conflict hot" ≠ "annexation likely").
+      const calibration = calibrateSignalLikelihood(story.likelihood, bestMatch.title, marketProb);
+      const calibratedLikelihood = calibration.calibrated;
+
+      const delta = calibratedLikelihood - marketProb;
       const absDelta = Math.abs(delta);
       const direction: SignalVsMarket['alphaDirection'] = absDelta <= 10 ? 'aligned' : (delta > 0 ? 'signal-higher' : 'market-higher');
 
@@ -282,7 +291,7 @@ export function matchStoriesWithMarkets(
       const alphaScore = Math.min(100, baseAlpha + intel.intelBoost);
 
       // Generate structured explanation for why Signal differs from Market
-      const whyDifferent = generateWhyDifferent(direction, absDelta, story.likelihood, marketProb, bestMatch, srcCount);
+      const whyDifferent = generateWhyDifferent(direction, absDelta, calibratedLikelihood, marketProb, bestMatch, srcCount);
 
       // Build structured thesis objects for the "Signal vs Market" card
       const signalThesis = buildSignalThesis(story, direction);
@@ -297,7 +306,9 @@ export function matchStoriesWithMarkets(
         topic: story.headline,
         storySlug: story.slug,
         topicCategory: bestCategory,
-        signalLikelihood: story.likelihood,
+        signalLikelihood: calibratedLikelihood,
+        signalRaw: story.likelihood,
+        calibrationNote: calibration.note,
         marketProbability: marketProb,
         delta,
         alphaDirection: direction,
@@ -362,6 +373,85 @@ function computeAlphaBreakdown(
 }
 
 /**
+/**
+ * Calibrate Signal likelihood against the specific Polymarket question.
+ *
+ * Signal likelihood = topic intensity (how loudly the news covers it).
+ * Polymarket probability = specific outcome probability.
+ * These are NOT the same. Extreme/specific outcomes need a discount.
+ *
+ * Rules:
+ * 1. Extreme outcome keywords → heavy discount (outcome is specific & rare)
+ * 2. Market already at extremes (≤5% or ≥95%) → Signal closer to market (market is probably right)
+ * 3. Weak match (score < 4) → moderate discount for mismatch risk
+ */
+function calibrateSignalLikelihood(
+  rawLikelihood: number,
+  marketTitle: string,
+  marketProb: number,
+): { calibrated: number; note?: string } {
+  const title = marketTitle.toLowerCase();
+
+  // Extreme outcome keywords — these describe rare, unprecedented, or very specific events
+  const EXTREME_KEYWORDS = [
+    'annex', 'annexation', 'invade', 'invasion', 'declare war', 'nuclear strike',
+    'impeach', 'impeachment', 'coup', 'assassinat', 'collapse', 'default',
+    'withdraw from', 'leave the', 'exit the', 'ban', 'outlaw',
+    'ספח', 'סיפוח', 'פלישה', 'הכריז מלחמה', 'גרעיני', 'הדחה', 'קריסה',
+  ];
+
+  // Specific-event keywords — distinct from general topic coverage
+  const SPECIFIC_KEYWORDS = [
+    'by june', 'by december', 'by march', 'by end of', 'before ', 'within ',
+    'will x win', 'will x be', 'will x happen', 'first', 'ever',
+    'עד יוני', 'עד דצמבר', 'עד מרץ', 'עד סוף', 'לפני ', 'תוך ',
+  ];
+
+  const hasExtreme  = EXTREME_KEYWORDS.some(kw => title.includes(kw));
+  const hasSpecific = SPECIFIC_KEYWORDS.some(kw => title.includes(kw));
+
+  // Market at extreme ends — usually means the consensus is strong; respect it
+  const marketAtFloor   = marketProb <= 5;
+  const marketAtCeiling = marketProb >= 95;
+
+  if (hasExtreme && marketAtFloor) {
+    // Annexation at 1% — Signal coverage noise should not inflate this.
+    // Blend strongly toward market: 20% Signal + 80% market signal
+    const calibrated = Math.round(rawLikelihood * 0.2 + marketProb * 0.8 + rawLikelihood * 0.05);
+    return {
+      calibrated: Math.min(calibrated, marketProb + 15), // cap at market + 15pts
+      note: `מכויל: ציון גולמי ${rawLikelihood}% הופחת — שאלת הפוליגון עוסקת בתוצאה קיצונית (${EXTREME_KEYWORDS.find(k => title.includes(k))}) שהשוק מתמחר ב-${marketProb}% בלבד`,
+    };
+  }
+
+  if (hasExtreme && !marketAtFloor && !marketAtCeiling) {
+    // Extreme outcome but market is not dismissive — moderate discount
+    const calibrated = Math.round(rawLikelihood * 0.5 + marketProb * 0.5);
+    return {
+      calibrated,
+      note: `מכויל: ממוצע בין Signal (${rawLikelihood}%) לשוק (${marketProb}%) — תוצאה ספציפית`,
+    };
+  }
+
+  if (hasSpecific && marketAtFloor) {
+    // Time-bounded specific question at low probability
+    const calibrated = Math.round(rawLikelihood * 0.35 + marketProb * 0.65);
+    return {
+      calibrated: Math.min(calibrated, marketProb + 20),
+      note: `מכויל: שאלה עם מועד ספציפי — Signal (${rawLikelihood}%) מייצג עוצמת כיסוי, לא הסתברות התוצאה`,
+    };
+  }
+
+  if (marketAtCeiling) {
+    // Market almost certain → blend toward market
+    const calibrated = Math.round(rawLikelihood * 0.3 + marketProb * 0.7);
+    return { calibrated };
+  }
+
+  // No calibration needed — Signal and question are well-aligned
+  return { calibrated: rawLikelihood };
+}
+
 /**
  * Build the Signal thesis — what our RSS analysis actually sees.
  */

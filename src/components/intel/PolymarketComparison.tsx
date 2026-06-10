@@ -28,6 +28,8 @@ interface SignalVsMarket {
   sourceCount: number;
   intelBoost: number;
   intelSummary: string;
+  signalRaw?: number;
+  calibrationNote?: string;
 }
 
 interface PolyData {
@@ -829,6 +831,13 @@ export default function PolymarketComparison() {
                     {match.intelBoost > 0 && match.intelSummary && (
                       <div className="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium bg-purple-500/10 border-purple-500/30 text-purple-400">
                         🧠 +{match.intelBoost} {lang === 'he' ? 'מודיעין' : 'intel'}: {match.intelSummary}
+                      </div>
+                    )}
+                    {/* Calibration badge — shown when Signal score was adjusted */}
+                    {match.calibrationNote && match.signalRaw !== undefined && match.signalRaw !== match.signalLikelihood && (
+                      <div className="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium bg-gray-700/50 border-gray-600/40 text-gray-400"
+                           title={match.calibrationNote}>
+                        ⚖️ {lang === 'he' ? `מכויל מ-${match.signalRaw}% → ${match.signalLikelihood}%` : `Calibrated ${match.signalRaw}% → ${match.signalLikelihood}%`}
                       </div>
                     )}
                   </div>
