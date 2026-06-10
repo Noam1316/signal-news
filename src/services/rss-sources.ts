@@ -3,7 +3,7 @@ export interface RssSource {
   name: string;
   url: string;
   language: 'he' | 'en' | 'ar';
-  lensCategory: 'il-mainstream' | 'il-partisan' | 'international';
+  lensCategory: 'il-mainstream' | 'il-partisan' | 'il-independent' | 'international';
   country: string;
 }
 
@@ -63,6 +63,10 @@ export const rssSources: RssSource[] = [
   { id: 'maariv',  name: 'מעריב',      url: 'https://news.google.com/rss/search?q=site:maariv.co.il&hl=he&gl=IL&ceid=IL:he',   language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
   { id: 'galatz',  name: 'גלץ',        url: 'https://news.google.com/rss/search?q=site:glz.co.il&hl=he&gl=IL&ceid=IL:he',      language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
   { id: 'ynet-he', name: 'Ynet (Google)', url: 'https://news.google.com/rss/search?q=site:ynet.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
+
+  // ── Israeli Independent / Telegram Channels ──
+  // Scraped via custom Telegram fetcher (see telegram-fetcher.ts)
+  // These IDs are picked up by fetchTelegramSources(), not the regular RSS fetcher
 
   // ── Left-leaning / Progressive ──
   { id: '972mag', name: '+972 Magazine', url: 'https://news.google.com/rss/search?q=site:972mag.com&hl=en&gl=IL&ceid=IL:en', language: 'en', lensCategory: 'il-partisan', country: 'IL' },

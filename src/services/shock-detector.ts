@@ -577,6 +577,95 @@ function detectFragmentationShocks(topicStats: Map<string, TopicStats>): ShockEv
 }
 
 /**
+ * Detect INDEPENDENT vs MAINSTREAM MEDIA SHOCKS
+ * When Israeli independent (Telegram) sources diverge significantly from
+ * mainstream/partisan Israeli media on the same topic.
+ * This surfaces stories the establishment isn't covering — or is framing very differently.
+ */
+function detectIndependentVsMainstreamShocks(topicStats: Map<string, TopicStats>): ShockEvent[] {
+  const shocks: ShockEvent[] = [];
+
+  for (const [topic, stats] of topicStats) {
+    if (topic === 'General' || stats.articles.length < 3) continue;
+
+    const independentArticles = stats.articles.filter((a) =>
+      a.article.lensCategory === 'il-independent'
+    );
+    const mainstreamArticles = stats.articles.filter((a) =>
+      a.article.lensCategory === 'il-mainstream' || a.article.lensCategory === 'il-partisan'
+    );
+
+    if (independentArticles.length < 1 || mainstreamArticles.length < 2) continue;
+
+    const indNeg  = independentArticles.filter((a) => a.analysis.sentiment === 'negative').length;
+    const mainNeg = mainstreamArticles.filter((a) => a.analysis.sentiment === 'negative').length;
+
+    const indNegRatio  = indNeg  / independentArticles.length;
+    const mainNegRatio = mainNeg / mainstreamArticles.length;
+
+    const gap = Math.abs(indNegRatio - mainNegRatio);
+    if (gap < 0.35) continue;
+
+    const gapPct = Math.round(gap * 100);
+    const indMoreNeg = indNegRatio > mainNegRatio;
+    const topicDisplay = TOPIC_DISPLAY[topic] || { he: topic, en: topic };
+    const entities = extractEntities(stats.articles.map((a) => a.article));
+
+    const topSources = [
+      ...independentArticles.slice(0, 2),
+      ...mainstreamArticles.slice(0, 2),
+    ].map((a) => ({ name: a.article.sourceName, url: a.article.link }));
+
+    const latestTs = stats.articles
+      .map((a) => a.article.pubDate).filter(Boolean)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
+      || new Date().toISOString();
+
+    const confidence: Confidence = gap >= 0.55 ? 'high' : 'medium';
+
+    shocks.push({
+      id: `auto-indvsmain-${topic.toLowerCase().replace(/\W+/g, '-')}`,
+      type: 'fragmentation',
+      headline: {
+        he: `תקשורת עצמאית ${indMoreNeg ? 'שלילית יותר' : 'חיובית יותר'} מהממסדית ב-${gapPct}% — ${topicDisplay.he}`,
+        en: `Independent Media ${indMoreNeg ? 'More Critical' : 'More Positive'} Than Mainstream by ${gapPct}% — ${topicDisplay.en}`,
+      },
+      whatMoved: {
+        he: indMoreNeg
+          ? `ערוצי טלגרם ותקשורת עצמאית מציגים תמונה שלילית משמעותית מהתקשורת הממסדית בנושא ${topicDisplay.he}. פער של ${gapPct}% בסנטימנט.`
+          : `ערוצי טלגרם ותקשורת עצמאית אופטימיים יותר מהתקשורת הממסדית בנושא ${topicDisplay.he}. פער של ${gapPct}% בסנטימנט.`,
+        en: indMoreNeg
+          ? `Telegram channels and independent media paint a significantly more negative picture than mainstream outlets on ${topicDisplay.en}. A ${gapPct}% sentiment gap.`
+          : `Telegram channels and independent media are more optimistic than mainstream outlets on ${topicDisplay.en}. A ${gapPct}% sentiment gap.`,
+      },
+      delta: indMoreNeg ? gapPct : -gapPct,
+      timeWindow: { he: 'שעות אחרונות', en: 'Last few hours' },
+      confidence,
+      whyNow: {
+        he: indMoreNeg
+          ? `התקשורת הממסדית (${mainstreamArticles.map(a => a.article.sourceName).slice(0, 2).join(', ')}) ממתנת את הטון; ערוצי הטלגרם מדווחים בחדות. זה יכול להצביע על מידע שהתקשורת הרשמית עדיין לא שיקפה.`
+          : `ערוצי טלגרם מבשרים נרטיב חיובי שהתקשורת הממסדית טרם אימצה — פוטנציאל ל-signal מוקדם.`,
+        en: indMoreNeg
+          ? `Mainstream outlets (${mainstreamArticles.map(a => a.article.sourceName).slice(0, 2).join(', ')}) are moderating tone; Telegram channels report sharply. This may indicate information the official press hasn't yet reflected.`
+          : `Telegram channels herald a positive narrative that mainstream media hasn't adopted yet — potential early signal.`,
+      },
+      whoDriving: {
+        he: entities.length > 0
+          ? `נושאים: ${entities.map((e) => e.he).join(', ')}`
+          : `פער בין תקשורת עצמאית לממסדית`,
+        en: entities.length > 0
+          ? `Key actors: ${entities.map((e) => e.en).join(', ')}`
+          : `Independent vs establishment media gap`,
+      },
+      sources: topSources.slice(0, 4),
+      timestamp: latestTs,
+    });
+  }
+
+  return shocks;
+}
+
+/**
  * Compute shock status based on the age of its triggering articles
  */
 function computeShockStatus(timestamp: string): ShockStatus {
@@ -599,8 +688,9 @@ export function detectShocks(articles: FetchedArticle[]): ShockEvent[] {
   const likelihoodShocks = detectLikelihoodShocks(topicStats);
   const narrativeShocks = detectNarrativeShocks(topicStats);
   const fragmentationShocks = detectFragmentationShocks(topicStats);
+  const independentShocks = detectIndependentVsMainstreamShocks(topicStats);
 
-  const allShocks = [...likelihoodShocks, ...narrativeShocks, ...fragmentationShocks];
+  const allShocks = [...likelihoodShocks, ...narrativeShocks, ...fragmentationShocks, ...independentShocks];
 
   // Attach status to each shock
   for (const shock of allShocks) {

@@ -6,6 +6,7 @@
 
 import { fetchAllSources, deduplicateArticles, type FetchedArticle } from './rss-fetcher';
 import { scrapeArticles } from './article-scraper';
+import { fetchAllTelegramSources } from './telegram-fetcher';
 
 const CACHE_TTL_MS = 15 * 60 * 1000;  // 15 minutes — fresh window
 const STALE_TTL_MS = 60 * 60 * 1000;  // 1 hour  — serve stale, refresh in bg
@@ -36,7 +37,11 @@ async function kvSet(key: string, value: unknown, ttlSeconds: number): Promise<v
 }
 
 async function refreshCache(): Promise<FetchedArticle[]> {
-  const { articles } = await fetchAllSources();
+  const [{ articles: rssArticles }, telegramArticles] = await Promise.all([
+    fetchAllSources(),
+    fetchAllTelegramSources(),
+  ]);
+  const articles = [...rssArticles, ...telegramArticles];
   const deduped = deduplicateArticles(articles);
   deduped.sort((a, b) => {
     const da = a.pubDate ? new Date(a.pubDate).getTime() : 0;
