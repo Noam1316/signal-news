@@ -65,10 +65,15 @@ export const rssSources: RssSource[] = [
   { id: 'ynet-he', name: 'Ynet (Google)', url: 'https://news.google.com/rss/search?q=site:ynet.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-mainstream', country: 'IL' },
 
   // ── Israeli Independent Media (RSS) ──
-  // Non-institutional investigative / alternative outlets with real RSS feeds
-  { id: '972mag',      name: '+972 Magazine',  url: 'https://news.google.com/rss/search?q=site:972mag.com&hl=en&gl=IL&ceid=IL:en',          language: 'en', lensCategory: 'il-independent', country: 'IL' },
-  { id: 'localcall',   name: 'Local Call (סיכה מקומית)', url: 'https://news.google.com/rss/search?q=site:local-call.co.il&hl=he&gl=IL&ceid=IL:he', language: 'he', lensCategory: 'il-independent', country: 'IL' },
-  { id: 'the7eye',     name: 'העין השביעית', url: 'https://news.google.com/rss/search?q=site:the7eye.org.il&hl=he&gl=IL&ceid=IL:he',         language: 'he', lensCategory: 'il-independent', country: 'IL' },
+  // Non-institutional: investigative, niche, and alternative outlets
+  { id: '972mag',      name: '+972 Magazine',         url: 'https://news.google.com/rss/search?q=site:972mag.com&hl=en&gl=IL&ceid=IL:en',             language: 'en', lensCategory: 'il-independent', country: 'IL' },
+  { id: 'localcall',   name: 'סיכה מקומית',           url: 'https://news.google.com/rss/search?q=site:local-call.co.il&hl=he&gl=IL&ceid=IL:he',       language: 'he', lensCategory: 'il-independent', country: 'IL' },
+  { id: 'the7eye',     name: 'העין השביעית',          url: 'https://news.google.com/rss/search?q=site:the7eye.org.il&hl=he&gl=IL&ceid=IL:he',         language: 'he', lensCategory: 'il-independent', country: 'IL' },
+  { id: 'shomrim',     name: 'שומרים',                url: 'https://news.google.com/rss/search?q=site:shomrim.news&hl=he&gl=IL&ceid=IL:he',            language: 'he', lensCategory: 'il-independent', country: 'IL' },
+  { id: 'netonews',    name: 'נטו חדשות',             url: 'https://news.google.com/rss/search?q=site:neto.news&hl=he&gl=IL&ceid=IL:he',               language: 'he', lensCategory: 'il-independent', country: 'IL' },
+  { id: 'kikar',       name: 'כיכר השבת',             url: 'https://news.google.com/rss/search?q=site:kikar.co.il&hl=he&gl=IL&ceid=IL:he',             language: 'he', lensCategory: 'il-independent', country: 'IL' },
+  { id: 'srugim',      name: 'סרוגים',                url: 'https://news.google.com/rss/search?q=site:srugim.co.il&hl=he&gl=IL&ceid=IL:he',            language: 'he', lensCategory: 'il-independent', country: 'IL' },
+  { id: 'themarker',   name: 'TheMarker',             url: 'https://news.google.com/rss/search?q=site:themarker.com&hl=he&gl=IL&ceid=IL:he',           language: 'he', lensCategory: 'il-independent', country: 'IL' },
 
   // ── Telegram channels are fetched separately via telegram-fetcher.ts ──
   // Mainstream Telegram: Ynet, N12, Kan, Walla → lensCategory: il-mainstream
