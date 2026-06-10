@@ -71,6 +71,12 @@ export interface SignalVsMarket {
   questionDirection?: string;     // detected question direction (for display)
   coverageVelocity?: number | null; // >1 accelerating, <1 decelerating
   velocityDelta?: number;         // pts added/removed due to velocity
+  // Multi-story aggregation
+  aggregatedStoryCount?: number;  // how many stories contributed to this signal
+  contributingHeadlines?: string[]; // up to 3 secondary story headlines
+  // Trend direction
+  trendDelta?: number;            // pts change since last sample (positive = rising)
+  trendDirection?: 'rising' | 'falling' | 'stable'; // direction label
 }
 
 /**
@@ -224,177 +230,269 @@ export async function fetchPolymarketEvents(): Promise<PolymarketEvent[]> {
   }
 }
 
+// Story shape accepted by matchStoriesWithMarkets
+type StoryInput = {
+  slug: string;
+  headline: string;
+  likelihood: number;
+  category?: string;
+  sourceCount?: number;
+  sources?: Array<{ name: string }>;
+  sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
+  leanBreakdown?: { left: number; center: number; right: number };
+  narrativeSplit?: { rightSource: string; leftSource: string; gapPct: number };
+  crossMediaEcho?: { direction: string; delayMinutes: number; firstSourceName: string };
+  firstMover?: { sourceName: string; minsAhead: number };
+  negativeRatio?: number;
+  topHeadlines?: string[];
+  coverageVelocity?: number | null;
+};
+
 /**
- * Match our brief stories with Polymarket events
+ * In-memory trend history: marketSlug → array of { ts, likelihood } samples
+ * Retains up to 48 samples per market (~4h at 5-min poll cadence).
+ */
+const trendHistory = new Map<string, Array<{ ts: number; likelihood: number }>>();
+const TREND_MAX_SAMPLES = 48;
+const TREND_MIN_AGE_MS  = 2 * 60 * 60 * 1000; // need at least 2h history to show trend
+const TREND_THRESHOLD   = 5; // pts change to qualify as 'rising' / 'falling'
+
+function recordTrend(marketSlug: string, likelihood: number): void {
+  const hist = trendHistory.get(marketSlug) ?? [];
+  hist.push({ ts: Date.now(), likelihood });
+  if (hist.length > TREND_MAX_SAMPLES) hist.splice(0, hist.length - TREND_MAX_SAMPLES);
+  trendHistory.set(marketSlug, hist);
+}
+
+function getTrend(marketSlug: string, currentLikelihood: number): Pick<SignalVsMarket, 'trendDelta' | 'trendDirection'> {
+  const hist = trendHistory.get(marketSlug);
+  if (!hist || hist.length < 2) return {};
+  // Find oldest sample that's at least TREND_MIN_AGE_MS old
+  const cutoff = Date.now() - TREND_MIN_AGE_MS;
+  const baseline = hist.find(h => h.ts <= cutoff);
+  if (!baseline) return {};
+  const delta = Math.round(currentLikelihood - baseline.likelihood);
+  return {
+    trendDelta: delta,
+    trendDirection: Math.abs(delta) < TREND_THRESHOLD ? 'stable' : delta > 0 ? 'rising' : 'falling',
+  };
+}
+
+/** Score how well a story matches a market. Returns { score, keywords, category } or null. */
+function scoreStoryMarketMatch(
+  storyText: string,
+  market: PolymarketEvent,
+): { score: number; keywords: string[]; category: string } | null {
+  const marketText = (market.title + ' ' + (market.category || '')).toLowerCase();
+  let matchScore = 0;
+  const matched: string[] = [];
+  const categoryScores: Record<string, number> = {};
+
+  for (const [category, keywords] of Object.entries(TOPIC_KEYWORDS)) {
+    for (const kw of keywords) {
+      const storyHas = storyText.includes(kw);
+      const marketHas = marketText.includes(kw);
+      if (storyHas && marketHas) {
+        matchScore += 2;
+        matched.push(kw);
+        categoryScores[category] = (categoryScores[category] || 0) + 2;
+      } else if (storyHas) {
+        categoryScores[category] = (categoryScores[category] || 0) + 0.5;
+      }
+    }
+  }
+
+  // Direct word overlap
+  const storyWords = new Set(storyText.split(/\s+/).filter(w => w.length > 3));
+  const marketWords = marketText.split(/\s+/).filter(w => w.length > 3);
+  for (const w of marketWords) {
+    if (storyWords.has(w)) {
+      matchScore += 1;
+      if (!matched.includes(w)) matched.push(w);
+    }
+  }
+
+  const hasCategoryHit = Object.values(categoryScores).some(s => s >= 2);
+  if (matchScore < 2 || !hasCategoryHit) return null;
+
+  const bestCat = Object.entries(categoryScores).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'other';
+  return { score: matchScore, keywords: matched, category: bestCat };
+}
+
+/** Process a single story through the signal pipeline → calibrated likelihood */
+function processStorySignal(
+  story: StoryInput,
+  market: PolymarketEvent,
+  marketProb: number,
+): { calibrated: number; sentimentAdjusted: number; velocityDelta: number; calibrationNote?: string; qDir: QuestionDirection } {
+  const qDir = detectQuestionDirection(market.title);
+
+  const sentimentAdjusted = applySentimentDirection(
+    story.likelihood,
+    story.sentiment || 'neutral',
+    story.negativeRatio ?? 0.5,
+    qDir,
+  );
+
+  const vel = story.coverageVelocity;
+  const velocityDelta = vel == null ? 0 : vel >= 2 ? 8 : vel >= 1.5 ? 5 : vel <= 0.3 ? -10 : vel <= 0.5 ? -6 : 0;
+  const velocityAdjusted = Math.round(Math.max(5, Math.min(95, sentimentAdjusted + velocityDelta)));
+
+  const calibration = calibrateSignalLikelihood(velocityAdjusted, market.title, marketProb);
+  return { calibrated: calibration.calibrated, sentimentAdjusted, velocityDelta, calibrationNote: calibration.note, qDir };
+}
+
+/**
+ * Match our brief stories with Polymarket events.
+ *
+ * Market-centric: for each market, collect ALL matching stories (score≥2),
+ * then aggregate their calibrated signal likelihoods into one weighted score.
+ * The primary story (highest match score) drives the thesis/headline display.
  */
 export function matchStoriesWithMarkets(
-  stories: Array<{
-    slug: string;
-    headline: string;
-    likelihood: number;
-    category?: string;
-    sourceCount?: number;
-    sources?: Array<{ name: string }>;
-    sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
-    // Rich story data for thesis generation
-    leanBreakdown?: { left: number; center: number; right: number };
-    narrativeSplit?: { rightSource: string; leftSource: string; gapPct: number };
-    crossMediaEcho?: { direction: string; delayMinutes: number; firstSourceName: string };
-    firstMover?: { sourceName: string; minsAhead: number };
-    negativeRatio?: number;       // 0-1
-    topHeadlines?: string[];      // up to 3 driving headlines
-    coverageVelocity?: number | null; // recent/prev ratio: >1 = accelerating
-  }>,
+  stories: StoryInput[],
   markets: PolymarketEvent[],
   earlyMovers?: EarlyMover[],
 ): SignalVsMarket[] {
-  const matches: SignalVsMarket[] = [];
+  // Step 1: pre-compute all (story, market) pairs above threshold
+  type Pair = {
+    story: StoryInput;
+    market: PolymarketEvent;
+    matchScore: number;
+    keywords: string[];
+    category: string;
+    storyText: string;
+  };
 
+  const allPairs: Pair[] = [];
   for (const story of stories) {
-    // Normalize slug: replace hyphens with spaces so "iran-nuclear" → "iran nuclear"
     const slugNorm = (story.slug || '').replace(/-/g, ' ');
     const storyText = `${story.headline} ${slugNorm} ${story.category || ''}`.toLowerCase();
-
-    // Find matching topic keywords
-    let bestMatch: PolymarketEvent | null = null;
-    let bestScore = 0;
-    let bestKeywords: string[] = [];
-    let bestCategory = 'other';
-
     for (const market of markets) {
-      const marketText = (market.title + ' ' + (market.category || '')).toLowerCase();
-      let matchScore = 0;
-      const matched: string[] = [];
-      const categoryScores: Record<string, number> = {};
-
-      // Check each topic keyword set
-      for (const [category, keywords] of Object.entries(TOPIC_KEYWORDS)) {
-        for (const kw of keywords) {
-          const storyHas = storyText.includes(kw);
-          const marketHas = marketText.includes(kw);
-          if (storyHas && marketHas) {
-            matchScore += 2;
-            matched.push(kw);
-            categoryScores[category] = (categoryScores[category] || 0) + 2;
-          } else if (storyHas) {
-            // Partial: keyword in story but not market — small bonus for category context
-            categoryScores[category] = (categoryScores[category] || 0) + 0.5;
-          }
-        }
-      }
-
-      // Direct word overlap (normalized)
-      const storyWords = new Set(storyText.split(/\s+/).filter(w => w.length > 3));
-      const marketWords = marketText.split(/\s+/).filter(w => w.length > 3);
-      for (const w of marketWords) {
-        if (storyWords.has(w)) {
-          matchScore += 1;
-          if (!matched.includes(w)) matched.push(w);
-        }
-      }
-
-      // Require at least one genuine topic-category keyword hit in both texts
-      const hasCategoryHit = Object.values(categoryScores).some(s => s >= 2);
-      if (matchScore > bestScore && hasCategoryHit) {
-        bestScore = matchScore;
-        bestMatch = market;
-        bestKeywords = matched;
-        bestCategory = Object.entries(categoryScores).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'other';
+      const result = scoreStoryMarketMatch(storyText, market);
+      if (result) {
+        allPairs.push({ story, market, matchScore: result.score, keywords: result.keywords, category: result.category, storyText });
       }
     }
+  }
 
-    // Lowered threshold from 4 → 2: one strong keyword match is sufficient
-    if (bestMatch && bestScore >= 2) {
-      const marketProb = Math.round(bestMatch.outcomePrices[0] * 100);
+  // Step 2: group pairs by market id — each market gets a list of matching stories
+  const marketGroups = new Map<string, Pair[]>();
+  for (const pair of allPairs) {
+    const key = pair.market.id;
+    if (!marketGroups.has(key)) marketGroups.set(key, []);
+    marketGroups.get(key)!.push(pair);
+  }
 
-      // ── Step 1: Detect question direction — does negative sentiment push prob UP or DOWN?
-      const qDir = detectQuestionDirection(bestMatch.title);
+  const matches: SignalVsMarket[] = [];
 
-      // ── Step 2: Convert topic intensity → direction-aware probability
-      const sentimentAdjusted = applySentimentDirection(
-        story.likelihood,
-        story.sentiment || 'neutral',
-        story.negativeRatio ?? 0.5,
-        qDir,
-      );
+  // Step 3: for each market group, aggregate and build one SignalVsMarket entry
+  for (const [, pairs] of marketGroups) {
+    // Sort: best match score first
+    pairs.sort((a, b) => b.matchScore - a.matchScore);
 
-      // ── Step 2b: Velocity boost/dampener
-      // Accelerating story (velocity > 1.5) → +5 pts. Decelerating (<0.5) → -8 pts.
-      const vel = story.coverageVelocity;
-      const velocityDelta = vel == null ? 0 : vel >= 2 ? 8 : vel >= 1.5 ? 5 : vel <= 0.3 ? -10 : vel <= 0.5 ? -6 : 0;
-      const velocityAdjusted = Math.round(Math.max(5, Math.min(95, sentimentAdjusted + velocityDelta)));
+    const market = pairs[0].market;
+    const marketProb = Math.round(market.outcomePrices[0] * 100);
 
-      // ── Step 3: Calibrate for extreme/specific outcomes
-      const calibration = calibrateSignalLikelihood(velocityAdjusted, bestMatch.title, marketProb);
-      const calibratedLikelihood = calibration.calibrated;
+    // Process each story through the pipeline, collect calibrated likelihoods
+    const processed = pairs.map(p => ({
+      ...p,
+      ...processStorySignal(p.story, market, marketProb),
+    }));
 
-      const delta = calibratedLikelihood - marketProb;
-      const absDelta = Math.abs(delta);
-      const direction: SignalVsMarket['alphaDirection'] = absDelta <= 10 ? 'aligned' : (delta > 0 ? 'signal-higher' : 'market-higher');
+    // Aggregate: weighted average of calibrated likelihoods, weight = matchScore × sourceCount
+    const totalWeight = processed.reduce((sum, p) => sum + p.matchScore * (p.story.sourceCount || 1), 0);
+    const aggregatedLikelihood = totalWeight > 0
+      ? Math.round(processed.reduce((sum, p) => sum + p.calibrated * p.matchScore * (p.story.sourceCount || 1), 0) / totalWeight)
+      : processed[0].calibrated;
 
-      // --- New Alpha Score formula (4 named components + intel boost, max 100) ---
-      const srcCount = story.sourceCount || 3;
-      // Weighted source count: Tier-1 sources (Reuters, Haaretz…) count 2x, partisan/blogs 0.5x
-      const weightedSrcCount = story.sources?.length
-        ? computeWeightedSourceCount(story.sources)
-        : srcCount;
-      const breakdown = computeAlphaBreakdown(absDelta, bestMatch.volume, weightedSrcCount, bestScore);
-      const baseAlpha = breakdown.deltaScore + breakdown.volumeScore + breakdown.sourceScore + breakdown.matchScore;
+    // Primary story drives thesis + headline
+    const primary = processed[0];
+    const primaryStory = primary.story;
+    const bestScore    = primary.matchScore;
+    const bestCategory = primary.category;
+    const bestKeywords = primary.keywords;
 
-      // Intel enhancement: bias-adjusted signal + early mover boost
-      const intel = computeIntelEnhancement(
-        story.sources || [],
-        bestCategory,
-        story.sentiment || 'neutral',
-        earlyMovers || [],
-      );
-      const alphaScore = Math.min(100, baseAlpha + intel.intelBoost);
+    const delta = aggregatedLikelihood - marketProb;
+    const absDelta = Math.abs(delta);
+    const direction: SignalVsMarket['alphaDirection'] = absDelta <= 10 ? 'aligned' : (delta > 0 ? 'signal-higher' : 'market-higher');
 
-      // Generate structured explanation for why Signal differs from Market
-      const whyDifferent = generateWhyDifferent(direction, absDelta, calibratedLikelihood, marketProb, bestMatch, srcCount);
-
-      // Build structured thesis objects for the "Signal vs Market" card
-      const signalThesis = buildSignalThesis(story, direction);
-      const marketThesis = buildMarketThesis(bestMatch, marketProb, direction, absDelta);
-
-      // Confidence: asymptotic scale — requires 3+ keywords + penalises thin markets
-      const rawConf = Math.round((bestScore / (bestScore + 4)) * 100);
-      const thinPenalty = bestMatch.volume < 50_000 ? 15 : 0;
-      const confidence = Math.min(88, Math.max(15, rawConf - thinPenalty));
-
-      matches.push({
-        topic: story.headline,
-        storySlug: story.slug,
-        topicCategory: bestCategory,
-        signalLikelihood: calibratedLikelihood,
-        signalRaw: story.likelihood,
-        calibrationNote: calibration.note,
-        questionDirection: qDir !== 'neutral' ? qDir : undefined,
-        coverageVelocity: story.coverageVelocity ?? null,
-        velocityDelta: velocityDelta !== 0 ? velocityDelta : undefined,
-        marketProbability: marketProb,
-        delta,
-        alphaDirection: direction,
-        alphaScore,
-        alphaBreakdown: breakdown,
-        whyDifferent,
-        signalThesis,
-        marketThesis,
-        polymarketTitle: bestMatch.title,
-        polymarketSlug: bestMatch.slug,
-        polymarketUrl: bestMatch.slug
-          ? `https://polymarket.com/event/${bestMatch.slug}`
-          : 'https://polymarket.com',
-        volume: bestMatch.volume,
-        liquidity: bestMatch.liquidity,
-        endDate: bestMatch.endDate,
-        confidence,
-        matchedKeywords: bestKeywords.slice(0, 5),
-        sourceCount: srcCount,
-        intelBoost: intel.intelBoost,
-        intelSummary: intel.intelSummary,
-      });
+    // Aggregate source count across all contributing stories (deduplicated)
+    const allSourceNames = new Set<string>();
+    const allSources: Array<{ name: string }> = [];
+    for (const p of processed) {
+      for (const s of (p.story.sources || [])) {
+        if (!allSourceNames.has(s.name)) { allSourceNames.add(s.name); allSources.push(s); }
+      }
     }
+    const srcCount = allSourceNames.size || primaryStory.sourceCount || 3;
+    const weightedSrcCount = allSources.length ? computeWeightedSourceCount(allSources) : srcCount;
+
+    const breakdown = computeAlphaBreakdown(absDelta, market.volume, weightedSrcCount, bestScore);
+    const baseAlpha = breakdown.deltaScore + breakdown.volumeScore + breakdown.sourceScore + breakdown.matchScore;
+
+    const intel = computeIntelEnhancement(
+      allSources,
+      bestCategory,
+      primaryStory.sentiment || 'neutral',
+      earlyMovers || [],
+    );
+    // Bonus for multi-story corroboration (up to +8 pts for 3+ stories)
+    const corroborationBoost = Math.min(8, (processed.length - 1) * 3);
+    const alphaScore = Math.min(100, baseAlpha + intel.intelBoost + corroborationBoost);
+
+    const whyDifferent = generateWhyDifferent(direction, absDelta, aggregatedLikelihood, marketProb, market, srcCount);
+    const signalThesis = buildSignalThesis(primaryStory, direction);
+    const marketThesis = buildMarketThesis(market, marketProb, direction, absDelta);
+
+    const rawConf = Math.round((bestScore / (bestScore + 4)) * 100);
+    const thinPenalty = market.volume < 50_000 ? 15 : 0;
+    const confidence = Math.min(88, Math.max(15, rawConf - thinPenalty));
+
+    // Trend direction: record + retrieve
+    recordTrend(market.slug || market.id, aggregatedLikelihood);
+    const trend = getTrend(market.slug || market.id, aggregatedLikelihood);
+
+    // Contributing story headlines (secondary stories only)
+    const contributingHeadlines = processed.slice(1, 4).map(p => p.story.headline);
+
+    matches.push({
+      topic: primaryStory.headline,
+      storySlug: primaryStory.slug,
+      topicCategory: bestCategory,
+      signalLikelihood: aggregatedLikelihood,
+      signalRaw: primaryStory.likelihood,
+      calibrationNote: primary.calibrationNote,
+      questionDirection: primary.qDir !== 'neutral' ? primary.qDir : undefined,
+      coverageVelocity: primaryStory.coverageVelocity ?? null,
+      velocityDelta: primary.velocityDelta !== 0 ? primary.velocityDelta : undefined,
+      // Multi-story aggregation
+      aggregatedStoryCount: processed.length,
+      contributingHeadlines: contributingHeadlines.length > 0 ? contributingHeadlines : undefined,
+      // Trend
+      ...trend,
+      marketProbability: marketProb,
+      delta,
+      alphaDirection: direction,
+      alphaScore,
+      alphaBreakdown: breakdown,
+      whyDifferent,
+      signalThesis,
+      marketThesis,
+      polymarketTitle: market.title,
+      polymarketSlug: market.slug,
+      polymarketUrl: market.slug
+        ? `https://polymarket.com/event/${market.slug}`
+        : 'https://polymarket.com',
+      volume: market.volume,
+      liquidity: market.liquidity,
+      endDate: market.endDate,
+      confidence,
+      matchedKeywords: bestKeywords.slice(0, 5),
+      sourceCount: srcCount,
+      intelBoost: intel.intelBoost,
+      intelSummary: intel.intelSummary,
+    });
   }
 
   return matches.sort((a, b) => b.confidence - a.confidence);

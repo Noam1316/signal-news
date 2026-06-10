@@ -31,6 +31,12 @@ interface SignalVsMarket {
   signalRaw?: number;
   calibrationNote?: string;
   questionDirection?: string;
+  coverageVelocity?: number | null;
+  velocityDelta?: number;
+  aggregatedStoryCount?: number;
+  contributingHeadlines?: string[];
+  trendDelta?: number;
+  trendDirection?: 'rising' | 'falling' | 'stable';
 }
 
 interface PolyData {
@@ -849,6 +855,25 @@ export default function PolymarketComparison() {
                         ⚖️ {lang === 'he' ? `מכויל מ-${match.signalRaw}% → ${match.signalLikelihood}%` : `Calibrated ${match.signalRaw}% → ${match.signalLikelihood}%`}
                       </div>
                     )}
+                    {/* Trend direction badge */}
+                    {match.trendDirection && match.trendDirection !== 'stable' && match.trendDelta !== undefined && (
+                      <div className={`mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium ${
+                        match.trendDirection === 'rising'
+                          ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+                          : 'bg-red-500/10 border-red-500/25 text-red-400'
+                      }`}>
+                        {match.trendDirection === 'rising' ? '🔺' : '🔻'}
+                        {lang === 'he'
+                          ? `Signal ${match.trendDirection === 'rising' ? 'עולה' : 'יורד'} ${match.trendDelta! > 0 ? '+' : ''}${match.trendDelta}% (שעות אחרונות)`
+                          : `Signal ${match.trendDirection === 'rising' ? 'rising' : 'falling'} ${match.trendDelta! > 0 ? '+' : ''}${match.trendDelta}%`}
+                      </div>
+                    )}
+                    {/* Multi-story aggregation badge */}
+                    {(match.aggregatedStoryCount ?? 1) > 1 && (
+                      <div className="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium bg-violet-500/10 border-violet-500/25 text-violet-400">
+                        🔗 {lang === 'he' ? `${match.aggregatedStoryCount} סיפורים מחוברים` : `${match.aggregatedStoryCount} stories aggregated`}
+                      </div>
+                    )}
                   </div>
                   <div className={`shrink-0 flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg ${
                     isAligned
@@ -938,6 +963,23 @@ export default function PolymarketComparison() {
                         <StructuredExplanation text={match.whyDifferent} lang={lang} />
                       </div>
                     ) : null}
+
+                    {/* Contributing stories — multi-story aggregation */}
+                    {match.contributingHeadlines && match.contributingHeadlines.length > 0 && (
+                      <div className="p-3 rounded-lg bg-violet-500/[0.04] border border-violet-500/20 space-y-2">
+                        <p className="text-[10px] font-bold text-violet-400 uppercase tracking-wide">
+                          🔗 {lang === 'he' ? `${(match.aggregatedStoryCount ?? 1)} סיפורים תורמים לסיגנל` : `${(match.aggregatedStoryCount ?? 1)} aggregated stories`}
+                        </p>
+                        <ul className="space-y-1">
+                          {match.contributingHeadlines.map((h, hi) => (
+                            <li key={hi} className="flex items-start gap-1.5 text-[10px] text-gray-400">
+                              <span className="text-violet-500/60 shrink-0 mt-px">·</span>
+                              <span className="line-clamp-1">{h}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
                     {/* Alpha breakdown */}
                     <div className="p-3 rounded-lg bg-gray-800/40 border border-gray-700/40">
