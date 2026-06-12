@@ -13,8 +13,8 @@ export default function LikelihoodTooltip({ likelihood, className = '' }: Props)
   const [show, setShow] = useState(false);
 
   const explanation = lang === 'he'
-    ? `ציון הסבירות מחושב מ: מספר מקורות × אמינות המקור × עדכניות × עקביות הנרטיב. ${likelihood}% פירושו שסיגנל מעריך ש${likelihood >= 70 ? 'המידע מגובה חזק ועשוי להתממש' : likelihood >= 45 ? 'המידע סביר אך עדיין לא מגובה מספיק' : 'המידע חלש ודורש אימות נוסף'}.`
-    : `Likelihood is computed from: source count × credibility × recency × narrative consistency. ${likelihood}% means Signal estimates this ${likelihood >= 70 ? 'is well-corroborated and likely to develop' : likelihood >= 45 ? 'is plausible but needs more corroboration' : 'is a weak signal requiring further verification'}.`;
+    ? `מדד הסיגנל (0–100) מודד עוצמת כיסוי ואימות — לא הסתברות שאירוע יקרה. הוא מורכב מ: אימות מקורות (30) + עוצמת סיגנל (25) + רוחב כיסוי (20) + רעננות (15) + קונסנזוס (10). ציון ${likelihood} פירושו ${likelihood >= 70 ? 'כיסוי רחב ומאומת היטב' : likelihood >= 45 ? 'כיסוי מתפתח — מאומת חלקית' : 'כיסוי דליל — דורש אימות נוסף'}.`
+    : `The Signal Index (0–100) measures coverage & verification intensity — not the probability of an event. Components: verification (30) + strength (25) + breadth (20) + freshness (15) + consensus (10). A score of ${likelihood} means ${likelihood >= 70 ? 'broad, well-verified coverage' : likelihood >= 45 ? 'developing coverage — partially verified' : 'thin coverage — needs further verification'}.`;
 
   return (
     <span className={`relative inline-flex items-center ${className}`}>
@@ -35,21 +35,21 @@ export default function LikelihoodTooltip({ likelihood, className = '' }: Props)
           onClick={e => e.stopPropagation()}
         >
           <div className="font-semibold text-yellow-400 mb-1">
-            {lang === 'he' ? 'מה זה ציון הסבירות?' : 'What is the Likelihood Score?'}
+            {lang === 'he' ? 'מה זה מדד הסיגנל?' : 'What is the Signal Index?'}
           </div>
           {explanation}
           <div className="mt-2 pt-2 border-t border-gray-800 grid grid-cols-3 gap-1 text-[10px]">
             <div className="text-center">
-              <div className="text-emerald-400 font-bold">70%+</div>
-              <div className="text-gray-500">{lang === 'he' ? 'חזק' : 'Strong'}</div>
+              <div className="text-emerald-400 font-bold">70+</div>
+              <div className="text-gray-500">{lang === 'he' ? 'מאומת' : 'Verified'}</div>
             </div>
             <div className="text-center">
-              <div className="text-yellow-400 font-bold">45-70%</div>
+              <div className="text-yellow-400 font-bold">45-70</div>
               <div className="text-gray-500">{lang === 'he' ? 'מתפתח' : 'Developing'}</div>
             </div>
             <div className="text-center">
-              <div className="text-red-400 font-bold">&lt;45%</div>
-              <div className="text-gray-500">{lang === 'he' ? 'חלש' : 'Weak'}</div>
+              <div className="text-red-400 font-bold">&lt;45</div>
+              <div className="text-gray-500">{lang === 'he' ? 'דליל' : 'Thin'}</div>
             </div>
           </div>
           {/* Arrow */}

@@ -37,7 +37,26 @@ interface SignalVsMarket {
   contributingHeadlines?: string[];
   trendDelta?: number;
   trendDirection?: 'rising' | 'falling' | 'stable';
+  momentum?: {
+    signalDelta: number;
+    marketDelta: number;
+    windowHours: number;
+    state: 'signal-leads' | 'confirmed' | 'market-leads' | 'diverging' | 'quiet';
+    note: string;
+  };
 }
+
+// Momentum state → display meta
+const MOMENTUM_META: Record<string, { icon: string; he: string; en: string; cls: string }> = {
+  'signal-leads': { icon: '🟡', he: 'הכיסוי מקדים את השוק', en: 'Coverage leads market',
+    cls: 'bg-yellow-400/10 border-yellow-400/30 text-yellow-300' },
+  'confirmed':    { icon: '✅', he: 'מאומת — זזים יחד',     en: 'Confirmed — moving together',
+    cls: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' },
+  'market-leads': { icon: '🔵', he: 'השוק מקדים את החדשות', en: 'Market leads coverage',
+    cls: 'bg-blue-500/10 border-blue-500/30 text-blue-300' },
+  'diverging':    { icon: '⚠️', he: 'כיוונים מנוגדים',      en: 'Diverging',
+    cls: 'bg-red-500/10 border-red-500/30 text-red-300' },
+};
 
 interface PolyData {
   matches: SignalVsMarket[];
@@ -733,8 +752,8 @@ export default function PolymarketComparison() {
           </div>
           <p className="text-[10px] text-gray-600 pt-1 border-t border-gray-800/50">
             {lang === 'he'
-              ? 'Alpha > 60 = Signal מזהה פיגור של השוק. Alpha < 30 = הפרשה קטנה / בסיס מידע חלש.'
-              : 'Alpha > 60 = Signal detects a market lag. Alpha < 30 = small gap or weak data basis.'}
+              ? 'חשוב: מדד הסיגנל מודד עוצמת כיסוי, והשוק מתמחר הסתברות — אלה לא אותו סולם. ההשוואה המשמעותית היא המומנטום: האם הכיסוי והשוק זזים יחד, או שאחד מקדים את השני (התג הצבעוני בראש כל כרטיס).'
+              : 'Important: the Signal Index measures coverage intensity while the market prices probability — different scales. The meaningful comparison is momentum: do coverage and market move together, or does one lead the other (the colored tag on each card).'}
           </p>
         </div>
       </details>
@@ -821,6 +840,21 @@ export default function PolymarketComparison() {
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-semibold text-white leading-snug">{match.topic}</h4>
                     <p className="text-[10px] text-gray-500 truncate mt-0.5">📊 {match.polymarketTitle}</p>
+                    {/* Momentum — the primary interpretation: direction-of-change comparison */}
+                    {match.momentum && match.momentum.state !== 'quiet' && (() => {
+                      const meta = MOMENTUM_META[match.momentum!.state];
+                      if (!meta) return null;
+                      return (
+                        <div className={`mt-1.5 flex items-start gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border font-medium ${meta.cls}`}
+                             title={lang === 'he' ? `חלון של ${match.momentum!.windowHours} שעות` : `${match.momentum!.windowHours}h window`}>
+                          <span className="shrink-0">{meta.icon}</span>
+                          <span className="leading-snug">
+                            <span className="font-bold">{lang === 'he' ? meta.he : meta.en}</span>
+                            {lang === 'he' && <span className="font-normal opacity-90"> — {match.momentum!.note}</span>}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     {/* Convergence badge */}
                     {convergence && (
                       <div className={`mt-1.5 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium ${

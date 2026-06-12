@@ -27,11 +27,20 @@ export interface NarrativeSplit {
   gapPct: number;           // sentiment gap %
 }
 
+export interface SignalComponents {
+  verification: number;   // 0-30: independent source count
+  strength: number;       // 0-25: signal article ratio + avg score
+  breadth: number;        // 0-20: cross-lens coverage (IL + international)
+  freshness: number;      // 0-15: recency of newest article
+  consensus: number;      // 0-10: sentiment agreement across sources
+}
+
 export interface BriefStory {
   slug: string;
   headline: LocalizedText;
   summary: LocalizedText;
   likelihood: number;
+  signalComponents?: SignalComponents; // breakdown of the signal index
   likelihoodLabel: Confidence;
   delta: number;
   why: LocalizedText;

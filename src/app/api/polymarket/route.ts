@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { fetchPolymarketEvents, matchStoriesWithMarkets } from '@/services/polymarket';
+import { fetchPolymarketEvents, matchStoriesWithMarkets, classifyMomentum } from '@/services/polymarket';
 import { getCachedArticles } from '@/services/article-cache';
 import { generateStories } from '@/services/story-clusterer';
 import { analyzeArticles } from '@/services/ai-analyzer';
 import { savePredictionSnapshots } from '@/services/prediction-tracker';
 import { computeEarlyMovers } from '@/services/signal-intelligence';
 import { isGroqEnabled } from '@/services/groq-analyzer';
+import { recordMarketProbs, getSignalDeltas, getMarketDeltas } from '@/services/likelihood-history';
 
 /**
  * Use Groq to generate a specific, news-grounded explanation for a Signal vs Market gap.
@@ -176,6 +177,20 @@ export async function GET() {
     });
 
     const matches = matchStoriesWithMarkets(storyData, markets, earlyMovers);
+
+    // ── Momentum comparison: direction-of-change of coverage vs market (24h) ──
+    // Record current market probs (hourly bucketed), then attach momentum to each match
+    recordMarketProbs(matches.map(m => ({ slug: m.polymarketSlug, prob: m.marketProbability }))).catch(() => {});
+    try {
+      const [signalDeltas, marketDeltas] = await Promise.all([getSignalDeltas(24), getMarketDeltas(24)]);
+      for (const match of matches) {
+        const sig = signalDeltas.get(match.storySlug);
+        const mkt = marketDeltas.get(match.polymarketSlug);
+        if (sig || mkt) {
+          match.momentum = classifyMomentum(sig?.delta ?? 0, mkt?.delta ?? 0, 24);
+        }
+      }
+    } catch { /* momentum is best-effort */ }
 
     // Enrich top matches with Groq-generated explanations (non-aligned only, top 4 by alpha)
     if (isGroqEnabled() && matches.length > 0) {

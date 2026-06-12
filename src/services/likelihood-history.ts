@@ -98,6 +98,83 @@ export async function getStoryHistory(slug: string): Promise<HistoryPoint[]> {
   return points;
 }
 
+// ─── Market probability history (same pattern, separate key) ────────────────
+
+const MARKET_KEY = 'signal:market-history';
+let memMarketHistory: HistorySnapshot[] = [];
+let lastMarketRecordTs = 0;
+
+/**
+ * Record current market probabilities per Polymarket slug.
+ * Throttled to one snapshot per hour bucket.
+ */
+export async function recordMarketProbs(
+  markets: Array<{ slug: string; prob: number }>,
+): Promise<void> {
+  if (markets.length === 0) return;
+
+  const now = Date.now();
+  const bucket = Math.floor(now / BUCKET_MS);
+  if (Math.floor(lastMarketRecordTs / BUCKET_MS) === bucket) return;
+
+  const history = (await kvGet<HistorySnapshot[]>(MARKET_KEY)) ?? memMarketHistory;
+  const last = history[history.length - 1];
+  if (last && Math.floor(last.ts / BUCKET_MS) === bucket) {
+    lastMarketRecordTs = now;
+    memMarketHistory = history;
+    return;
+  }
+
+  const scores: Record<string, number> = {};
+  for (const m of markets) {
+    if (m.slug) scores[m.slug] = m.prob;
+  }
+
+  const updated = [...history, { ts: now, scores }].slice(-MAX_ENTRIES);
+  memMarketHistory = updated;
+  lastMarketRecordTs = now;
+  await kvSet(MARKET_KEY, updated);
+}
+
+/**
+ * Compute per-slug deltas over the last `hours` window for a stored series.
+ * Returns map: slug → { from, to, delta }. Slugs missing in either endpoint
+ * snapshot are omitted.
+ */
+function computeDeltas(
+  history: HistorySnapshot[],
+  hours: number,
+): Map<string, { from: number; to: number; delta: number }> {
+  const result = new Map<string, { from: number; to: number; delta: number }>();
+  if (history.length < 2) return result;
+
+  const cutoff = Date.now() - hours * 60 * 60 * 1000;
+  const inWindow = history.filter(h => h.ts >= cutoff);
+  if (inWindow.length < 2) return result;
+
+  const oldest = inWindow[0];
+  const newest = inWindow[inWindow.length - 1];
+
+  for (const [slug, to] of Object.entries(newest.scores)) {
+    const from = oldest.scores[slug];
+    if (typeof from !== 'number') continue;
+    result.set(slug, { from, to, delta: to - from });
+  }
+  return result;
+}
+
+/** Signal (story likelihood) deltas over the last `hours`. Keyed by story slug. */
+export async function getSignalDeltas(hours = 24) {
+  const history = (await kvGet<HistorySnapshot[]>(HISTORY_KEY)) ?? memHistory;
+  return computeDeltas(history, hours);
+}
+
+/** Market probability deltas over the last `hours`. Keyed by Polymarket slug. */
+export async function getMarketDeltas(hours = 24) {
+  const history = (await kvGet<HistorySnapshot[]>(MARKET_KEY)) ?? memMarketHistory;
+  return computeDeltas(history, hours);
+}
+
 /**
  * Get the biggest movers over the last `hours` (default 24h):
  * stories whose likelihood changed the most between the oldest in-window

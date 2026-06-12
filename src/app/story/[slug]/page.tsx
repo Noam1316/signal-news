@@ -77,9 +77,9 @@ function LiveStoryCard({ story, lang, dir }: { story: BriefStory; lang: string; 
       <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4 space-y-4">
         <div className="flex items-center gap-6 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className={`text-4xl font-black ${likelihoodColor}`}>{story.likelihood}%</span>
+            <span className={`text-4xl font-black ${likelihoodColor}`}>{story.likelihood}</span>
             <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-gray-500">{lang === 'he' ? 'סבירות' : 'likelihood'}</span>
+              <span className="text-[10px] text-gray-500">{lang === 'he' ? 'מדד סיגנל' : 'signal index'}</span>
               {absDelta > 0 && (
                 <span className={`text-xs font-bold ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
                   {isUp ? '▲' : '▼'} {absDelta}%

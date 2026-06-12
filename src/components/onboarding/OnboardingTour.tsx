@@ -31,10 +31,10 @@ const STEPS: Step[] = [
   },
   {
     icon: '📊',
-    titleHe: 'ציון סבירות (Likelihood)',
-    titleEn: 'Likelihood Score',
-    bodyHe: 'כל סיפור מקבל ציון 0-100: מספר מקורות (30%) + עוצמת סיגנל (25%) + כיסוי ישראלי+בינלאומי (20%) + רעננות (15%) + קונסנזוס סנטימנט (10%).',
-    bodyEn: 'Each story scores 0-100: source diversity (30%) + signal strength (25%) + Israeli+intl coverage (20%) + recency (15%) + sentiment consensus (10%).',
+    titleHe: 'מדד סיגנל (Signal Index)',
+    titleEn: 'Signal Index',
+    bodyHe: 'כל סיפור מקבל מדד 0-100 שמודד עוצמת כיסוי ואימות — לא הסתברות: אימות מקורות (30) + עוצמת סיגנל (25) + רוחב כיסוי (20) + רעננות (15) + קונסנזוס (10). לחץ על המדד בכרטיס לפירוק מלא.',
+    bodyEn: 'Each story gets a 0-100 index measuring coverage & verification intensity — not probability: verification (30) + strength (25) + breadth (20) + freshness (15) + consensus (10). Click the meter on any card for the full breakdown.',
   },
   {
     icon: '🔴',

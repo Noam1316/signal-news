@@ -153,7 +153,7 @@ export default function NewsTicker() {
                   : item.likelihood >= 50 ? 'text-yellow-400'
                   : 'text-gray-500'
                 }`}>
-                  {item.likelihood}%
+                  {item.likelihood}
                 </span>
               </a>
             );

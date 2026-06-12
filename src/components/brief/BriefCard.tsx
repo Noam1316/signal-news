@@ -289,7 +289,9 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
       <div className="flex items-center gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-1">
-            <LikelihoodMeter value={story.likelihood} label={story.likelihoodLabel} />
+            <div className="flex-1">
+              <LikelihoodMeter value={story.likelihood} label={story.likelihoodLabel} components={story.signalComponents} />
+            </div>
             <LikelihoodTooltip likelihood={story.likelihood} />
           </div>
         </div>

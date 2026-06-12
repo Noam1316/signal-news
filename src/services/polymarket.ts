@@ -77,6 +77,64 @@ export interface SignalVsMarket {
   // Trend direction
   trendDelta?: number;            // pts change since last sample (positive = rising)
   trendDirection?: 'rising' | 'falling' | 'stable'; // direction label
+  // Momentum comparison: direction-of-change of coverage vs market over 24h
+  momentum?: MomentumComparison;
+}
+
+export type MomentumState =
+  | 'signal-leads'    // coverage accelerating, market hasn't moved — the interesting signal
+  | 'confirmed'       // both moving in the same direction
+  | 'market-leads'    // market moved without matching news coverage
+  | 'diverging'       // moving in opposite directions
+  | 'quiet';          // neither moving
+
+export interface MomentumComparison {
+  signalDelta: number;   // story signal index change over window (pts)
+  marketDelta: number;   // market probability change over window (pts)
+  windowHours: number;
+  state: MomentumState;
+  note: string;          // Hebrew one-liner interpretation
+}
+
+/**
+ * Classify momentum: compare direction-of-change of news coverage (signal index)
+ * vs market probability. This is the honest comparison — levels are not
+ * comparable (intensity vs probability), but *movement* is.
+ */
+export function classifyMomentum(
+  signalDelta: number,
+  marketDelta: number,
+  windowHours = 24,
+): MomentumComparison {
+  const sigMoving = Math.abs(signalDelta) >= 5;
+  const mktMoving = Math.abs(marketDelta) >= 3;
+
+  let state: MomentumState;
+  let note: string;
+
+  if (sigMoving && !mktMoving) {
+    state = 'signal-leads';
+    note = signalDelta > 0
+      ? `הכיסוי מאיץ (+${signalDelta}) אבל השוק סטטי — השוק עוד לא הגיב לחדשות`
+      : `הכיסוי דועך (${signalDelta}) אבל השוק סטטי — העניין התקשורתי שוכך`;
+  } else if (!sigMoving && mktMoving) {
+    state = 'market-leads';
+    note = `השוק זז (${marketDelta > 0 ? '+' : ''}${marketDelta}%) בלי שינוי בכיסוי — ייתכן מידע שלא הגיע ל-RSS`;
+  } else if (sigMoving && mktMoving) {
+    const sameDirection = Math.sign(signalDelta) === Math.sign(marketDelta);
+    if (sameDirection) {
+      state = 'confirmed';
+      note = `חדשות ושוק זזים יחד (${signalDelta > 0 ? '+' : ''}${signalDelta} / ${marketDelta > 0 ? '+' : ''}${marketDelta}%) — הסיגנל מאומת`;
+    } else {
+      state = 'diverging';
+      note = `סתירה: כיסוי ${signalDelta > 0 ? 'עולה' : 'יורד'} אבל השוק ${marketDelta > 0 ? 'עולה' : 'יורד'} — אחד הצדדים טועה`;
+    }
+  } else {
+    state = 'quiet';
+    note = 'גם הכיסוי וגם השוק יציבים';
+  }
+
+  return { signalDelta, marketDelta, windowHours, state, note };
 }
 
 /**

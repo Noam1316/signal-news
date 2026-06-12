@@ -873,7 +873,12 @@ function buildSummary(cluster: Cluster, bestArticle: ArticleWithAnalysis, chosen
  * 4. Recency (15%): fresher articles boost likelihood
  * 5. Sentiment consensus (10%): agreement across sources = higher confidence
  */
-function calculateLikelihood(cluster: Cluster): { likelihood: number; delta: number; confidence: number } {
+function calculateLikelihood(cluster: Cluster): {
+  likelihood: number;
+  delta: number;
+  confidence: number;
+  components: { verification: number; strength: number; breadth: number; freshness: number; consensus: number };
+} {
   const totalArticles = cluster.articles.length;
   const signalCount = cluster.articles.filter((a) => a.analysis.isSignal).length;
   const avgSignalScore = cluster.articles.reduce((sum, a) => sum + a.analysis.signalScore, 0) / totalArticles;
@@ -928,7 +933,16 @@ function calculateLikelihood(cluster: Cluster): { likelihood: number; delta: num
   const offset = (topicHash % 5) - 2; // -2 to +2
   const delta = Math.round(baseDelta * recencyMult + offset);
 
-  return { likelihood, delta, confidence };
+  return {
+    likelihood, delta, confidence,
+    components: {
+      verification: crossSourceScore,
+      strength: signalScore,
+      breadth: lensScore,
+      freshness: recencyScore,
+      consensus: consensusScore,
+    },
+  };
 }
 
 /**
@@ -1081,7 +1095,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
     }
 
     const summary = buildSummary(cluster, bestArticle, headline);
-    const { likelihood, delta, confidence } = calculateLikelihood(cluster);
+    const { likelihood, delta, confidence, components: signalComponents } = calculateLikelihood(cluster);
     const lens = determineLens(cluster);
     const isSignal = cluster.articles.some((a) => a.analysis.isSignal);
     const category = TOPIC_CATEGORIES[cluster.topic] || { he: 'כללי', en: 'General' };
@@ -1223,6 +1237,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
       contradiction,
       crossMediaEcho,
       indieVsMainstream: indieVsMainstream ?? undefined,
+      signalComponents,
     };
   }).filter((s): s is NonNullable<typeof s> => s !== null)
     .sort((a, b) => {
