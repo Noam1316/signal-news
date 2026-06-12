@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server';
 import { generateStories } from '@/services/story-clusterer';
 import { getCachedArticles } from '@/services/article-cache';
 import { preAnalyzeWithGroq, isGroqEnabled, warmGroqFromKV } from '@/services/groq-analyzer';
+import { recordLikelihoods } from '@/services/likelihood-history';
 import type { BriefStory } from '@/lib/types';
 
 let cache: { stories: BriefStory[]; timestamp: number } | null = null;
@@ -95,6 +96,9 @@ export async function GET() {
     const stories = await translateEnglishSummaries(rawStories);
 
     cache = { stories, timestamp: Date.now() };
+
+    // Persist hourly likelihood snapshot for trend charts (non-blocking)
+    recordLikelihoods(stories.map(s => ({ slug: s.slug, likelihood: s.likelihood }))).catch(() => {});
 
     return NextResponse.json({
       stories,

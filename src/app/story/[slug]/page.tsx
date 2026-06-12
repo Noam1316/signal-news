@@ -15,6 +15,7 @@ import NarrativeList from '@/components/story/NarrativeList';
 import LensView from '@/components/story/LensView';
 import SoWhat from '@/components/story/SoWhat';
 import WatchNext from '@/components/story/WatchNext';
+import LiveStoryIntel from '@/components/story/LiveStoryIntel';
 import type { BriefStory } from '@/lib/types';
 
 // ── Live Story Card — shown when story comes from RSS (not static data) ──────
@@ -139,6 +140,9 @@ function LiveStoryCard({ story, lang, dir }: { story: BriefStory; lang: string; 
             : `${story.likelihood}% likelihood${story.isSignal ? ' — flagged as a statistical signal anomaly. ' : '. '}${srcCount >= 5 ? `${srcCount} sources confirm broad consensus.` : srcCount >= 3 ? `${srcCount} sources — solid coverage.` : `Only ${srcCount} source${srcCount === 1 ? '' : 's'} — limited coverage.`}${absDelta > 0 ? ` ${absDelta}% change in recent hours.` : ''}`}
         </p>
       </div>
+
+      {/* Live intel: likelihood trend, indie vs mainstream, market match */}
+      <LiveStoryIntel story={story} />
     </div>
   );
 }
