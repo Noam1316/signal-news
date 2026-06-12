@@ -53,6 +53,11 @@ export default function ArticleSidebar() {
   const { lang } = useLanguage();
   const [showAllTopics, setShowAllTopics] = useState(false);
   const [showAllImpacts, setShowAllImpacts] = useState(false);
+  const [hasOpened, setHasOpened] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) setHasOpened(true);
+  }, [isOpen]);
 
   // Close on Escape key
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -95,6 +100,10 @@ export default function ArticleSidebar() {
     }
   };
 
+  // Don't mount at all until first opened — keeps the dialog out of the
+  // accessibility tree and DOM on initial page load
+  if (!hasOpened) return null;
+
   return (
     <>
       {/* Backdrop */}
@@ -131,25 +140,24 @@ export default function ArticleSidebar() {
       <aside
         role="dialog"
         aria-modal="true"
+        aria-hidden={!isOpen}
+        inert={!isOpen}
         aria-label={lang === 'he' ? 'פרטי כתבה' : 'Article details'}
-        className="article-sidebar-panel fixed top-0 right-0 h-full z-50 flex flex-col transition-transform duration-300 ease-in-out"
+        className="article-sidebar-panel fixed top-0 right-0 h-full z-50 flex flex-col transition-transform duration-300 ease-in-out bg-gray-900 border-s border-gray-800"
         style={{
           width: 'min(420px, 100vw)',
-          backgroundColor: '#0f172a',
-          borderLeft: '1px solid #1e293b',
           transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+          pointerEvents: isOpen ? 'auto' : 'none',
         }}
       >
           {/* Header */}
           <div
-            className="flex items-center justify-between px-5 py-4 shrink-0"
-            style={{ borderBottom: '1px solid #1e293b' }}
+            className="flex items-center justify-between px-5 py-4 shrink-0 border-b border-gray-800"
           >
             <div className="flex items-center gap-2">
               {article?.sourceName && (
                 <span
-                  className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
-                  style={{ backgroundColor: '#1e293b', color: '#94a3b8', border: '1px solid #334155' }}
+                  className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700"
                 >
                   {article.sourceName}
                 </span>
@@ -194,7 +202,7 @@ export default function ArticleSidebar() {
                 )}
 
                 {/* Divider */}
-                <div style={{ borderTop: '1px solid #1e293b' }} />
+                <div className="border-t border-gray-800" />
 
                 {/* Sentiment + Signal badge */}
                 <div className="flex items-center gap-2 flex-wrap">
@@ -230,10 +238,7 @@ export default function ArticleSidebar() {
                           href={src.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[11px] px-2.5 py-0.5 rounded-full transition-colors"
-                          style={{ backgroundColor: '#1e293b', color: '#94a3b8', border: '1px solid #334155', textDecoration: 'none' }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#e2e8f0'; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#94a3b8'; }}
+                          className="text-[11px] px-2.5 py-0.5 rounded-full transition-colors no-underline bg-gray-800 text-gray-400 border border-gray-700 hover:text-gray-200"
                         >
                           {src.name} ↗
                         </a>
@@ -252,8 +257,7 @@ export default function ArticleSidebar() {
                       {(showAllTopics ? article.topics : article.topics.slice(0, TOPICS_LIMIT)).map((topic) => (
                         <span
                           key={topic}
-                          className="text-[11px] px-2.5 py-0.5 rounded-full"
-                          style={{ backgroundColor: '#1e293b', color: '#cbd5e1', border: '1px solid #334155' }}
+                          className="text-[11px] px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-300 border border-gray-700"
                         >
                           {topic}
                         </span>
@@ -320,8 +324,7 @@ export default function ArticleSidebar() {
           {/* Footer CTA */}
           {article?.url && (
             <div
-              className="px-5 py-4 shrink-0"
-              style={{ borderTop: '1px solid #1e293b' }}
+              className="px-5 py-4 shrink-0 border-t border-gray-800"
             >
               <a
                 href={article.url}

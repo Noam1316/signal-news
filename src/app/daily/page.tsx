@@ -177,7 +177,7 @@ export default async function DailyPage() {
             מופעל ע"י <a href="/dashboard" className="text-yellow-400/70 hover:text-yellow-400">זיקוק</a> — מודיעין גיאופוליטי בזמן אמת
           </p>
           <p className="text-[10px] text-gray-700">
-            מנתח {articles.length}+ כתבות מ-28 ערוצי RSS · מתעדכן כל 30 דקות
+            מנתח {articles.length}+ כתבות מ-50+ ערוצי RSS · מתעדכן כל 30 דקות
           </p>
         </div>
       </div>

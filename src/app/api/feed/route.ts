@@ -5,7 +5,7 @@ import type { BriefStory } from '@/lib/types';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://signal-news-noam1316s-projects.vercel.app';
 const FEED_TITLE = 'Zikuk — Geopolitical Intelligence Feed';
-const FEED_DESC  = 'Real-time geopolitical signals, shock events, and prediction market analysis. Powered by keyword-based AI analysis of 28+ RSS sources.';
+const FEED_DESC  = 'Real-time geopolitical signals, shock events, and prediction market analysis. Powered by keyword-based AI analysis of 50+ RSS sources.';
 
 function escapeXml(str: string): string {
   return str

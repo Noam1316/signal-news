@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     default: "Zikuk — מזקק רעש לסיגנל",
     template: "%s | Zikuk",
   },
-  description: "Zikuk מזקק 28+ מקורות RSS למודיעין גיאופוליטי: ציוני סבירות, זיהוי זעזועים, ניתוח הטיה תקשורתית. Distilling geopolitical noise into signal.",
+  description: "Zikuk מזקק 50+ מקורות RSS למודיעין גיאופוליטי: ציוני סבירות, זיהוי זעזועים, ניתוח הטיה תקשורתית. Distilling geopolitical noise into signal.",
   keywords: [
     'news intelligence', 'geopolitical analysis', 'media bias', 'news likelihood',
     'signal vs noise', 'polymarket', 'news analysis', 'real-time news',
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Zikuk — מזקק רעש לסיגנל",
-    description: "Zikuk מזקק 28+ מקורות RSS למודיעין גיאופוליטי. Distilling geopolitical noise into signal.",
+    description: "Zikuk מזקק 50+ מקורות RSS למודיעין גיאופוליטי. Distilling geopolitical noise into signal.",
     siteName: "Zikuk",
     type: "website",
     url: BASE_URL,

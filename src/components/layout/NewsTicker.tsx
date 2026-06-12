@@ -26,6 +26,9 @@ const TICKER_STYLE = `
 .ticker-track:hover {
   animation-play-state: paused;
 }
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; }
+}
 `;
 
 export default function NewsTicker() {

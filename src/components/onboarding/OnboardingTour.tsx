@@ -19,8 +19,8 @@ const STEPS: Step[] = [
     icon: '⚡',
     titleHe: 'Zikuk — מודיעין גיאופוליטי חי',
     titleEn: 'Zikuk — Live Geopolitical Intel',
-    bodyHe: 'מנתח 28+ ערוצי RSS בזמן אמת, מחלץ סיגנלים, זעזועים, ופערי נרטיב — ללא מפתח AI, הכל keyword-based.',
-    bodyEn: 'Analyzes 28+ RSS feeds in real time, extracting signals, shocks, and narrative gaps — no AI key, all keyword-based.',
+    bodyHe: 'מנתח 50+ ערוצי RSS בזמן אמת, מחלץ סיגנלים, זעזועים, ופערי נרטיב — ללא מפתח AI, הכל keyword-based.',
+    bodyEn: 'Analyzes 50+ RSS feeds in real time, extracting signals, shocks, and narrative gaps — no AI key, all keyword-based.',
   },
   {
     icon: '🌡️',

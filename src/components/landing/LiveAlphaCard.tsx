@@ -58,7 +58,7 @@ export default function LiveAlphaCard({ lang }: { lang: 'he' | 'en' }) {
           </span>
         </div>
         <span className="text-[10px] text-gray-600">
-          {lang === 'he' ? 'מחושב מ-28+ מקורות' : 'From 28+ sources'}
+          {lang === 'he' ? 'מחושב מ-50+ מקורות' : 'From 50+ sources'}
         </span>
       </div>
 

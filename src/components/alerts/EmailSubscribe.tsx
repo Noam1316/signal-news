@@ -26,7 +26,7 @@ export default function EmailSubscribe() {
   const [errorMsg, setErrorMsg] = useState('');
 
   const t = {
-    subscribe: lang === 'he' ? '📧 תקציר יומי במייל' : '📧 Daily Email Brief',
+    subscribe: lang === 'he' ? 'תקציר יומי במייל' : 'Daily Email Brief',
     modalTitle: lang === 'he' ? 'הירשם לעדכונים' : 'Subscribe to Updates',
     emailPlaceholder: lang === 'he' ? 'your@email.com' : 'your@email.com',
     dailyBriefLabel: lang === 'he' ? 'תקציר יומי — כל בוקר ב-7:00' : 'Daily brief — every morning at 7am',

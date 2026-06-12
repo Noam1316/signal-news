@@ -61,8 +61,8 @@ const FEATURES = [
     icon: '🗣️',
     titleHe: 'ניתוח הטיה תקשורתית',
     titleEn: 'Media Bias Analysis',
-    bodyHe: '43+ מקורות ממופים. פערי כיסוי, פיצולי נרטיב, נקודות עיוורון.',
-    bodyEn: '43+ sources mapped. Coverage gaps, narrative splits, blind spots surfaced.',
+    bodyHe: '50+ מקורות ממופים. פערי כיסוי, פיצולי נרטיב, נקודות עיוורון.',
+    bodyEn: '50+ sources mapped. Coverage gaps, narrative splits, blind spots surfaced.',
   },
   {
     icon: '🧠',
@@ -126,37 +126,32 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
+    const safeJson = (r: PromiseSettledResult<Response>) =>
+      r.status === 'fulfilled' && r.value.ok ? r.value.json().catch(() => null) : Promise.resolve(null);
+
     Promise.allSettled([fetch('/api/analyze'), fetch('/api/shocks'), fetch('/api/track-record')])
-      .then(([aRes, sRes, tRes]) => {
-        let articles = 0, sources = 28, shocks = 0, riskIndex = 0;
-        if (aRes.status === 'fulfilled' && aRes.value.ok) {
-          aRes.value.json().then(d => {
-            articles = d?.stats?.total ?? 0;
-            sources  = d?.stats?.sources ?? 28;
-            const sent  = d?.stats?.sentimentBreakdown ?? {};
-            const total = Object.values(sent).reduce((a: number, b) => a + (b as number), 0) as number;
-            const negR  = total > 0 ? (sent.negative ?? 0) / total : 0.4;
-            riskIndex += negR * 40;
-          }).catch(() => {});
-        }
-        if (sRes.status === 'fulfilled' && sRes.value.ok) {
-          sRes.value.json().then(d => {
-            const list = d?.shocks ?? [];
-            shocks = list.length;
-            const p = list.reduce((a: number, s: { confidence: string }) =>
-              a + (s.confidence === 'high' ? 16 : s.confidence === 'medium' ? 8 : 4), 0);
-            riskIndex += Math.min(40, p);
-            const level: 'low' | 'medium' | 'high' = riskIndex >= 66 ? 'high' : riskIndex >= 34 ? 'medium' : 'low';
-            setStats({ articles, shocks, sources, riskLevel: level });
-          }).catch(() => {});
-        } else {
-          setStats({ articles, shocks, sources, riskLevel: 'low' });
-        }
-        if (tRes.status === 'fulfilled' && tRes.value.ok) {
-          tRes.value.json().then(d => {
-            setAccuracy(d?.accuracyRate ?? d?.signalWinRate ?? null);
-          }).catch(() => {});
-        }
+      .then(async ([aRes, sRes, tRes]) => {
+        const [a, s, t] = await Promise.all([safeJson(aRes), safeJson(sRes), safeJson(tRes)]);
+
+        const articles = a?.stats?.total ?? 0;
+        const sources  = a?.stats?.sources ?? 50;
+        let riskIndex  = 0;
+
+        const sent  = a?.stats?.sentimentBreakdown ?? {};
+        const total = Object.values(sent).reduce((acc: number, b) => acc + (b as number), 0) as number;
+        const negR  = total > 0 ? (sent.negative ?? 0) / total : 0.4;
+        riskIndex += negR * 40;
+
+        const list = s?.shocks ?? [];
+        const shocks = list.length;
+        const p = list.reduce((acc: number, sh: { confidence: string }) =>
+          acc + (sh.confidence === 'high' ? 16 : sh.confidence === 'medium' ? 8 : 4), 0);
+        riskIndex += Math.min(40, p);
+
+        const level: 'low' | 'medium' | 'high' = riskIndex >= 66 ? 'high' : riskIndex >= 34 ? 'medium' : 'low';
+        setStats({ articles, shocks, sources, riskLevel: level });
+
+        if (t) setAccuracy(t?.accuracyRate ?? t?.signalWinRate ?? null);
       });
   }, []);
 
@@ -209,7 +204,7 @@ export default function LandingPage() {
         {/* Live badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-semibold">
           <span className={`w-1.5 h-1.5 rounded-full bg-emerald-400 ${pulse ? 'opacity-100' : 'opacity-30'} transition-opacity duration-1000`} />
-          {lang === 'he' ? 'מנטר 43+ מקורות RSS עכשיו' : 'Monitoring 43+ RSS sources now'}
+          {lang === 'he' ? 'מנטר 50+ מקורות RSS עכשיו' : 'Monitoring 50+ RSS sources now'}
           {risk && (
             <span className={`ms-2 font-bold ${risk.color}`}>
               · {lang === 'he' ? risk.he : risk.en}
@@ -227,8 +222,8 @@ export default function LandingPage() {
         {/* Sub */}
         <p className="text-lg text-gray-400 max-w-xl mx-auto leading-relaxed">
           {lang === 'he'
-            ? 'מנתח 43+ מקורות עברית ואנגלית, מזהה שבירות בזמן אמת, ומשווה לשווקי הימורים — כולל NLP בעברית.'
-            : 'Analyzes 43+ Hebrew & English sources, detects breaking news in real-time, and compares against prediction markets — including Hebrew NLP.'}
+            ? 'מנתח 50+ מקורות עברית ואנגלית, מזהה שבירות בזמן אמת, ומשווה לשווקי הימורים — כולל NLP בעברית.'
+            : 'Analyzes 50+ Hebrew & English sources, detects breaking news in real-time, and compares against prediction markets — including Hebrew NLP.'}
         </p>
 
         {/* Accuracy badge */}
@@ -290,7 +285,7 @@ export default function LandingPage() {
             color="text-yellow-400"
           />
           <StatCounter
-            value={stats?.sources ?? 28}
+            value={stats?.sources ?? 50}
             label={lang === 'he' ? 'מקורות מחוברים' : 'Sources connected'}
             color="text-emerald-400"
           />
@@ -300,7 +295,7 @@ export default function LandingPage() {
       {/* Who uses this */}
       <div className="max-w-4xl mx-auto px-6 pb-14">
         <h2 className="text-center text-sm font-bold uppercase tracking-widest text-gray-500 mb-8">
-          {lang === 'he' ? 'מי משתמש ב-Signal' : 'Who uses Signal'}
+          {lang === 'he' ? 'מי משתמש ב-Zikuk' : 'Who uses Zikuk'}
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {USE_CASES.map((u, i) => (
@@ -316,7 +311,7 @@ export default function LandingPage() {
       {/* Feature grid */}
       <div className="max-w-4xl mx-auto px-6 pb-16">
         <h2 className="text-center text-sm font-bold uppercase tracking-widest text-gray-500 mb-8">
-          {lang === 'he' ? 'מה Signal מוסיף מעבר לחדשות רגילות' : 'What Signal adds beyond regular news'}
+          {lang === 'he' ? 'מה Zikuk מוסיף מעבר לחדשות רגילות' : 'What Zikuk adds beyond regular news'}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {FEATURES.map((f, i) => (

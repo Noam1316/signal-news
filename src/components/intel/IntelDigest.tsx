@@ -200,8 +200,8 @@ export default function IntelDigest() {
       <div className="px-4 py-2 border-t border-gray-800 bg-gray-900/30">
         <p className="text-[10px] text-gray-600">
           {lang === 'he'
-            ? 'מחושב מ-28+ מקורות RSS · ניתוח keyword-based · ללא LLM'
-            : 'Computed from 28+ RSS feeds · keyword-based analysis · no LLM'}
+            ? 'מחושב מ-50+ מקורות RSS · ניתוח keyword-based · ללא LLM'
+            : 'Computed from 50+ RSS feeds · keyword-based analysis · no LLM'}
         </p>
       </div>
     </div>

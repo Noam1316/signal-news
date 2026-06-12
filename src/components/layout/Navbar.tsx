@@ -56,13 +56,15 @@ export default function Navbar() {
 
       {/* Right side: theme toggle + language toggle + debug */}
       <div className="flex items-center gap-2">
-        <Link
-          href="/rss-debug"
-          className={`hidden md:inline px-2 py-1 rounded-md text-[10px] font-mono transition-colors
-                      ${isLight ? 'text-gray-400 hover:text-gray-700 hover:bg-gray-100' : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800/50'}`}
-        >
-          Debug
-        </Link>
+        {process.env.NODE_ENV === 'development' && (
+          <Link
+            href="/rss-debug"
+            className={`hidden md:inline px-2 py-1 rounded-md text-[10px] font-mono transition-colors
+                        ${isLight ? 'text-gray-400 hover:text-gray-700 hover:bg-gray-100' : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800/50'}`}
+          >
+            Debug
+          </Link>
+        )}
 
         {/* Theme toggle */}
         <button
