@@ -175,27 +175,11 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
             </span>
           )}
 
-          {/* Blindspot indicator */}
-          <BlindspotBadge sources={story.sources} />
-
-          {/* Independent exclusive badge */}
-          {hasIndependentCoverage && (
-            <span
-              title={lang === 'he' ? 'תקשורת עצמאית מכסה נושא זה — בדוק פיד זעזועים' : 'Independent media covering this topic — check shocks feed'}
-              className="text-[10px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 bg-orange-500/15 border-orange-500/40 text-orange-400 cursor-default"
-            >
-              🟠 {lang === 'he' ? 'עצמאי' : 'Indie'}
-            </span>
-          )}
-          {/* Narrative divergence badge — only when divergence is significant */}
-          {story.indieVsMainstream && story.indieVsMainstream.divergenceScore >= 35 && (
+          {/* Narrative divergence — only high divergence shown in collapsed view */}
+          {story.indieVsMainstream && story.indieVsMainstream.divergenceScore >= 60 && (
             <span
               title={story.indieVsMainstream.divergenceNote ?? (lang === 'he' ? 'נרטיב שונה בין עצמאי לממסד' : 'Indie and mainstream frame this story differently')}
-              className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 cursor-default ${
-                story.indieVsMainstream.divergenceScore >= 60
-                  ? 'bg-red-500/10 border-red-500/25 text-red-400'
-                  : 'bg-amber-500/10 border-amber-500/25 text-amber-400'
-              }`}
+              className="text-[10px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 cursor-default bg-red-500/10 border-red-500/25 text-red-400"
             >
               ⚡ {lang === 'he' ? `פיצול ${story.indieVsMainstream.divergenceScore}%` : `Split ${story.indieVsMainstream.divergenceScore}%`}
             </span>
@@ -306,72 +290,6 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
         </div>
       )}
 
-      {/* Cross-Media Echo badge */}
-      {story.crossMediaEcho && (
-        <div className="flex items-center gap-1.5 text-[11px]">
-          <span>🔁</span>
-          {story.crossMediaEcho.direction === 'indie-first' ? (
-            <span className="text-orange-400/90">
-              <span className="font-semibold">{story.crossMediaEcho.firstSourceName}</span>
-              {' '}
-              <span className="text-gray-400">
-                {lang === 'he'
-                  ? `(עצמאי) פרסם ${story.crossMediaEcho.delayMinutes >= 60
-                      ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}ש'`
-                      : `${story.crossMediaEcho.delayMinutes}ד'`} לפני הממסד`
-                  : `(indie) broke ${story.crossMediaEcho.delayMinutes >= 60
-                      ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}h`
-                      : `${story.crossMediaEcho.delayMinutes}m`} before mainstream`}
-              </span>
-            </span>
-          ) : (
-            <span className="text-blue-400/80">
-              <span className="text-gray-400">
-                {lang === 'he'
-                  ? `ממסד ↗ עצמאי — אחרי ${story.crossMediaEcho.delayMinutes >= 60
-                      ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}ש'`
-                      : `${story.crossMediaEcho.delayMinutes}ד'`}`
-                  : `mainstream → indie — ${story.crossMediaEcho.delayMinutes >= 60
-                      ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}h`
-                      : `${story.crossMediaEcho.delayMinutes}m`} later`}
-              </span>
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* First-Mover badge */}
-      {story.firstMover && story.firstMover.minsAhead >= 10 && (
-        <div className="flex items-center gap-1.5 text-[11px] text-amber-400/80">
-          <span>🚀</span>
-          <span className="font-semibold">{story.firstMover.sourceName}</span>
-          <span className="text-gray-500">
-            {lang === 'he'
-              ? `פרסם ראשון — ${story.firstMover.minsAhead} דקות לפני`
-              : `broke first — ${story.firstMover.minsAhead}m ahead`}
-          </span>
-        </div>
-      )}
-
-      {/* Contradiction badge */}
-      {story.contradiction && (
-        <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-2 text-[11px] space-y-1">
-          <div className="flex items-center gap-1 text-orange-400 font-semibold">
-            <span>⚔️</span>
-            <span>{lang === 'he' ? 'סיקור סותר' : 'Contradictory Coverage'}</span>
-            <span className="ms-auto text-orange-400/60">{story.contradiction.gapPct}% gap</span>
-          </div>
-          <div className="text-gray-400 leading-snug">
-            <span className="text-green-400/80 font-medium">{story.contradiction.sourceA}:</span>{' '}
-            <span className="truncate">{story.contradiction.headlineA.slice(0, 80)}{story.contradiction.headlineA.length > 80 ? '…' : ''}</span>
-          </div>
-          <div className="text-gray-400 leading-snug">
-            <span className="text-red-400/80 font-medium">{story.contradiction.sourceB}:</span>{' '}
-            <span className="truncate">{story.contradiction.headlineB.slice(0, 80)}{story.contradiction.headlineB.length > 80 ? '…' : ''}</span>
-          </div>
-        </div>
-      )}
-
       {/* Why */}
       <p className="text-sm italic text-gray-400">{t(story.why)}</p>
 
@@ -437,6 +355,31 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
       {expanded && !hasDetailPage && (
         <div className="pt-3 border-t border-gray-700 space-y-4">
 
+          {/* Secondary badges — shown only when expanded */}
+          {(() => {
+            const secondaryBadges = [];
+            if (story.sources) {
+              const blindspot = story.sources.filter((s: any) => s.lensCategory === 'il-independent').length > 0
+                && story.sources.filter((s: any) => s.lensCategory === 'il-mainstream' || s.lensCategory === 'il-partisan').length === 0;
+              if (blindspot) secondaryBadges.push(
+                <BlindspotBadge key="blindspot" sources={story.sources} />
+              );
+            }
+            if (hasIndependentCoverage) secondaryBadges.push(
+              <span key="indie" className="text-[10px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 bg-orange-500/15 border-orange-500/40 text-orange-400 cursor-default">
+                🟠 {lang === 'he' ? 'עצמאי' : 'Indie'}
+              </span>
+            );
+            if (story.indieVsMainstream && story.indieVsMainstream.divergenceScore >= 35 && story.indieVsMainstream.divergenceScore < 60) secondaryBadges.push(
+              <span key="split" title={story.indieVsMainstream.divergenceNote ?? ''}
+                className="text-[10px] px-1.5 py-0.5 rounded-full border font-medium shrink-0 cursor-default bg-amber-500/10 border-amber-500/25 text-amber-400">
+                ⚡ {lang === 'he' ? `פיצול ${story.indieVsMainstream.divergenceScore}%` : `Split ${story.indieVsMainstream.divergenceScore}%`}
+              </span>
+            );
+            if (secondaryBadges.length === 0) return null;
+            return <div className="flex flex-wrap gap-1.5">{secondaryBadges}</div>;
+          })()}
+
           {/* Smart Connections */}
           {story.impacts && story.impacts.length > 0 && (
             <div className="space-y-2">
@@ -469,6 +412,61 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
 
           {/* Likelihood Timeline */}
           <StoryTimeline slug={story.slug} currentLikelihood={story.likelihood} />
+
+          {/* Cross-Media Echo */}
+          {story.crossMediaEcho && (
+            <div className="flex items-center gap-1.5 text-[11px]">
+              <span>🔁</span>
+              {story.crossMediaEcho.direction === 'indie-first' ? (
+                <span className="text-orange-400/90">
+                  <span className="font-semibold">{story.crossMediaEcho.firstSourceName}</span>{' '}
+                  <span className="text-gray-400">
+                    {lang === 'he'
+                      ? `(עצמאי) פרסם ${story.crossMediaEcho.delayMinutes >= 60 ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}ש'` : `${story.crossMediaEcho.delayMinutes}ד'`} לפני הממסד`
+                      : `(indie) broke ${story.crossMediaEcho.delayMinutes >= 60 ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}h` : `${story.crossMediaEcho.delayMinutes}m`} before mainstream`}
+                  </span>
+                </span>
+              ) : (
+                <span className="text-blue-400/80">
+                  <span className="text-gray-400">
+                    {lang === 'he'
+                      ? `ממסד ↗ עצמאי — אחרי ${story.crossMediaEcho.delayMinutes >= 60 ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}ש'` : `${story.crossMediaEcho.delayMinutes}ד'`}`
+                      : `mainstream → indie — ${story.crossMediaEcho.delayMinutes >= 60 ? `${Math.round(story.crossMediaEcho.delayMinutes / 60)}h` : `${story.crossMediaEcho.delayMinutes}m`} later`}
+                  </span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* First-Mover */}
+          {story.firstMover && story.firstMover.minsAhead >= 10 && (
+            <div className="flex items-center gap-1.5 text-[11px] text-amber-400/80">
+              <span>🚀</span>
+              <span className="font-semibold">{story.firstMover.sourceName}</span>
+              <span className="text-gray-500">
+                {lang === 'he' ? `פרסם ראשון — ${story.firstMover.minsAhead} דקות לפני` : `broke first — ${story.firstMover.minsAhead}m ahead`}
+              </span>
+            </div>
+          )}
+
+          {/* Contradiction */}
+          {story.contradiction && (
+            <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-2 text-[11px] space-y-1">
+              <div className="flex items-center gap-1 text-orange-400 font-semibold">
+                <span>⚔️</span>
+                <span>{lang === 'he' ? 'סיקור סותר' : 'Contradictory Coverage'}</span>
+                <span className="ms-auto text-orange-400/60">{story.contradiction.gapPct}% gap</span>
+              </div>
+              <div className="text-gray-400 leading-snug">
+                <span className="text-green-400/80 font-medium">{story.contradiction.sourceA}:</span>{' '}
+                <span className="truncate">{story.contradiction.headlineA.slice(0, 80)}{story.contradiction.headlineA.length > 80 ? '…' : ''}</span>
+              </div>
+              <div className="text-gray-400 leading-snug">
+                <span className="text-red-400/80 font-medium">{story.contradiction.sourceB}:</span>{' '}
+                <span className="truncate">{story.contradiction.headlineB.slice(0, 80)}{story.contradiction.headlineB.length > 80 ? '…' : ''}</span>
+              </div>
+            </div>
+          )}
 
           {/* Sources */}
           <div className="space-y-2">

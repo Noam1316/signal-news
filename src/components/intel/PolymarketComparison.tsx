@@ -175,7 +175,7 @@ function TrackRecord({ lang }: { lang: string }) {
     </div>
   );
 
-  if (!data) return null;
+  if (!data || data.total === 0) return null;
 
   const hasResolved = data.total > 0;
   const signalBetter = data.avgSignalError < data.avgMarketError;
@@ -835,18 +835,17 @@ export default function PolymarketComparison() {
                   isExpanded ? 'bg-gray-900' : 'hover:bg-gray-800/60'
                 }`}
               >
-                {/* Top: topic title + alpha badge */}
+                {/* Top: topic title + momentum (primary) */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-semibold text-white leading-snug">{match.topic}</h4>
                     <p className="text-[10px] text-gray-500 truncate mt-0.5">📊 {match.polymarketTitle}</p>
-                    {/* Momentum — the primary interpretation: direction-of-change comparison */}
+                    {/* Momentum — PRIMARY interpretation (always shown) */}
                     {match.momentum && match.momentum.state !== 'quiet' && (() => {
                       const meta = MOMENTUM_META[match.momentum!.state];
                       if (!meta) return null;
                       return (
-                        <div className={`mt-1.5 flex items-start gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border font-medium ${meta.cls}`}
-                             title={lang === 'he' ? `חלון של ${match.momentum!.windowHours} שעות` : `${match.momentum!.windowHours}h window`}>
+                        <div className={`mt-1.5 flex items-start gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border font-medium ${meta.cls}`}>
                           <span className="shrink-0">{meta.icon}</span>
                           <span className="leading-snug">
                             <span className="font-bold">{lang === 'he' ? meta.he : meta.en}</span>
@@ -855,7 +854,7 @@ export default function PolymarketComparison() {
                         </div>
                       );
                     })()}
-                    {/* Convergence badge */}
+                    {/* Convergence — secondary badge (only when present) */}
                     {convergence && (
                       <div className={`mt-1.5 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium ${
                         convergence.toward
@@ -868,47 +867,8 @@ export default function PolymarketComparison() {
                           : `Market ${convergence.toward ? '→ Signal' : '← away'} · ${convergence.movement > 0 ? '+' : ''}${convergence.movement}% in ${convergence.hoursAgo}h`}
                       </div>
                     )}
-                    {/* Intel boost badge */}
-                    {match.intelBoost > 0 && match.intelSummary && (
-                      <div className="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium bg-purple-500/10 border-purple-500/30 text-purple-400">
-                        🧠 +{match.intelBoost} {lang === 'he' ? 'מודיעין' : 'intel'}: {match.intelSummary}
-                      </div>
-                    )}
-                    {/* Question direction badge */}
-                    {match.questionDirection && (
-                      <div className="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium bg-blue-500/10 border-blue-500/25 text-blue-400">
-                        {match.questionDirection === 'negative-bullish'  && (lang === 'he' ? '📰 חדשות רעות = סבירות גבוהה' : '📰 Bad news → higher prob')}
-                        {match.questionDirection === 'negative-bearish'  && (lang === 'he' ? '📰 חדשות רעות = סבירות נמוכה' : '📰 Bad news → lower prob')}
-                        {match.questionDirection === 'positive-bullish'  && (lang === 'he' ? '📰 חדשות טובות = סבירות גבוהה' : '📰 Good news → higher prob')}
-                      </div>
-                    )}
-                    {/* Calibration badge — shown when Signal score was adjusted */}
-                    {match.calibrationNote && match.signalRaw !== undefined && match.signalRaw !== match.signalLikelihood && (
-                      <div className="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium bg-gray-700/50 border-gray-600/40 text-gray-400"
-                           title={match.calibrationNote}>
-                        ⚖️ {lang === 'he' ? `מכויל מ-${match.signalRaw}% → ${match.signalLikelihood}%` : `Calibrated ${match.signalRaw}% → ${match.signalLikelihood}%`}
-                      </div>
-                    )}
-                    {/* Trend direction badge */}
-                    {match.trendDirection && match.trendDirection !== 'stable' && match.trendDelta !== undefined && (
-                      <div className={`mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium ${
-                        match.trendDirection === 'rising'
-                          ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
-                          : 'bg-red-500/10 border-red-500/25 text-red-400'
-                      }`}>
-                        {match.trendDirection === 'rising' ? '🔺' : '🔻'}
-                        {lang === 'he'
-                          ? `Signal ${match.trendDirection === 'rising' ? 'עולה' : 'יורד'} ${match.trendDelta! > 0 ? '+' : ''}${match.trendDelta}% (שעות אחרונות)`
-                          : `Signal ${match.trendDirection === 'rising' ? 'rising' : 'falling'} ${match.trendDelta! > 0 ? '+' : ''}${match.trendDelta}%`}
-                      </div>
-                    )}
-                    {/* Multi-story aggregation badge */}
-                    {(match.aggregatedStoryCount ?? 1) > 1 && (
-                      <div className="mt-1 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium bg-violet-500/10 border-violet-500/25 text-violet-400">
-                        🔗 {lang === 'he' ? `${match.aggregatedStoryCount} סיפורים מחוברים` : `${match.aggregatedStoryCount} stories aggregated`}
-                      </div>
-                    )}
                   </div>
+                  {/* Direction indicator replaces alpha badge in collapsed view */}
                   <div className={`shrink-0 flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg ${
                     isAligned
                       ? 'bg-gray-800 border border-gray-700'
@@ -916,15 +876,14 @@ export default function PolymarketComparison() {
                       ? 'bg-yellow-500/10 border border-yellow-500/25'
                       : 'bg-blue-500/10 border border-blue-500/25'
                   }`}>
-                    <span className={`text-lg font-black leading-none ${alphaColor}`}>
-                      {match.alphaScore}
+                    <span className={`text-lg font-black leading-none ${isAligned ? 'text-gray-400' : signalHigher ? 'text-yellow-400' : 'text-blue-400'}`}>
+                      {isAligned ? '≈' : signalHigher ? '↑' : '↓'}
                     </span>
-                    <span className="text-[8px] text-gray-500 uppercase">alpha</span>
+                    <span className="text-[8px] text-gray-500 uppercase">
+                      {isAligned ? (lang === 'he' ? 'מיושר' : 'aligned') : (lang === 'he' ? `פער ${Math.abs(match.delta)}%` : `gap ${Math.abs(match.delta)}%`)}
+                    </span>
                   </div>
                 </div>
-
-                {/* Position axis gauge */}
-                <PositionAxis signal={match.signalLikelihood} market={match.marketProbability} dir="ltr" />
 
                 {/* Quick meta row */}
                 <div className="flex items-center justify-between text-[10px]">
@@ -935,9 +894,6 @@ export default function PolymarketComparison() {
                     </span>
                     <span>
                       {match.sourceCount} {lang === 'he' ? 'מקורות' : 'src'}
-                    </span>
-                    <span className="hidden sm:inline text-gray-600">
-                      {lang === 'he' ? 'ביטחון:' : 'Conf:'} {match.confidence}%
                     </span>
                     {isUrgent && days !== null && (
                       <span className="font-bold px-1.5 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400">
@@ -982,6 +938,63 @@ export default function PolymarketComparison() {
                 {/* Expanded section */}
                 {isExpanded && (
                   <div className="pt-3 border-t border-gray-800 space-y-4 animate-in fade-in duration-200">
+
+                    {/* Position axis — only shown expanded (different scales disclaimer inline) */}
+                    <div className="space-y-1">
+                      <PositionAxis signal={match.signalLikelihood} market={match.marketProbability} dir="ltr" />
+                      <p className="text-[9px] text-gray-600 text-center">
+                        {lang === 'he'
+                          ? 'הסולמות שונים — Signal מודד עוצמת כיסוי, השוק מתמחר הסתברות'
+                          : 'Different scales — Signal measures coverage intensity, market prices probability'}
+                      </p>
+                    </div>
+
+                    {/* Alpha score + additional badges — shown only expanded */}
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full border font-bold ${alphaColor} ${
+                        isAligned ? 'bg-gray-800 border-gray-700' : signalHigher ? 'bg-yellow-500/10 border-yellow-500/25' : 'bg-blue-500/10 border-blue-500/25'
+                      }`}>
+                        Alpha {match.alphaScore}/100
+                      </span>
+                      {match.intelBoost > 0 && match.intelSummary && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full border font-medium bg-purple-500/10 border-purple-500/30 text-purple-400">
+                          🧠 +{match.intelBoost} {lang === 'he' ? 'מודיעין' : 'intel'}: {match.intelSummary}
+                        </span>
+                      )}
+                      {match.questionDirection && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full border font-medium bg-blue-500/10 border-blue-500/25 text-blue-400">
+                          {match.questionDirection === 'negative-bullish'  && (lang === 'he' ? '📰 חדשות רעות = סבירות גבוהה' : '📰 Bad news → higher prob')}
+                          {match.questionDirection === 'negative-bearish'  && (lang === 'he' ? '📰 חדשות רעות = סבירות נמוכה' : '📰 Bad news → lower prob')}
+                          {match.questionDirection === 'positive-bullish'  && (lang === 'he' ? '📰 חדשות טובות = סבירות גבוהה' : '📰 Good news → higher prob')}
+                        </span>
+                      )}
+                      {match.calibrationNote && match.signalRaw !== undefined && match.signalRaw !== match.signalLikelihood && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full border font-medium bg-gray-700/50 border-gray-600/40 text-gray-400"
+                             title={match.calibrationNote}>
+                          ⚖️ {lang === 'he' ? `מכויל מ-${match.signalRaw}% → ${match.signalLikelihood}%` : `Calibrated ${match.signalRaw}% → ${match.signalLikelihood}%`}
+                        </span>
+                      )}
+                      {match.trendDirection && match.trendDirection !== 'stable' && match.trendDelta !== undefined && (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${
+                          match.trendDirection === 'rising'
+                            ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+                            : 'bg-red-500/10 border-red-500/25 text-red-400'
+                        }`}>
+                          {match.trendDirection === 'rising' ? '🔺' : '🔻'}
+                          {lang === 'he'
+                            ? `Signal ${match.trendDirection === 'rising' ? 'עולה' : 'יורד'} ${match.trendDelta! > 0 ? '+' : ''}${match.trendDelta}%`
+                            : `Signal ${match.trendDirection === 'rising' ? 'rising' : 'falling'} ${match.trendDelta! > 0 ? '+' : ''}${match.trendDelta}%`}
+                        </span>
+                      )}
+                      {(match.aggregatedStoryCount ?? 1) > 1 && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full border font-medium bg-violet-500/10 border-violet-500/25 text-violet-400">
+                          🔗 {lang === 'he' ? `${match.aggregatedStoryCount} סיפורים` : `${match.aggregatedStoryCount} stories`}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-gray-600">
+                        {lang === 'he' ? `ביטחון: ${match.confidence}%` : `Conf: ${match.confidence}%`}
+                      </span>
+                    </div>
 
                     {/* Thesis vs Thesis — Signal argument vs Market argument */}
                     {match.signalThesis && match.marketThesis ? (
