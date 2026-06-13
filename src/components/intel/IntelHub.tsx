@@ -14,12 +14,9 @@ import SocialBuzz from './SocialBuzz';
 
 const TABS = [
   { id: 'polymarket', icon: '📈', en: 'Signal vs Market', he: 'סיגנל vs שוק' },
-  { id: 'social',     icon: '🌐', en: 'Social',           he: 'רשתות' },
-  { id: 'calendar',   icon: '📅', en: 'Calendar',         he: 'לוח אירועים' },
   { id: 'overview',   icon: '📊', en: 'Overview',         he: 'סקירה' },
-  { id: 'bias',       icon: '🏛️', en: 'Media Bias',       he: 'הטיה תקשורתית' },
-  { id: 'sources',    icon: '🛡️', en: 'Sources',          he: 'מקורות' },
-  { id: 'feed',       icon: '🌐', en: 'Live Feed',        he: 'פיד חי' },
+  { id: 'bias',       icon: '🏛️', en: 'Media & Sources',  he: 'תקשורת ומקורות' },
+  { id: 'feed',       icon: '📡', en: 'Live Feed',        he: 'פיד חי' },
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
@@ -41,7 +38,7 @@ export default function IntelHub() {
       {/* AI Synthesis */}
       <IntelSynthesis />
 
-      {/* Tab bar */}
+      {/* Tab bar — exactly 4 tabs */}
       <div role="tablist" className="flex gap-1 bg-gray-900/80 rounded-xl p-1 border border-gray-800">
         {TABS.map(tab => {
           const isActive = activeTab === tab.id;
@@ -80,20 +77,45 @@ export default function IntelHub() {
       </div>
 
       {/* Tab content */}
-      <div role="tabpanel" aria-label={lang === 'he' ? TABS.find(t => t.id === activeTab)?.he : TABS.find(t => t.id === activeTab)?.en} className="min-h-[300px]">
-        {activeTab === 'social' && <SocialBuzz />}
-        {activeTab === 'calendar' && <GeoCalendar />}
-        {activeTab === 'overview' && <IntelDashboard />}
+      <div role="tabpanel" className="min-h-[300px]">
         {activeTab === 'polymarket' && <PolymarketComparison />}
-        {activeTab === 'bias' && <MediaBiasPanel />}
-        {activeTab === 'sources' && (
-          <div className="space-y-6">
-            <GroupedFeed />
+
+        {activeTab === 'overview' && (
+          <div className="space-y-8">
+            <IntelDashboard />
             <div className="border-t border-gray-800 pt-6">
-              <CredibilityDashboard />
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <span>🌐</span>
+                {lang === 'he' ? 'רשתות חברתיות ועצמאיות' : 'Social & Independent Media'}
+              </h3>
+              <SocialBuzz />
+            </div>
+            <div className="border-t border-gray-800 pt-6">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <span>📅</span>
+                {lang === 'he' ? 'לוח אירועים גיאופוליטי' : 'Geopolitical Calendar'}
+              </h3>
+              <GeoCalendar />
             </div>
           </div>
         )}
+
+        {activeTab === 'bias' && (
+          <div className="space-y-8">
+            <MediaBiasPanel />
+            <div className="border-t border-gray-800 pt-6">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <span>🛡️</span>
+                {lang === 'he' ? 'מקורות ואמינות' : 'Sources & Credibility'}
+              </h3>
+              <GroupedFeed />
+              <div className="mt-6">
+                <CredibilityDashboard />
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'feed' && <LiveWire />}
       </div>
     </div>
