@@ -122,6 +122,29 @@ body {
   background-image: linear-gradient(to right, rgba(250, 204, 21, 0.04) 0%, transparent 25%);
 }
 
+/* Section divider — subtle gradient rule between dashboard sections */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent 0%, rgba(250, 204, 21, 0.12) 30%, rgba(250, 204, 21, 0.12) 70%, transparent 100%);
+  margin-block: 0;
+}
+
+/* Section title accent */
+.section-title-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+.section-title-bar::before {
+  content: '';
+  display: block;
+  width: 3px;
+  height: 1.25rem;
+  border-radius: 9999px;
+  background: #facc15;
+  flex-shrink: 0;
+}
+
 /* Scrollbar hide for filter rows */
 .scrollbar-hide {
   -ms-overflow-style: none;

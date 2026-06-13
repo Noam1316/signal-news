@@ -29,8 +29,7 @@ export default function IntelHub() {
     <div dir={dir} className="space-y-4">
       {/* Header */}
       <header>
-        <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-          <span className="text-yellow-400">🧠</span>
+        <h2 className="text-xl font-bold section-title-bar">
           {lang === 'he' ? 'מרכז מודיעין' : 'Intelligence Hub'}
         </h2>
       </header>

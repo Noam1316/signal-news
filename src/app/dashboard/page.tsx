@@ -144,23 +144,32 @@ export default function DashboardPage() {
 
         {/* ── Shocks ── */}
         {!prefs.hiddenSections.includes('shocks') && (
-          <section id="shocks" className="scroll-mt-24">
-            <ShockFeed />
-          </section>
+          <>
+            <div className="section-divider" />
+            <section id="shocks" className="scroll-mt-24">
+              <ShockFeed />
+            </section>
+          </>
         )}
 
         {/* ── Map & Entities ── */}
         {!prefs.hiddenSections.includes('map') && (
-          <section id="map" className="scroll-mt-24">
-            <MapEntities />
-          </section>
+          <>
+            <div className="section-divider" />
+            <section id="map" className="scroll-mt-24">
+              <MapEntities />
+            </section>
+          </>
         )}
 
         {/* ── Intel Hub ── */}
         {!prefs.hiddenSections.includes('intel') && (
-          <section id="intel" className="scroll-mt-24">
-            <IntelHub />
-          </section>
+          <>
+            <div className="section-divider" />
+            <section id="intel" className="scroll-mt-24">
+              <IntelHub />
+            </section>
+          </>
         )}
       </div>
 
