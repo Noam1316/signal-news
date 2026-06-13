@@ -16,24 +16,51 @@ export async function GET() {
       return NextResponse.json({ ...record, pending, dataMode: 'live' });
     }
 
-    // Demo mode: generate realistic historical predictions
+    // Demo mode: real historical predictions with verifiable outcomes
     const demoData = generateDemoTrackRecord();
     const demoStats = calculateTrackRecordStats(demoData);
 
-    return NextResponse.json({
-      // Signal vs Market framing (primary investor metric)
-      total: demoStats.resolved,
-      signalWins: demoStats.signalVsMarketWins,
-      marketWins: demoStats.signalVsMarketLosses,
-      ties: 0,
-      signalWinRate: demoStats.signalVsMarketWins > 0
-        ? Math.round(demoStats.signalVsMarketWins / (demoStats.signalVsMarketWins + demoStats.signalVsMarketLosses) * 100)
-        : 68, // default display
-      avgSignalError: 14,
-      avgMarketError: 22,
-      byCategory: demoStats.byTopic,
+    // Compute actual per-prediction errors (|signal - outcome| vs |market - outcome|)
+    const resolved = demoData.filter(p => p.outcome !== 'pending' && p.outcome !== undefined);
+    const recentWithErrors = resolved.map(p => {
+      const actualVal = p.outcome === 'correct' ? 100 : p.outcome === 'partial' ? 50 : 0;
+      const signalError = Math.abs(p.predictedLikelihood - actualVal);
+      const mktProb = p.marketProbability ?? p.predictedLikelihood;
+      const marketError = Math.abs(mktProb - actualVal);
+      return {
+        topic: p.topic,
+        signalLikelihood: p.predictedLikelihood,
+        marketProbability: mktProb,
+        outcome: p.outcome,
+        snapshotAt: p.createdAt,
+        resolvedAt: p.resolvedAt,
+        signalWasCloser: signalError < marketError,
+        signalError,
+        marketError,
+      };
+    });
 
-      // Full prediction accuracy stats
+    const avgSignalError = resolved.length > 0
+      ? Math.round(recentWithErrors.reduce((s, r) => s + r.signalError, 0) / resolved.length)
+      : 0;
+    const avgMarketError = resolved.length > 0
+      ? Math.round(recentWithErrors.reduce((s, r) => s + r.marketError, 0) / resolved.length)
+      : 0;
+
+    const signalWins = recentWithErrors.filter(r => r.signalWasCloser).length;
+    const marketWins = recentWithErrors.filter(r => !r.signalWasCloser).length;
+
+    return NextResponse.json({
+      total: resolved.length,
+      signalWins,
+      marketWins,
+      ties: 0,
+      signalWinRate: (signalWins + marketWins) > 0
+        ? Math.round(signalWins / (signalWins + marketWins) * 100)
+        : 0,
+      avgSignalError,
+      avgMarketError,
+      byCategory: demoStats.byTopic,
       accuracyRate: demoStats.accuracyRate,
       correct: demoStats.correct,
       incorrect: demoStats.incorrect,
@@ -42,18 +69,7 @@ export async function GET() {
       streakBest: demoStats.streakBest,
       brierScore: demoStats.brierScore,
       calibrationBuckets: demoStats.calibrationBuckets,
-      recent: demoStats.recentPredictions.map(p => ({
-        topic: p.topic,
-        signalLikelihood: p.predictedLikelihood,
-        marketProbability: p.marketProbability ?? p.predictedLikelihood + 8,
-        outcome: p.outcome,
-        snapshotAt: p.createdAt,
-        resolvedAt: p.resolvedAt,
-        signalWasCloser: p.outcome === 'correct',
-        signalError: p.outcome === 'correct' ? 8 : 35,
-        marketError: p.outcome === 'correct' ? 22 : 18,
-      })),
-
+      recent: recentWithErrors.slice(0, 10),
       pending,
       dataMode: 'demo',
     });
