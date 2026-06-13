@@ -456,14 +456,20 @@ function pickHeadline(cluster: Cluster): { headline: { he: string; en: string };
     if (groqHe && groqHe.length > 15) {
       heTitle = groqHe;
     } else {
-      const heBest = sorted.find(a => a.article.language === 'he' && !isJunkTitle(a.article.title) && isTopicRelevant(a.article.title));
-      heTitle = heBest ? cleanHL(heBest.article.title) : template.he;
+      // Try topic-relevant Hebrew first, then any Hebrew article, then fall back to English title
+      // (cluster membership already ensures articles are on-topic)
+      const heBest = sorted.find(a => a.article.language === 'he' && !isJunkTitle(a.article.title) && isTopicRelevant(a.article.title))
+                  ?? sorted.find(a => a.article.language === 'he' && !isJunkTitle(a.article.title));
+      heTitle = heBest ? cleanHL(heBest.article.title) : (enTitle || template.he);
     }
   } else {
-    // Both junk — use templates, but try Groq for Hebrew
+    // Both junk — try Groq, then topic-relevant non-junk article
     const groqHe = getGroqResult(best.article.id)?.summaryHe;
-    heTitle = (groqHe && groqHe.length > 15) ? groqHe : template.he;
-    enTitle = template.en;
+    const anyTopicGood = sorted.find(a => !isJunkTitle(a.article.title) && isTopicRelevant(a.article.title));
+    enTitle = anyTopicGood ? cleanHL(anyTopicGood.article.title) : template.en;
+    const heFallback = sorted.find(a => a.article.language === 'he' && !isJunkTitle(a.article.title) && isTopicRelevant(a.article.title))
+                    ?? sorted.find(a => a.article.language === 'he' && !isJunkTitle(a.article.title));
+    heTitle = (groqHe && groqHe.length > 15) ? groqHe : (heFallback ? cleanHL(heFallback.article.title) : (enTitle || template.he));
   }
 
   return { headline: { he: heTitle, en: enTitle }, bestArticle: best };
@@ -476,12 +482,18 @@ function pickHeadline(cluster: Cluster): { headline: { he: string; en: string };
 // Clean a raw RSS description — remove junk metadata and normalize
 function cleanDescription(desc: string): string {
   return desc
+    // HTML entities first
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&nbsp;/g, ' ')
     .replace(/<[^>]+>/g, ' ')                                 // strip HTML tags
     .replace(/\d+\s*כתבות\s*מ-\d+\s*מקורות[^.]*\./g, '')   // "386 כתבות מ-32 מקורות שונים."
     .replace(/רמת ביטחון:[^.]*\./g, '')                       // "רמת ביטחון: גבוה (81%)."
     .replace(/זוהה כסיגנל[^.]*\./g, '')                       // "זוהה כסיגנל חדשותי משמעותי."
     .replace(/[A-Za-z]{2,}\s+en\s+\w+\s*\|[^|]*/g, '')       // "Kan en français | ..."
-    .replace(/^\d{1,2}\.\d{1,2}\.\d{4}\s*/g, '')             // leading dates
+    // Date/time patterns embedded mid-text
+    .replace(/\d{1,2}[./]\d{1,2}[./]\d{4}\s*[-–]\s*\d{1,2}:\d{2}/g, '') // "13.6.2026 - 11:47"
+    .replace(/^\d{1,2}[./]\d{1,2}[./]\d{4}\s*/g, '')         // leading dates (both . and / formats)
+    .replace(/\|\s*\d{1,2}[./]\d{1,2}[./]\d{4}[^|]*/g, '')   // "| 13.6.2026 ..."
     .replace(/\|[^|]{0,40}$/g, '')                            // trailing " | source name"
     .replace(/\s*[-–—]\s*(הארץ|ינט|ynet|וואלה|וואלה!|Walla|Kan|כאן|גלובס|Globes|הגשש|מעריב|ישראל היום|Israel Hayom|Jerusalem Post|Times of Israel|Reuters|AP|BBC)\s*$/i, '') // trailing " - source"
     // Normalize bullet points → sentence separators

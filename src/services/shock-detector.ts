@@ -472,6 +472,25 @@ function detectNarrativeShocks(topicStats: Map<string, TopicStats>): ShockEvent[
 
       const confidence: Confidence = sentimentGap >= 0.6 ? 'high' : 'medium';
 
+      // Extract representative titles from each side for specificity
+      const rightMoreNeg = rightNegRatio > leftNegRatio;
+      const negSide   = rightMoreNeg ? rightArticles : leftArticles;
+      const posSide   = rightMoreNeg ? leftArticles  : rightArticles;
+      const stripSrc  = (t: string) => t.replace(/\s*[–—|]\s*[\w ]+$/, '').trim();
+      const negTitle  = negSide.sort((a,b) => b.analysis.signalScore - a.analysis.signalScore)[0]?.article.title;
+      const posTitle  = posSide.sort((a,b) => b.analysis.signalScore - a.analysis.signalScore)[0]?.article.title;
+      const negLabel  = rightMoreNeg ? (topicDisplay.he ? 'ימין' : 'Right') : (topicDisplay.he ? 'שמאל' : 'Left');
+      const posLabel  = rightMoreNeg ? (topicDisplay.he ? 'שמאל' : 'Left')  : (topicDisplay.he ? 'ימין' : 'Right');
+      const gapPct    = Math.round(sentimentGap * 100);
+
+      const whatMovedHe = negTitle && posTitle
+        ? `${negLabel} (שלילי): "${stripSrc(negTitle).slice(0, 60)}" · ${posLabel} (חיובי יחסית): "${stripSrc(posTitle).slice(0, 60)}" — פער סנטימנט ${gapPct}%.`
+        : `תקשורת ${rightMoreNeg ? 'ימין שלילית יותר בעוד שמאל מתון' : 'שמאל שלילית יותר בעוד ימין מתון'} על ${topicDisplay.he} — פער ${gapPct}%.`;
+
+      const whatMovedEn = negTitle && posTitle
+        ? `${rightMoreNeg ? 'Right' : 'Left'} (negative): "${stripSrc(negTitle).slice(0, 60)}" · ${rightMoreNeg ? 'Left' : 'Right'} (positive): "${stripSrc(posTitle).slice(0, 60)}" — ${gapPct}% sentiment gap.`
+        : `${rightMoreNeg ? 'Right-leaning' : 'Left-leaning'} sources frame ${topicDisplay.en} negatively while the other side is more positive — ${gapPct}% gap.`;
+
       shocks.push({
         id: `auto-narrative-${topic.toLowerCase().replace(/\W+/g, '-')}`,
         type: 'narrative',
@@ -479,11 +498,8 @@ function detectNarrativeShocks(topicStats: Map<string, TopicStats>): ShockEvent[
           he: `פער נרטיבי: ימין ושמאל מתארים מציאות שונה בנושא ${topicDisplay.he}`,
           en: `Narrative Gap: Right and Left describe different realities on ${topicDisplay.en}`,
         },
-        whatMoved: {
-          he: `תקשורת ${rightNegRatio > leftNegRatio ? 'ימין מדווחת בטון שלילי בעוד שמאל נוטה לחיובי' : 'שמאל מדווחת בטון שלילי בעוד ימין נוטה לחיובי'} על ${topicDisplay.he} — פער של ${Math.round(sentimentGap * 100)}% בסנטימנט.`,
-          en: `${rightNegRatio > leftNegRatio ? 'Right-leaning sources frame this negatively while left-leaning are more positive' : 'Left-leaning sources frame this negatively while right-leaning are more positive'} on ${topicDisplay.en} — a ${Math.round(sentimentGap * 100)}% sentiment gap.`,
-        },
-        delta: 0,
+        whatMoved: { he: whatMovedHe, en: whatMovedEn },
+        delta: gapPct,
         timeWindow: { he: 'שעות אחרונות', en: 'Last few hours' },
         confidence,
         whyNow: buildDisagreementText(topic, rightNegRatio, leftNegRatio),
