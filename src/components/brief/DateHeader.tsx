@@ -4,25 +4,32 @@ import { useLanguage } from '@/i18n/context';
 import { formatDate } from '@/lib/utils';
 
 export default function DateHeader() {
-  const { ui, lang } = useLanguage();
+  const { ui, lang, dir } = useLanguage();
   const today = new Date().toISOString();
 
   return (
-    <header className="mb-8">
-      <div className="flex items-start justify-between gap-3">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{ui('todaysBrief')}</h1>
+    <header dir={dir} className="mb-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="w-1 h-6 rounded-full bg-yellow-400 block" />
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{ui('todaysBrief')}</h1>
+          </div>
+          <span className="hidden sm:inline text-xs text-gray-600 font-mono border border-gray-800 px-2 py-0.5 rounded">
+            {formatDate(today, lang)}
+          </span>
+        </div>
         <a
           href="/brief/print"
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 mt-1 flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-yellow-400/30 text-yellow-400 hover:text-yellow-300 hover:border-yellow-400/50 transition-colors"
+          className="shrink-0 flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-700 text-gray-500 hover:text-yellow-400 hover:border-yellow-400/40 transition-colors"
         >
           <span>📄</span>
-          <span>{lang === 'he' ? 'תקציר מלא' : 'Full Brief'}</span>
+          <span className="hidden sm:inline">{lang === 'he' ? 'תקציר מלא' : 'Full Brief'}</span>
         </a>
       </div>
-      <p className="text-sm text-gray-400 mt-1">{formatDate(today, lang)}</p>
-      <p className="text-sm text-gray-500 italic mt-1">{ui('slogan')}</p>
+      <p className="text-xs text-gray-600 italic mt-1 ms-4">{ui('slogan')}</p>
     </header>
   );
 }
