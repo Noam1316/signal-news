@@ -118,7 +118,7 @@ export default function DashboardPage() {
       <SectionNav />
 
       {/* pb-20 on mobile to clear the BottomNav; none on desktop */}
-      <div className={`max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-6 ${prefs.compactMode ? 'space-y-6' : 'space-y-12'}`}>
+      <div className={`max-w-6xl mx-auto px-4 py-4 pb-24 md:pb-4 ${prefs.compactMode ? 'space-y-4' : 'space-y-8'}`}>
         {/* ── Brief ── */}
         {!prefs.hiddenSections.includes('brief') && (
           <section id="brief" className="scroll-mt-24">

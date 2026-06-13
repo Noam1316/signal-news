@@ -117,7 +117,7 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
     <article
       dir={dir}
       onClick={handleClick}
-      className={`rounded-xl border transition-all cursor-pointer p-6 space-y-4 ${
+      className={`rounded-xl border transition-all cursor-pointer p-4 space-y-3 ${
         story.resolved
           ? 'border-gray-700/50 bg-gray-900/40 opacity-60 hover:opacity-80'
           : 'border-gray-800 bg-gray-900/80 hover:bg-gray-800/80 card-glow'
@@ -231,32 +231,21 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
       </div>
 
       {/* Headline */}
-      <h2 className="text-xl font-bold leading-snug tracking-tight">{t(story.headline)}</h2>
+      <h2 className="text-lg font-bold leading-snug tracking-tight">{t(story.headline)}</h2>
 
-      {/* Narrative split — promoted above summary, 2-column split view */}
+      {/* Narrative split — compact 1-line indicator */}
       {story.narrativeSplit && (
-        <div className="rounded-lg overflow-hidden border border-gray-700/60 text-[11px]">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/60 border-b border-gray-700/50">
-            <span className="font-bold uppercase tracking-widest text-[9px] text-gray-500">
-              {lang === 'he' ? 'ניגוד נרטיבים' : 'Narrative Split'}
-            </span>
-            <span className="ms-auto font-mono text-orange-400/80">{story.narrativeSplit.gapPct}% gap</span>
-          </div>
-          <div className="grid grid-cols-2 divide-x divide-gray-700/50">
-            <div className="px-3 py-2 space-y-0.5 border-s-2 border-blue-500/60">
-              <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wide truncate">{story.narrativeSplit.leftSource}</p>
-              <p className="text-gray-300 leading-snug line-clamp-2">{story.narrativeSplit.leftHeadline}</p>
-            </div>
-            <div className="px-3 py-2 space-y-0.5 border-s-2 border-red-500/60">
-              <p className="text-[9px] font-bold text-red-400 uppercase tracking-wide truncate">{story.narrativeSplit.rightSource}</p>
-              <p className="text-gray-300 leading-snug line-clamp-2">{story.narrativeSplit.rightHeadline}</p>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 text-[11px] px-2.5 py-1.5 rounded-lg bg-gray-800/50 border border-gray-700/50">
+          <span className="text-blue-400 font-medium truncate max-w-[30%]">{story.narrativeSplit.leftSource}</span>
+          <span className="text-gray-600 shrink-0">↔</span>
+          <span className="text-red-400 font-medium truncate max-w-[30%]">{story.narrativeSplit.rightSource}</span>
+          <span className="ms-auto shrink-0 font-mono text-orange-400/80 text-[10px]">gap {story.narrativeSplit.gapPct}%</span>
+          <span className="shrink-0 text-gray-600 text-[10px]">{lang === 'he' ? '▼ פרט' : '▼ detail'}</span>
         </div>
       )}
 
       {/* Summary */}
-      <p className={`text-sm text-gray-300 leading-relaxed ${expanded ? '' : 'line-clamp-3'}`}>{t(story.summary)}</p>
+      <p className={`text-sm text-gray-300 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>{t(story.summary)}</p>
 
       {/* Mobile expand toggle — visible only on mobile */}
       <button
@@ -289,9 +278,6 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
           <StoryTimeline slug={story.slug} currentLikelihood={story.likelihood} />
         </div>
       )}
-
-      {/* Why */}
-      <p className="text-sm italic text-gray-400">{t(story.why)}</p>
 
       {/* Strategic implication */}
       {story.strategicImplication && (
@@ -406,6 +392,25 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
                     </span>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Why + full narrative split — expanded only */}
+          {story.why && (
+            <p className="text-sm italic text-gray-400">{t(story.why)}</p>
+          )}
+          {story.narrativeSplit && (
+            <div className="rounded-lg overflow-hidden border border-gray-700/60 text-[11px]">
+              <div className="grid grid-cols-2 divide-x divide-gray-700/50">
+                <div className="px-3 py-2 space-y-0.5 border-s-2 border-blue-500/60">
+                  <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wide truncate">{story.narrativeSplit.leftSource}</p>
+                  <p className="text-gray-300 leading-snug line-clamp-2">{story.narrativeSplit.leftHeadline}</p>
+                </div>
+                <div className="px-3 py-2 space-y-0.5 border-s-2 border-red-500/60">
+                  <p className="text-[9px] font-bold text-red-400 uppercase tracking-wide truncate">{story.narrativeSplit.rightSource}</p>
+                  <p className="text-gray-300 leading-snug line-clamp-2">{story.narrativeSplit.rightHeadline}</p>
+                </div>
               </div>
             </div>
           )}
