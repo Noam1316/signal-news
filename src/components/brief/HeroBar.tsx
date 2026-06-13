@@ -205,7 +205,7 @@ export default function HeroBar() {
   };
 
   return (
-    <div className="w-full bg-gray-950/80 border-b border-gray-800/50 backdrop-blur-sm">
+    <div className="w-full border-b border-gray-800/60 backdrop-blur-md" style={{ background: 'linear-gradient(to right, rgba(9,14,26,0.95) 0%, rgba(13,19,35,0.95) 50%, rgba(9,14,26,0.95) 100%)' }}>
       {/* Stale data banner */}
       {showStaleBanner && (
         <div className="w-full bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 flex items-center justify-between gap-3">

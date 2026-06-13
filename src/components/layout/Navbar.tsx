@@ -15,8 +15,9 @@ export default function Navbar() {
                  backdrop-blur-md border-b transition-colors
                  ${isLight
                    ? 'bg-white/95 border-gray-200'
-                   : 'bg-gray-950/90 border-gray-800'
+                   : 'border-gray-700/40'
                  }`}
+        style={!isLight ? { background: 'linear-gradient(180deg, rgba(8,12,24,0.97) 0%, rgba(10,15,26,0.95) 100%)' } : undefined}
     >
       {/* Logo → home */}
       <Link

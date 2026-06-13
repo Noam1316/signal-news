@@ -1097,7 +1097,7 @@ export function generateStories(articles: FetchedArticle[], maxStories = 8): Bri
     const summary = buildSummary(cluster, bestArticle, headline);
     const { likelihood, delta, confidence, components: signalComponents } = calculateLikelihood(cluster);
     const lens = determineLens(cluster);
-    const isSignal = cluster.articles.some((a) => a.analysis.isSignal);
+    const isSignal = cluster.articles.some((a) => a.analysis.isSignal) || likelihood >= 65;
     const category = TOPIC_CATEGORIES[cluster.topic] || { he: 'כללי', en: 'General' };
 
     const impacts = detectImpacts(cluster.topic);

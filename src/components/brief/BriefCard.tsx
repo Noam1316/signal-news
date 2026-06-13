@@ -120,7 +120,7 @@ export default function BriefCard({ story, isWatched = false, onWatchToggle, rel
       className={`rounded-xl border transition-all cursor-pointer p-4 space-y-3 ${
         story.resolved
           ? 'border-gray-700/50 bg-gray-900/40 opacity-60 hover:opacity-80'
-          : 'border-gray-800 bg-gray-900/80 hover:bg-gray-800/80 card-glow'
+          : `border-gray-800 bg-gray-900/80 hover:bg-gray-800/80 card-glow ${story.isSignal ? 'signal-card' : ''}`
       }`}
     >
       {/* Top row: category + badges + signal + watch */}
